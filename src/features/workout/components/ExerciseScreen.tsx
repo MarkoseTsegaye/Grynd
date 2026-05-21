@@ -1,0 +1,187 @@
+import React from 'react';
+import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { SetChip } from './SetChip';
+import type { LoggedExercise } from '../types';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Icon } from '../../../shared/components/Icon';
+import { formatShortDate } from '../../../shared/lib/date';
+import { usePrefsStore } from '../../../shared/store/prefsStore';
+import { formatWeight } from '../../../shared/lib/weight';
+
+interface Props {
+  exercise: LoggedExercise;
+  exerciseIndex: number;
+  totalExercises: number;
+  isLastExercise: boolean;
+  previousExercise: LoggedExercise | null;
+  onOpenLog: () => void;
+  onDeleteSet: (index: number) => void;
+  onFinish: () => void;
+  onCancel: () => void;
+}
+
+const MAX_DOTS = 8;
+
+function DotProgress({ current, total }: { current: number; total: number }) {
+  let startIdx = 0;
+
+  if (total > MAX_DOTS) {
+    const half = Math.floor(MAX_DOTS / 2);
+    startIdx = Math.max(0, Math.min(current - half, total - MAX_DOTS));
+  }
+
+  const endIdx = Math.min(startIdx + MAX_DOTS, total);
+  const dots = Array.from({ length: endIdx - startIdx }, (_, i) => startIdx + i);
+
+  return (
+    <View className="flex-row items-center justify-center gap-1.5 mb-1">
+      {dots.map((idx) => {
+        const isActive = idx === current;
+        const isCompleted = idx < current;
+        // Dot sizes: active = 9px, normal = 6px (inline style needed for dynamic sizing)
+        const size = isActive ? 9 : 6;
+        const bg = isActive ? '#E8FF47' : isCompleted ? '#8A8580' : '#3D3B38';
+        return (
+          <View
+            key={idx}
+            style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: bg }}
+          />
+        );
+      })}
+    </View>
+  );
+}
+
+export function ExerciseScreen({
+  exercise, exerciseIndex, totalExercises, isLastExercise, previousExercise,
+  onOpenLog, onDeleteSet, onFinish, onCancel,
+}: Props) {
+  const isFirst = exerciseIndex === 0;
+  const { weightUnit } = usePrefsStore();
+
+  return (
+    <SafeAreaView className="flex-1 bg-surface-0 px-5 pt-4 pb-8">
+      {/* Header row: cancel + progress + finish */}
+      <View className="flex-row items-center justify-between mb-4">
+        <TouchableOpacity
+          onPress={onCancel}
+          accessibilityLabel="Cancel workout"
+          activeOpacity={0.7}
+          className="p-1"
+        >
+          <Icon name="close" size={24} color="text-secondary" />
+        </TouchableOpacity>
+
+        <View className="flex-1 items-center">
+          <DotProgress current={exerciseIndex} total={totalExercises} />
+          <View className="flex-row items-center gap-1.5">
+            <Icon name="dumbbell" size={14} color="text-secondary" />
+            <Text className="text-text-secondary font-mono text-xs">
+              {exerciseIndex + 1} / {totalExercises}
+            </Text>
+          </View>
+        </View>
+
+        {isLastExercise ? (
+          <TouchableOpacity
+            className="bg-success rounded-lg px-3 py-2 flex-row items-center gap-1"
+            onPress={onFinish}
+            accessibilityLabel="Finish workout"
+            activeOpacity={0.7}
+          >
+            <Icon name="flag-checkered" size={18} color="surface-0" />
+            <Text className="text-surface-0 font-sans-bold text-sm">Finish</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 68 }} />
+        )}
+      </View>
+
+      {/* Swipe direction hints */}
+      <View className="flex-row items-center justify-between mb-2">
+        <View style={{ width: 24 }}>
+          {!isFirst && <Icon name="chevron-left" size={24} color="text-disabled" />}
+        </View>
+        <View style={{ width: 24 }}>
+          {!isLastExercise && <Icon name="chevron-right" size={24} color="text-disabled" />}
+          {isLastExercise && <Icon name="flag-checkered" size={24} color="text-disabled" />}
+        </View>
+      </View>
+
+      <Text className="text-text-primary font-sans-bold text-4xl mb-1" numberOfLines={2}>
+        {exercise.exerciseName}
+      </Text>
+
+      <View className="flex-row items-center mt-1 mb-4">
+        <Text className="text-accent font-mono-bold text-2xl">{exercise.sets.length}</Text>
+        <Text className="text-text-secondary font-mono text-base ml-1">
+          {exercise.sets.length === 1 ? 'set' : 'sets'}
+        </Text>
+      </View>
+
+      {/* Previous performance panel */}
+      {previousExercise && (
+        <View className="bg-surface-1 rounded-lg px-4 py-3 mb-4 border border-surface-2">
+          <View className="flex-row items-center justify-between mb-2">
+            <Text className="text-text-secondary font-sans text-xs">Last time</Text>
+            <Text className="text-text-secondary font-sans text-xs">
+              {previousExercise.sets.length > 0
+                ? formatShortDate(previousExercise.sets[0].loggedAt)
+                : ''}
+            </Text>
+          </View>
+          {previousExercise.sets.slice(0, 5).map((set, i) => {
+            const w = formatWeight(set.weightKg, weightUnit);
+            const unit = weightUnit;
+            const hasFail = set.effort?.toFailure;
+            const hasRpe = set.effort?.rpe !== undefined;
+            return (
+              <View key={`prev-${i}`} className="flex-row items-center gap-1 mb-0.5 flex-wrap">
+                <Text className="text-text-disabled font-sans text-xs">Set {i + 1}</Text>
+                <Text className="text-text-primary font-mono text-sm"> {w}</Text>
+                <Text className="text-text-secondary font-mono text-sm"> {unit} × </Text>
+                <Text className="text-text-primary font-mono text-sm">{set.reps}</Text>
+                <Text className="text-text-secondary font-mono text-sm"> reps</Text>
+                {(hasFail || hasRpe) && (
+                  <View className={`rounded-md px-1 py-0.5 ${hasFail ? 'bg-danger/10' : 'bg-surface-2'}`}>
+                    <Text className={`text-xs font-sans ${hasFail ? 'text-danger' : 'text-text-secondary'}`}>
+                      {hasFail && hasRpe ? `FAIL · RPE ${set.effort?.rpe}` : hasFail ? 'FAIL' : `RPE ${set.effort?.rpe}`}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            );
+          })}
+          {previousExercise.sets.length > 5 && (
+            <Text className="text-text-disabled font-sans text-xs mt-1">
+              +{previousExercise.sets.length - 5} more
+            </Text>
+          )}
+        </View>
+      )}
+
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+        <View className="flex-row flex-wrap">
+          {exercise.sets.map((set, i) => (
+            <SetChip
+              key={`${set.loggedAt}-${i}`}
+              setNumber={i + 1}
+              set={set}
+              onDelete={() => onDeleteSet(i)}
+            />
+          ))}
+        </View>
+      </ScrollView>
+
+      <TouchableOpacity
+        className="bg-surface-1 border border-text-disabled rounded-lg py-5 flex-row items-center justify-center gap-2 mt-4"
+        onPress={onOpenLog}
+        accessibilityLabel="Log a set"
+        activeOpacity={0.7}
+      >
+        <Icon name="plus-circle-outline" size={20} color="accent" />
+        <Text className="text-accent font-sans-bold text-xl">Set</Text>
+      </TouchableOpacity>
+    </SafeAreaView>
+  );
+}

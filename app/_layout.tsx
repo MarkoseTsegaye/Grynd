@@ -1,0 +1,55 @@
+import '../src/global.css';
+import React, { useEffect } from 'react';
+import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import {
+  useFonts,
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_700Bold,
+} from '@expo-google-fonts/inter';
+import {
+  JetBrainsMono_400Regular,
+  JetBrainsMono_700Bold,
+} from '@expo-google-fonts/jetbrains-mono';
+import { View } from 'react-native';
+import { usePrefsStore } from '../src/shared/store/prefsStore';
+import { DevBadge } from '../src/shared/components/DevBadge';
+
+export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_700Bold,
+    JetBrainsMono_400Regular,
+    JetBrainsMono_700Bold,
+  });
+
+  const { loadPrefs } = usePrefsStore();
+
+  useEffect(() => {
+    loadPrefs();
+  }, [loadPrefs]);
+
+  if (!fontsLoaded) {
+    return <View className="flex-1 bg-surface-0" />;
+  }
+
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <BottomSheetModalProvider>
+        <StatusBar style="light" />
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#0A0A0A' } }}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="workout/[splitId]" options={{ animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="splits/[splitId]" options={{ animation: 'slide_from_right', headerShown: true, headerStyle: { backgroundColor: '#141414' }, headerTintColor: '#F0EDE8', headerTitle: 'Manage Split' }} />
+          <Stack.Screen name="history/[sessionId]" options={{ animation: 'slide_from_right', headerShown: true, headerStyle: { backgroundColor: '#141414' }, headerTintColor: '#F0EDE8', headerTitle: 'Session' }} />
+          <Stack.Screen name="cycle" options={{ animation: 'slide_from_right', headerShown: true, headerStyle: { backgroundColor: '#141414' }, headerTintColor: '#F0EDE8', headerTitle: 'Training Cycle' }} />
+        </Stack>
+        <DevBadge />
+      </BottomSheetModalProvider>
+    </GestureHandlerRootView>
+  );
+}
