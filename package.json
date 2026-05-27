@@ -10,7 +10,8 @@
     "ios": "cross-env APP_ENV=development npx expo run:ios",
     "build:prod": "cross-env APP_ENV=production eas build --profile production",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src/ app/"
+    "lint": "eslint src/ app/",
+    "orchestrate": "node tools/orchestrator/orchestrate.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
@@ -38,9 +39,13 @@
     "zustand": "^5.0.13"
   },
   "devDependencies": {
+    "@cursor/sdk": "^1.0.0",
+    "@typescript-eslint/parser": "^8.44.0",
     "@types/react": "~19.1.0",
     "babel-preset-expo": "~54.0.10",
     "cross-env": "^10.1.0",
+    "eslint": "^9.34.0",
+    "tsx": "^4.20.5",
     "typescript": "~5.9.2"
   },
   "private": true
