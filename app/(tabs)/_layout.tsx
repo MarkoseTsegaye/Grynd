@@ -2,6 +2,7 @@ import React from 'react';
 import { Tabs } from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { colors } from '../../src/shared/theme/colors';
+import { typography } from '../../src/shared/theme/typography';
 
 export default function TabsLayout() {
   return (
@@ -11,7 +12,7 @@ export default function TabsLayout() {
         tabBarStyle: { backgroundColor: colors['surface-1'], borderTopColor: colors['surface-2'] },
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors['text-secondary'],
-        tabBarLabelStyle: { fontFamily: 'Inter_500Medium', fontSize: 12 },
+        tabBarLabelStyle: { fontFamily: typography.fonts.sansMedium, fontSize: typography.sizes.xs },
       }}
     >
       <Tabs.Screen
