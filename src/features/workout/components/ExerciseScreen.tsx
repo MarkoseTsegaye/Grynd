@@ -62,14 +62,14 @@ export function ExerciseScreen({
 
   const body = (
     <>
-      {/* Swipe direction hints */}
+      {/* Swipe direction hints: left = forward, right = back */}
       <View className="flex-row items-center justify-between mb-2">
         <View style={{ width: 24 }}>
-          {!isFirst && <Icon name="chevron-left" size={24} color="text-disabled" />}
+          {!isLastExercise && <Icon name="chevron-left" size={24} color="text-disabled" />}
+          {isLastExercise && <Icon name="flag-checkered" size={24} color="text-disabled" />}
         </View>
         <View style={{ width: 24 }}>
-          {!isLastExercise && <Icon name="chevron-right" size={24} color="text-disabled" />}
-          {isLastExercise && <Icon name="flag-checkered" size={24} color="text-disabled" />}
+          {!isFirst && <Icon name="chevron-right" size={24} color="text-disabled" />}
         </View>
       </View>
 

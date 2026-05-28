@@ -165,7 +165,7 @@ export default function WorkoutScreen() {
       if (!val) {
         setShowSwipeHint(true);
         hintOpacity.value = withTiming(1, { duration: 300 });
-        hintTranslateX.value = withTiming(50, { duration: 1000 });
+        hintTranslateX.value = withTiming(-50, { duration: 1000 });
         const fadeTimer = setTimeout(() => {
           hintOpacity.value = withTiming(0, { duration: 400 });
           AsyncStorage.setItem(STORAGE_KEYS.HAS_SEEN_SWIPE_HINT, 'true');
@@ -183,8 +183,8 @@ export default function WorkoutScreen() {
 
   const translateX = useSharedValue(0);
 
-  // Right swipe = next exercise (or finish on last); left swipe = prev
-  const doSwipeRight = useCallback(() => {
+  // Left swipe = next exercise (or finish on last); right swipe = prev
+  const doSwipeNext = useCallback(() => {
     if (isLastExercise) {
       handleFinish().then(() => router.replace('/(tabs)/history'));
     } else {
@@ -192,7 +192,7 @@ export default function WorkoutScreen() {
     }
   }, [isLastExercise, handleFinish, handleSwipeNext, router]);
 
-  const doSwipeLeft = useCallback(() => {
+  const doSwipePrev = useCallback(() => {
     handleSwipePrev();
   }, [handleSwipePrev]);
 
@@ -210,14 +210,14 @@ export default function WorkoutScreen() {
           const leftCommit =
             e.translationX < -SWIPE_THRESHOLD || e.velocityX < -SWIPE_VELOCITY_THRESHOLD;
 
-          if (rightCommit) {
-            runOnJS(doSwipeRight)();
-          } else if (leftCommit) {
-            runOnJS(doSwipeLeft)();
+          if (leftCommit) {
+            runOnJS(doSwipeNext)();
+          } else if (rightCommit) {
+            runOnJS(doSwipePrev)();
           }
           translateX.value = withSpring(0);
         }),
-    [logSheetVisible, doSwipeRight, doSwipeLeft, translateX],
+    [logSheetVisible, doSwipeNext, doSwipePrev, translateX],
   );
 
   const animStyle = useAnimatedStyle(() => ({
@@ -294,8 +294,8 @@ export default function WorkoutScreen() {
         <Animated.View
           style={[hintStyle, { position: 'absolute', bottom: 120, left: 0, right: 0, alignItems: 'center', pointerEvents: 'none' }]}
         >
-          <Icon name="gesture-swipe-right" size={36} color="text-secondary" />
-          <Text className="text-text-secondary font-sans text-xs mt-1">Swipe to next exercise</Text>
+          <Icon name="gesture-swipe-left" size={36} color="text-secondary" />
+          <Text className="text-text-secondary font-sans text-xs mt-1">Swipe left for next exercise</Text>
         </Animated.View>
       )}
 
