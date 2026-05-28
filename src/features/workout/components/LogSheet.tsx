@@ -62,12 +62,22 @@ export function LogSheet({
   );
 
   useEffect(() => {
+    let rafId: number | null = null;
+    let focusTimer: ReturnType<typeof setTimeout> | null = null;
+
     if (visible) {
-      sheetRef.current?.present();
-      setTimeout(() => repsRef.current?.focus(), 200);
+      rafId = requestAnimationFrame(() => {
+        sheetRef.current?.present();
+        focusTimer = setTimeout(() => repsRef.current?.focus(), 200);
+      });
     } else {
       sheetRef.current?.dismiss();
     }
+
+    return () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      if (focusTimer !== null) clearTimeout(focusTimer);
+    };
   }, [visible]);
 
   const reps = parseInt(repInput, 10);
@@ -86,6 +96,8 @@ export function LogSheet({
       ref={sheetRef}
       snapPoints={snapPoints}
       enablePanDownToClose
+      enableHandlePanningGesture={false}
+      enableContentPanningGesture={false}
       keyboardBehavior="interactive"
       keyboardBlurBehavior="restore"
       backdropComponent={renderBackdrop}

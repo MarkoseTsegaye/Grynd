@@ -18,6 +18,7 @@ interface Props {
   onDeleteSet: (index: number) => void;
   onFinish: () => void;
   onCancel: () => void;
+  renderSwipeable?: (body: React.ReactNode) => React.ReactNode;
 }
 
 const MAX_DOTS = 8;
@@ -54,49 +55,13 @@ function DotProgress({ current, total }: { current: number; total: number }) {
 
 export function ExerciseScreen({
   exercise, exerciseIndex, totalExercises, isLastExercise, previousExercise,
-  onOpenLog, onDeleteSet, onFinish, onCancel,
+  onOpenLog, onDeleteSet, onFinish, onCancel, renderSwipeable,
 }: Props) {
   const isFirst = exerciseIndex === 0;
   const { weightUnit } = usePrefsStore();
 
-  return (
-    <SafeAreaView className="flex-1 bg-surface-0 px-5 pt-4 pb-8">
-      {/* Header row: cancel + progress + finish */}
-      <View className="flex-row items-center justify-between mb-4">
-        <TouchableOpacity
-          onPress={onCancel}
-          accessibilityLabel="Cancel workout"
-          activeOpacity={0.7}
-          className="p-1"
-        >
-          <Icon name="close" size={24} color="text-secondary" />
-        </TouchableOpacity>
-
-        <View className="flex-1 items-center">
-          <DotProgress current={exerciseIndex} total={totalExercises} />
-          <View className="flex-row items-center gap-1.5">
-            <Icon name="dumbbell" size={14} color="text-secondary" />
-            <Text className="text-text-secondary font-mono text-xs">
-              {exerciseIndex + 1} / {totalExercises}
-            </Text>
-          </View>
-        </View>
-
-        {isLastExercise ? (
-          <TouchableOpacity
-            className="bg-success rounded-lg px-3 py-2 flex-row items-center gap-1"
-            onPress={onFinish}
-            accessibilityLabel="Finish workout"
-            activeOpacity={0.7}
-          >
-            <Icon name="flag-checkered" size={18} color="surface-0" />
-            <Text className="text-surface-0 font-sans-bold text-sm">Finish</Text>
-          </TouchableOpacity>
-        ) : (
-          <View style={{ width: 68 }} />
-        )}
-      </View>
-
+  const body = (
+    <>
       {/* Swipe direction hints */}
       <View className="flex-row items-center justify-between mb-2">
         <View style={{ width: 24 }}>
@@ -172,6 +137,50 @@ export function ExerciseScreen({
           ))}
         </View>
       </ScrollView>
+    </>
+  );
+
+  return (
+    <SafeAreaView className="flex-1 bg-surface-0 px-5 pt-4 pb-8">
+      {/* Header row: cancel + progress + finish */}
+      <View className="flex-row items-center justify-between mb-4">
+        <TouchableOpacity
+          onPress={onCancel}
+          accessibilityLabel="Cancel workout"
+          activeOpacity={0.7}
+          className="p-1"
+        >
+          <Icon name="close" size={24} color="text-secondary" />
+        </TouchableOpacity>
+
+        <View className="flex-1 items-center">
+          <DotProgress current={exerciseIndex} total={totalExercises} />
+          <View className="flex-row items-center gap-1.5">
+            <Icon name="dumbbell" size={14} color="text-secondary" />
+            <Text className="text-text-secondary font-mono text-xs">
+              {exerciseIndex + 1} / {totalExercises}
+            </Text>
+          </View>
+        </View>
+
+        {isLastExercise ? (
+          <TouchableOpacity
+            className="bg-success rounded-lg px-3 py-2 flex-row items-center gap-1"
+            onPress={onFinish}
+            accessibilityLabel="Finish workout"
+            activeOpacity={0.7}
+          >
+            <Icon name="flag-checkered" size={18} color="surface-0" />
+            <Text className="text-surface-0 font-sans-bold text-sm">Finish</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 68 }} />
+        )}
+      </View>
+
+      <View className="flex-1">
+        {renderSwipeable ? renderSwipeable(body) : body}
+      </View>
 
       <TouchableOpacity
         className="bg-surface-1 border border-text-disabled rounded-lg py-5 flex-row items-center justify-center gap-2 mt-4"

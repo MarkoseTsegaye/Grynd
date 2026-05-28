@@ -194,28 +194,42 @@ export default function WorkoutScreen() {
     handleSwipePrev();
   }, [handleSwipePrev]);
 
-  const panGesture = Gesture.Pan()
-    .activeOffsetX([-20, 20])
-    .onUpdate((e) => {
-      translateX.value = e.translationX * 0.3;
-    })
-    .onEnd((e) => {
-      const rightCommit =
-        e.translationX > SWIPE_THRESHOLD || e.velocityX > SWIPE_VELOCITY_THRESHOLD;
-      const leftCommit =
-        e.translationX < -SWIPE_THRESHOLD || e.velocityX < -SWIPE_VELOCITY_THRESHOLD;
+  const panGesture = useMemo(
+    () =>
+      Gesture.Pan()
+        .enabled(!logSheetVisible)
+        .activeOffsetX([-20, 20])
+        .onUpdate((e) => {
+          translateX.value = e.translationX * 0.3;
+        })
+        .onEnd((e) => {
+          const rightCommit =
+            e.translationX > SWIPE_THRESHOLD || e.velocityX > SWIPE_VELOCITY_THRESHOLD;
+          const leftCommit =
+            e.translationX < -SWIPE_THRESHOLD || e.velocityX < -SWIPE_VELOCITY_THRESHOLD;
 
-      if (rightCommit) {
-        runOnJS(doSwipeRight)();
-      } else if (leftCommit) {
-        runOnJS(doSwipeLeft)();
-      }
-      translateX.value = withSpring(0);
-    });
+          if (rightCommit) {
+            runOnJS(doSwipeRight)();
+          } else if (leftCommit) {
+            runOnJS(doSwipeLeft)();
+          }
+          translateX.value = withSpring(0);
+        }),
+    [logSheetVisible, doSwipeRight, doSwipeLeft, translateX],
+  );
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: translateX.value }],
   }));
+
+  const renderSwipeable = useCallback(
+    (body: React.ReactNode) => (
+      <GestureDetector gesture={panGesture}>
+        <Animated.View style={[{ flex: 1 }, animStyle]}>{body}</Animated.View>
+      </GestureDetector>
+    ),
+    [panGesture, animStyle],
+  );
 
   const handleCancelPress = useCallback(() => {
     cancelSheetRef.current?.present();
@@ -260,21 +274,18 @@ export default function WorkoutScreen() {
 
   return (
     <View className="flex-1 bg-surface-0">
-      <GestureDetector gesture={panGesture}>
-        <Animated.View style={[{ flex: 1 }, animStyle]}>
-          <ExerciseScreen
-            exercise={currentExercise}
-            exerciseIndex={currentExerciseIndex}
-            totalExercises={totalExercises}
-            isLastExercise={isLastExercise}
-            previousExercise={currentPreviousPerformance}
-            onOpenLog={openLogSheet}
-            onDeleteSet={handleDeleteSet}
-            onFinish={async () => { await handleFinish(); router.replace('/(tabs)/history'); }}
-            onCancel={handleCancelPress}
-          />
-        </Animated.View>
-      </GestureDetector>
+      <ExerciseScreen
+        exercise={currentExercise}
+        exerciseIndex={currentExerciseIndex}
+        totalExercises={totalExercises}
+        isLastExercise={isLastExercise}
+        previousExercise={currentPreviousPerformance}
+        onOpenLog={openLogSheet}
+        onDeleteSet={handleDeleteSet}
+        onFinish={async () => { await handleFinish(); router.replace('/(tabs)/history'); }}
+        onCancel={handleCancelPress}
+        renderSwipeable={renderSwipeable}
+      />
 
       {/* Swipe hint overlay */}
       {showSwipeHint && (
