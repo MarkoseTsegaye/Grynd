@@ -6,7 +6,8 @@ import { useHaptics } from '../../../shared/hooks/useHaptics';
 import { getPreviousPerformance } from '../../../storage/adapters/sessions';
 import {
   computePlateWeightKg,
-  lbsToKg,
+  normalizeWeightKg,
+  parseDisplayWeightToKg,
   LBS_PLATES,
   KG_PLATES,
 } from '../../../shared/lib/weight';
@@ -69,10 +70,8 @@ export function useWorkout(logSheetRef: RefObject<BottomSheetModal | null>) {
   const plateList = weightUnit === 'lbs' ? LBS_PLATES : KG_PLATES;
 
   const computedWeightKg: number = weightMode === 'plates'
-    ? computePlateWeightKg(plates, weightUnit)
-    : weightUnit === 'lbs'
-      ? lbsToKg(parseFloat(weightInput) || 0)
-      : parseFloat(weightInput) || 0;
+    ? normalizeWeightKg(computePlateWeightKg(plates, weightUnit), weightUnit)
+    : parseDisplayWeightToKg(weightInput, weightUnit);
 
   const resetLogForm = useCallback(() => {
     setRepInput('');

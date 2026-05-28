@@ -264,6 +264,7 @@ export function LogSheet({
                 value={weightInput}
                 onChangeText={onChangeWeight}
                 suffix={weightUnit}
+                keyboardType="number-pad"
                 returnKeyType="next"
                 onSubmitEditing={() => repsRef.current?.focus()}
                 onFocus={() => handleFieldFocus('weight')}
@@ -380,6 +381,7 @@ export function LogSheet({
                   size="compact"
                   InputComponent={BottomSheetTextInput}
                   value={rpeInput}
+                  integerOnly={false}
                   onChangeText={(v) => {
                     const num = parseInt(v, 10);
                     if (v === '') { onChangeRpe(''); return; }

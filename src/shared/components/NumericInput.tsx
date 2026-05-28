@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, TextInput, Text, Platform } from 'react-native';
 import type { TextInputProps } from 'react-native';
+import { sanitizeIntegerInput } from '../lib/weight';
 import { typography } from '../theme/typography';
 
 type NumericInputSize = 'default' | 'compact';
@@ -34,6 +35,7 @@ interface NumericInputProps {
   accessibilityLabel?: string;
   InputComponent?: React.ElementType<TextInputProps>;
   size?: NumericInputSize;
+  integerOnly?: boolean;
 }
 
 export const NumericInput = React.forwardRef<TextInput, NumericInputProps>(
@@ -46,17 +48,25 @@ export const NumericInput = React.forwardRef<TextInput, NumericInputProps>(
       autoFocus,
       onSubmitEditing,
       onFocus,
-      keyboardType = 'decimal-pad',
+      keyboardType = 'number-pad',
       returnKeyType = 'done',
       maxLength = 6,
       accessibilityLabel,
       InputComponent = TextInput,
       size = 'default',
+      integerOnly = true,
     },
     ref,
   ) => {
     const Input = (InputComponent ?? TextInput) as typeof TextInput;
     const config = sizeConfig[size];
+
+    const handleChangeText = useCallback(
+      (text: string) => {
+        onChangeText(integerOnly ? sanitizeIntegerInput(text) : text);
+      },
+      [integerOnly, onChangeText],
+    );
 
     return (
       <View className={`flex-row items-center justify-center bg-surface-2 rounded-lg ${config.container}`}>
@@ -65,7 +75,7 @@ export const NumericInput = React.forwardRef<TextInput, NumericInputProps>(
           className={`text-text-primary font-mono-bold flex-1 ${config.inputClass}`}
           keyboardType={keyboardType}
           value={value}
-          onChangeText={onChangeText}
+          onChangeText={handleChangeText}
           placeholder={placeholder ?? '0'}
           placeholderTextColor="#3D3B38"
           returnKeyType={returnKeyType}

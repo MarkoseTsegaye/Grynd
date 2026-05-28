@@ -1,8 +1,8 @@
 export const BAR_WEIGHT_LBS = 45;
 export const BAR_WEIGHT_KG = 45 / 2.2046;
 
-export const LBS_PLATES = [2.5, 5, 10, 25, 35, 45];
-export const KG_PLATES = [1.25, 2.5, 5, 10, 15, 20];
+export const LBS_PLATES = [5, 10, 25, 35, 45];
+export const KG_PLATES = [5, 10, 15, 20];
 
 export function lbsToKg(lbs: number): number {
   return lbs / 2.2046;
@@ -10,6 +10,32 @@ export function lbsToKg(lbs: number): number {
 
 export function kgToLbs(kg: number): number {
   return kg * 2.2046;
+}
+
+/** Keeps leading digits only so pasted values like "12.5" become "12", not "125". */
+export function sanitizeIntegerInput(text: string): string {
+  if (text === '') return '';
+  const match = text.match(/^\d+/);
+  return match?.[0] ?? '';
+}
+
+export function weightKgToDisplay(weightKg: number, unit: 'kg' | 'lbs'): number {
+  if (unit === 'lbs') return Math.round(kgToLbs(weightKg));
+  return Math.round(weightKg);
+}
+
+export function displayWeightToKg(display: number, unit: 'kg' | 'lbs'): number {
+  if (unit === 'lbs') return lbsToKg(display);
+  return display;
+}
+
+export function parseDisplayWeightToKg(value: string, unit: 'kg' | 'lbs'): number {
+  const display = parseInt(value, 10) || 0;
+  return displayWeightToKg(display, unit);
+}
+
+export function normalizeWeightKg(weightKg: number, unit: 'kg' | 'lbs'): number {
+  return displayWeightToKg(weightKgToDisplay(weightKg, unit), unit);
 }
 
 export function computePlateWeightKg(plates: Record<number, number>, unit: 'kg' | 'lbs'): number {
@@ -24,8 +50,5 @@ export function computePlateWeightKg(plates: Record<number, number>, unit: 'kg' 
 }
 
 export function formatWeight(weightKg: number, unit: 'kg' | 'lbs'): string {
-  if (unit === 'lbs') {
-    return Math.round(kgToLbs(weightKg) * 10) / 10 + '';
-  }
-  return Math.round(weightKg * 10) / 10 + '';
+  return String(weightKgToDisplay(weightKg, unit));
 }
