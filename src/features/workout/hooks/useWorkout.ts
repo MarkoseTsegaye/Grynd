@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
+import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useWorkoutStore } from '../store/workoutStore';
 import { usePrefsStore } from '../../../shared/store/prefsStore';
 import { useHaptics } from '../../../shared/hooks/useHaptics';
@@ -13,7 +14,7 @@ import type { LoggedExercise } from '../types';
 
 type WeightMode = 'straight' | 'plates';
 
-export function useWorkout() {
+export function useWorkout(logSheetRef: RefObject<BottomSheetModal | null>) {
   const { session, currentExerciseIndex, logSet, deleteSet, goToExercise, finishWorkout } =
     useWorkoutStore();
   const { weightUnit, loadPrefs, isLoaded: prefsLoaded, setWeightUnit } = usePrefsStore();
@@ -64,22 +65,27 @@ export function useWorkout() {
       ? lbsToKg(parseFloat(weightInput) || 0)
       : parseFloat(weightInput) || 0;
 
-  const openLogSheet = useCallback(() => {
+  const resetLogForm = useCallback(() => {
     setRepInput('');
     setWeightInput('');
     setPlates({});
     setToFailure(false);
     setRpeInput('');
-    setLogSheetVisible(true);
   }, []);
 
+  const openLogSheet = useCallback(() => {
+    resetLogForm();
+    logSheetRef.current?.present();
+  }, [logSheetRef, resetLogForm]);
+
   const closeLogSheet = useCallback(() => {
+    logSheetRef.current?.dismiss();
     setLogSheetVisible(false);
-    setRepInput('');
-    setWeightInput('');
-    setPlates({});
-    setToFailure(false);
-    setRpeInput('');
+    resetLogForm();
+  }, [logSheetRef, resetLogForm]);
+
+  const handleLogSheetChange = useCallback((index: number) => {
+    setLogSheetVisible(index >= 0);
   }, []);
 
   const handleConfirmSet = useCallback(async () => {
@@ -183,6 +189,7 @@ export function useWorkout() {
     isLogging,
     openLogSheet,
     closeLogSheet,
+    handleLogSheetChange,
     handleConfirmSet,
     handleDeleteSet,
     handleSwipeNext,

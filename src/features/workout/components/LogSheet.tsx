@@ -1,4 +1,5 @@
-import React, { useRef, useEffect, useCallback, useMemo } from 'react';
+import React, { useRef, useCallback, useMemo } from 'react';
+import type { RefObject } from 'react';
 import { View, Text, TouchableOpacity, TextInput } from 'react-native';
 import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
@@ -7,7 +8,8 @@ import { Icon } from '../../../shared/components/Icon';
 import { formatWeight } from '../../../shared/lib/weight';
 
 interface Props {
-  visible: boolean;
+  sheetRef: RefObject<BottomSheetModal | null>;
+  onChange: (index: number) => void;
   // Reps
   repInput: string;
   onChangeReps: (val: string) => void;
@@ -38,7 +40,8 @@ interface Props {
 }
 
 export function LogSheet({
-  visible,
+  sheetRef,
+  onChange,
   repInput, onChangeReps,
   weightMode, onToggleWeightMode,
   weightUnit, onToggleUnit,
@@ -48,7 +51,6 @@ export function LogSheet({
   rpeInput, onChangeRpe,
   isLogging, onConfirm, onClose,
 }: Props) {
-  const sheetRef = useRef<BottomSheetModal>(null);
   const repsRef = useRef<TextInput>(null);
   const weightRef = useRef<TextInput>(null);
   const rpeRef = useRef<TextInput>(null);
@@ -61,24 +63,15 @@ export function LogSheet({
     [],
   );
 
-  useEffect(() => {
-    let rafId: number | null = null;
-    let focusTimer: ReturnType<typeof setTimeout> | null = null;
-
-    if (visible) {
-      rafId = requestAnimationFrame(() => {
-        sheetRef.current?.present();
-        focusTimer = setTimeout(() => repsRef.current?.focus(), 200);
-      });
-    } else {
-      sheetRef.current?.dismiss();
-    }
-
-    return () => {
-      if (rafId !== null) cancelAnimationFrame(rafId);
-      if (focusTimer !== null) clearTimeout(focusTimer);
-    };
-  }, [visible]);
+  const handleSheetChange = useCallback(
+    (index: number) => {
+      onChange(index);
+      if (index >= 0) {
+        setTimeout(() => repsRef.current?.focus(), 200);
+      }
+    },
+    [onChange],
+  );
 
   const reps = parseInt(repInput, 10);
   const weightValid = computedWeightKg > 0;
@@ -101,6 +94,7 @@ export function LogSheet({
       keyboardBehavior="interactive"
       keyboardBlurBehavior="restore"
       backdropComponent={renderBackdrop}
+      onChange={handleSheetChange}
       onDismiss={onClose}
       backgroundStyle={{ backgroundColor: '#141414' }}
       handleIndicatorStyle={{ backgroundColor: '#3D3B38' }}

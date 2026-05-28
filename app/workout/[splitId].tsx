@@ -32,6 +32,8 @@ export default function WorkoutScreen() {
   const [bootstrapState, setBootstrapState] = useState<BootstrapState>('loading');
   const [bootstrapMessage, setBootstrapMessage] = useState<string | null>(null);
 
+  const logSheetRef = useRef<BottomSheetModal>(null);
+
   const {
     session, currentExercise, currentExerciseIndex, totalExercises, isLastExercise,
     logSheetVisible,
@@ -43,10 +45,10 @@ export default function WorkoutScreen() {
     toFailure, setToFailure,
     rpeInput, setRpeInput,
     isLogging,
-    openLogSheet, closeLogSheet, handleConfirmSet, handleDeleteSet,
+    openLogSheet, closeLogSheet, handleLogSheetChange, handleConfirmSet, handleDeleteSet,
     handleSwipeNext, handleSwipePrev, handleFinish,
     currentPreviousPerformance,
-  } = useWorkout();
+  } = useWorkout(logSheetRef);
 
   // Cancel sheet
   const cancelSheetRef = useRef<BottomSheetModal>(null);
@@ -298,7 +300,8 @@ export default function WorkoutScreen() {
       )}
 
       <LogSheet
-        visible={logSheetVisible}
+        sheetRef={logSheetRef}
+        onChange={handleLogSheetChange}
         repInput={repInput}
         onChangeReps={setRepInput}
         weightMode={weightMode}
