@@ -157,10 +157,7 @@ export function LogSheet({
       const isOpen = index >= 0;
       setSheetOpen(isOpen);
       onChange(index);
-      if (isOpen) {
-        focusedFieldRef.current = 'reps';
-        setTimeout(() => repsRef.current?.focus(), 200);
-      } else {
+      if (!isOpen) {
         focusedFieldRef.current = null;
         setKeyboardHeight(0);
       }
