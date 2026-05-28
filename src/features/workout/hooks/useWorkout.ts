@@ -134,16 +134,14 @@ export function useWorkout(logSheetRef: RefObject<BottomSheetModal | null>) {
   const handleSwipeNext = useCallback(() => {
     if (currentExerciseIndex < totalExercises - 1) {
       goToExercise(currentExerciseIndex + 1);
-      light();
     }
-  }, [currentExerciseIndex, totalExercises, goToExercise, light]);
+  }, [currentExerciseIndex, totalExercises, goToExercise]);
 
   const handleSwipePrev = useCallback(() => {
     if (currentExerciseIndex > 0) {
       goToExercise(currentExerciseIndex - 1);
-      light();
     }
-  }, [currentExerciseIndex, goToExercise, light]);
+  }, [currentExerciseIndex, goToExercise]);
 
   const handleFinish = useCallback(async () => {
     success();

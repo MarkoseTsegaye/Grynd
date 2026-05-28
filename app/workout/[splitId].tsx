@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, Dimensions, AppState } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import Animated, {
@@ -18,9 +18,16 @@ import { useWorkoutStore } from '../../src/features/workout';
 import { useSplitsStore } from '../../src/features/splits';
 import { Icon } from '../../src/shared/components/Icon';
 import { STORAGE_KEYS } from '../../src/storage/keys';
+import {
+  SWIPE_THRESHOLD,
+  SWIPE_VELOCITY_THRESHOLD,
+  COMMIT_EXIT_TIMING,
+  COMMIT_ENTER_TIMING,
+  CANCEL_SPRING,
+  clampDragTranslation,
+} from '../../src/features/workout/constants/swipeMotion';
 
-const SWIPE_THRESHOLD = 80;
-const SWIPE_VELOCITY_THRESHOLD = 500;
+const SCREEN_WIDTH = Dimensions.get('window').width;
 
 type BootstrapState = 'loading' | 'ready' | 'error' | 'empty';
 
@@ -182,19 +189,47 @@ export default function WorkoutScreen() {
   }));
 
   const translateX = useSharedValue(0);
+  const isAnimating = useSharedValue(false);
+  const canGoPrev = useSharedValue(currentExerciseIndex > 0);
+  const isLastExerciseSV = useSharedValue(isLastExercise);
 
-  // Left swipe = next exercise (or finish on last); right swipe = prev
-  const doSwipeNext = useCallback(() => {
-    if (isLastExercise) {
-      handleFinish().then(() => router.replace('/(tabs)/history'));
-    } else {
-      handleSwipeNext();
+  useEffect(() => {
+    canGoPrev.value = currentExerciseIndex > 0;
+    isLastExerciseSV.value = isLastExercise;
+  }, [canGoPrev, currentExerciseIndex, isLastExercise, isLastExerciseSV]);
+
+  useEffect(() => {
+    if (!logSheetVisible) {
+      translateX.value = 0;
+      isAnimating.value = false;
     }
-  }, [isLastExercise, handleFinish, handleSwipeNext, router]);
+  }, [isAnimating, logSheetVisible, translateX]);
 
-  const doSwipePrev = useCallback(() => {
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'background' || nextState === 'inactive') {
+        translateX.value = 0;
+        isAnimating.value = false;
+      }
+    });
+    return () => subscription.remove();
+  }, [isAnimating, translateX]);
+
+  const triggerSwipeCommitHaptic = useCallback(() => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  }, []);
+
+  const afterSwipeNext = useCallback(() => {
+    handleSwipeNext();
+  }, [handleSwipeNext]);
+
+  const afterSwipePrev = useCallback(() => {
     handleSwipePrev();
   }, [handleSwipePrev]);
+
+  const afterSwipeFinish = useCallback(() => {
+    void handleFinish().then(() => router.replace('/(tabs)/history'));
+  }, [handleFinish, router]);
 
   const panGesture = useMemo(
     () =>
@@ -202,22 +237,78 @@ export default function WorkoutScreen() {
         .enabled(!logSheetVisible)
         .activeOffsetX([-20, 20])
         .onUpdate((e) => {
-          translateX.value = e.translationX * 0.3;
+          if (isAnimating.value) return;
+          translateX.value = clampDragTranslation(
+            e.translationX,
+            canGoPrev.value,
+            SCREEN_WIDTH,
+          );
         })
         .onEnd((e) => {
+          if (isAnimating.value) return;
+
           const rightCommit =
             e.translationX > SWIPE_THRESHOLD || e.velocityX > SWIPE_VELOCITY_THRESHOLD;
           const leftCommit =
             e.translationX < -SWIPE_THRESHOLD || e.velocityX < -SWIPE_VELOCITY_THRESHOLD;
 
           if (leftCommit) {
-            runOnJS(doSwipeNext)();
-          } else if (rightCommit) {
-            runOnJS(doSwipePrev)();
+            isAnimating.value = true;
+            if (!isLastExerciseSV.value) {
+              runOnJS(triggerSwipeCommitHaptic)();
+            }
+            translateX.value = withTiming(-SCREEN_WIDTH, COMMIT_EXIT_TIMING, (finished) => {
+              if (!finished) {
+                isAnimating.value = false;
+                return;
+              }
+              if (isLastExerciseSV.value) {
+                runOnJS(afterSwipeFinish)();
+                return;
+              }
+              runOnJS(afterSwipeNext)();
+              translateX.value = SCREEN_WIDTH;
+              translateX.value = withTiming(0, COMMIT_ENTER_TIMING, (enterFinished) => {
+                if (enterFinished) {
+                  isAnimating.value = false;
+                }
+              });
+            });
+            return;
           }
-          translateX.value = withSpring(0);
+
+          if (rightCommit && canGoPrev.value) {
+            isAnimating.value = true;
+            runOnJS(triggerSwipeCommitHaptic)();
+            translateX.value = withTiming(SCREEN_WIDTH, COMMIT_EXIT_TIMING, (finished) => {
+              if (!finished) {
+                isAnimating.value = false;
+                return;
+              }
+              runOnJS(afterSwipePrev)();
+              translateX.value = -SCREEN_WIDTH;
+              translateX.value = withTiming(0, COMMIT_ENTER_TIMING, (enterFinished) => {
+                if (enterFinished) {
+                  isAnimating.value = false;
+                }
+              });
+            });
+            return;
+          }
+
+          translateX.value = withSpring(0, CANCEL_SPRING);
         }),
-    [logSheetVisible, doSwipeNext, doSwipePrev, translateX],
+    [
+      afterSwipeFinish,
+      afterSwipeNext,
+      afterSwipePrev,
+      canGoPrev,
+      isAnimating,
+      isLastExerciseSV,
+      logSheetVisible,
+      translateX,
+      triggerSwipeCommitHaptic,
+    ],
   );
 
   const animStyle = useAnimatedStyle(() => ({
