@@ -374,9 +374,10 @@ export function LogSheet({
             </TouchableOpacity>
             <View className="flex-row items-center gap-2">
               <Text className="text-text-secondary font-sans text-sm">RPE</Text>
-              <View className="w-16">
+              <View className="w-14">
                 <NumericInput
                   ref={rpeRef}
+                  size="compact"
                   InputComponent={BottomSheetTextInput}
                   value={rpeInput}
                   onChangeText={(v) => {

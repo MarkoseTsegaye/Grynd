@@ -1,6 +1,24 @@
 import React from 'react';
-import { View, TextInput, Text } from 'react-native';
+import { View, TextInput, Text, Platform } from 'react-native';
 import type { TextInputProps } from 'react-native';
+import { typography } from '../theme/typography';
+
+type NumericInputSize = 'default' | 'compact';
+
+const sizeConfig = {
+  default: {
+    container: 'min-h-16 px-4',
+    inputClass: 'text-4xl',
+    lineHeight: typography.sizes['4xl'],
+    suffixClass: 'text-sm ml-1.5',
+  },
+  compact: {
+    container: 'min-h-10 px-2',
+    inputClass: 'text-2xl',
+    lineHeight: typography.sizes['2xl'],
+    suffixClass: 'text-xs ml-1',
+  },
+} as const;
 
 interface NumericInputProps {
   value: string;
@@ -15,6 +33,7 @@ interface NumericInputProps {
   maxLength?: number;
   accessibilityLabel?: string;
   InputComponent?: React.ElementType<TextInputProps>;
+  size?: NumericInputSize;
 }
 
 export const NumericInput = React.forwardRef<TextInput, NumericInputProps>(
@@ -32,16 +51,18 @@ export const NumericInput = React.forwardRef<TextInput, NumericInputProps>(
       maxLength = 6,
       accessibilityLabel,
       InputComponent = TextInput,
+      size = 'default',
     },
     ref,
   ) => {
     const Input = (InputComponent ?? TextInput) as typeof TextInput;
+    const config = sizeConfig[size];
 
     return (
-      <View className="flex-row items-center bg-surface-2 rounded-lg px-4 py-4">
+      <View className={`flex-row items-center justify-center bg-surface-2 rounded-lg ${config.container}`}>
         <Input
           ref={ref}
-          className="text-text-primary font-mono-bold text-4xl flex-1"
+          className={`text-text-primary font-mono-bold flex-1 ${config.inputClass}`}
           keyboardType={keyboardType}
           value={value}
           onChangeText={onChangeText}
@@ -52,12 +73,16 @@ export const NumericInput = React.forwardRef<TextInput, NumericInputProps>(
           onFocus={onFocus}
           autoFocus={autoFocus}
           textAlignVertical="center"
-          style={{ paddingTop: 0 }}
+          textAlign={size === 'compact' ? 'center' : 'left'}
+          style={{
+            lineHeight: config.lineHeight,
+            ...(Platform.OS === 'android' ? { includeFontPadding: false } : {}),
+          }}
           maxLength={maxLength}
           accessibilityLabel={accessibilityLabel}
         />
         {suffix ? (
-          <Text className="text-text-secondary font-sans text-sm ml-1">{suffix}</Text>
+          <Text className={`text-text-secondary font-sans ${config.suffixClass}`}>{suffix}</Text>
         ) : null}
       </View>
     );
