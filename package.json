@@ -11,7 +11,8 @@
     "build:prod": "cross-env APP_ENV=production eas build --profile production",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/ app/",
-    "orchestrate": "node tools/orchestrator/orchestrate.mjs"
+    "orchestrate": "node tools/orchestrator/orchestrate.mjs",
+    "orchestrate:drain": "node tools/orchestrator/drain.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",

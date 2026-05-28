@@ -1,5 +1,6 @@
 import React, { useState, useRef, useMemo, useCallback } from 'react';
 import { View, Text, TextInput, TouchableOpacity } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import DraggableFlatList, { ScaleDecorator } from 'react-native-draggable-flatlist';
 import { BottomSheetModal, BottomSheetView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
@@ -11,8 +12,13 @@ import { useCreateSplit } from '../../src/features/splits';
 import { Icon } from '../../src/shared/components/Icon';
 import type { Split } from '../../src/features/splits/types';
 
+const TAB_BAR_HEIGHT = 49;
+const FLOATING_CTA_HEIGHT = 56;
+const FLOATING_CTA_GAP = 12;
+
 export default function SplitsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { splits, isLoaded } = useSplitsList();
   const { getExercisesForSplit, reorderSplits, deleteSplit } = useSplitsStore();
   const { name, setName, canSubmit, isSubmitting, handleSubmit } = useCreateSplit(
@@ -50,6 +56,14 @@ export default function SplitsScreen() {
     setPendingDeleteSplit(null);
   }, []);
 
+  const handleToggleForm = useCallback(async () => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setShowForm((v) => !v);
+  }, []);
+
+  const ctaBottomOffset = insets.bottom + TAB_BAR_HEIGHT + FLOATING_CTA_GAP;
+  const listBottomPadding = ctaBottomOffset + FLOATING_CTA_HEIGHT + 16;
+
   if (!isLoaded) {
     return <View className="flex-1 bg-surface-0" />;
   }
@@ -78,23 +92,13 @@ export default function SplitsScreen() {
     <View className="flex-1 bg-surface-0">
       <View className="px-5 pt-14 pb-4 flex-row items-center justify-between">
         <Text className="text-text-primary font-sans-bold text-4xl">Splits</Text>
-        <View className="flex-row items-center gap-3">
-          <TouchableOpacity
-            onPress={() => router.push('/cycle')}
-            accessibilityLabel="Training cycle"
-            activeOpacity={0.7}
-          >
-            <Icon name="sync-circle" size={24} color="text-secondary" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            className="bg-accent rounded-lg px-4 py-2"
-            onPress={() => setShowForm((v) => !v)}
-            accessibilityLabel="Create new split"
-            activeOpacity={0.7}
-          >
-            <Text className="text-surface-0 font-sans-bold text-base">{showForm ? 'Cancel' : '+ New'}</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          onPress={() => router.push('/cycle')}
+          accessibilityLabel="Training cycle"
+          activeOpacity={0.7}
+        >
+          <Icon name="sync-circle" size={24} color="text-secondary" />
+        </TouchableOpacity>
       </View>
 
       {showForm && (
@@ -125,7 +129,10 @@ export default function SplitsScreen() {
       )}
 
       {splits.length === 0 ? (
-        <View className="flex-1 items-center justify-center px-8">
+        <View
+          className="flex-1 items-center justify-center px-8"
+          style={{ paddingBottom: listBottomPadding }}
+        >
           <Icon name="dumbbell" size={48} color="text-disabled" />
           <Text className="text-text-secondary font-sans text-base text-center mt-4">
             Create your first split to get started.
@@ -137,8 +144,34 @@ export default function SplitsScreen() {
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           onDragEnd={({ data }) => reorderSplits(data)}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: listBottomPadding }}
         />
+      )}
+
+      {!pendingDeleteSplit && (
+        <View
+          className="absolute left-5 right-5"
+          style={{ bottom: ctaBottomOffset }}
+          pointerEvents="box-none"
+        >
+          <TouchableOpacity
+            className="bg-accent rounded-lg py-4 items-center"
+            onPress={handleToggleForm}
+            accessibilityLabel={showForm ? 'Cancel create split' : 'Create new split'}
+            activeOpacity={0.7}
+            style={{
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.35,
+              shadowRadius: 8,
+              elevation: 8,
+            }}
+          >
+            <Text className="text-surface-0 font-sans-bold text-base">
+              {showForm ? 'Cancel' : '+ New Split'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       )}
 
       {/* Delete confirmation sheet */}

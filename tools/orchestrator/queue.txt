@@ -1,0 +1,10 @@
+# One request per line. Lines starting with # are comments and are skipped.
+# Add tasks below — drain.mjs processes them one at a time, committing after each PASS.
+#
+# Example:
+# fix the + Set button dead tap on second open
+# add rest timer between sets
+find a new place for cycles button and create cycles setting
+update cycle “add split day” modal to come up vertical move
+add done button to training cycle page
+home page calendar needs updating. Remove +N and show only up to and including the next rest day
