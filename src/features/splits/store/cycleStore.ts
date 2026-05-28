@@ -13,6 +13,7 @@ interface CycleState {
   addSplitDay: (splitId: string) => Promise<void>;
   addRestDay: () => Promise<void>;
   removeDay: (dayId: string) => Promise<void>;
+  resetCyclePosition: () => Promise<void>;
 }
 
 export const useCycleStore = create<CycleState>()(
@@ -73,6 +74,14 @@ export const useCycleStore = create<CycleState>()(
         const days = cycle.days.filter((d) => d.id !== dayId);
         const currentIndex = Math.min(cycle.currentIndex, Math.max(0, days.length - 1));
         const updated: WorkoutCycle = { ...cycle, days, currentIndex };
+        set({ cycle: updated });
+        await saveWorkoutCycle(updated);
+      },
+
+      resetCyclePosition: async () => {
+        const { cycle } = get();
+        if (!cycle || cycle.days.length === 0) return;
+        const updated: WorkoutCycle = { ...cycle, currentIndex: 0 };
         set({ cycle: updated });
         await saveWorkoutCycle(updated);
       },

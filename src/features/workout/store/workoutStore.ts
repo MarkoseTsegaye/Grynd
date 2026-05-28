@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { getActiveSession, setActiveSession, clearActiveSession, saveSession } from '../../../storage/adapters/sessions';
 import { useCycleStore } from '../../splits/store/cycleStore';
+import { usePrefsStore } from '../../../shared/store/prefsStore';
 import { generateId } from '../../../shared/lib/id';
 import type { WorkoutSession, LoggedExercise, LoggedSet } from '../types';
 import type { Split, Exercise } from '../../splits/types';
@@ -114,7 +115,9 @@ export const useWorkoutStore = create<WorkoutState>()(
         // BUG-01 fix: ensure write completes before navigation
         await saveSession(completed);
         await clearActiveSession();
-        await useCycleStore.getState().advanceCycle();
+        if (usePrefsStore.getState().autoAdvanceCycle) {
+          await useCycleStore.getState().advanceCycle();
+        }
         set({ session: null, currentExerciseIndex: 0 });
       },
 

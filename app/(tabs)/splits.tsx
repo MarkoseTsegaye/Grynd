@@ -90,15 +90,8 @@ export default function SplitsScreen() {
 
   return (
     <View className="flex-1 bg-surface-0">
-      <View className="px-5 pt-14 pb-4 flex-row items-center justify-between">
+      <View className="px-5 pt-14 pb-4">
         <Text className="text-text-primary font-sans-bold text-4xl">Splits</Text>
-        <TouchableOpacity
-          onPress={() => router.push('/cycle')}
-          accessibilityLabel="Training cycle"
-          activeOpacity={0.7}
-        >
-          <Icon name="sync-circle" size={24} color="text-secondary" />
-        </TouchableOpacity>
       </View>
 
       {showForm && (
