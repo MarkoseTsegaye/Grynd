@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useMemo, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import DraggableFlatList, { ScaleDecorator } from 'react-native-draggable-flatlist';
 import { BottomSheetModal, BottomSheetFlatList, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
@@ -15,6 +15,7 @@ export default function CycleScreen() {
     useCycleStore();
   const { splits, isLoaded: splitsLoaded, loadData } = useSplitsStore();
 
+  const insets = useSafeAreaInsets();
   const splitPickerRef = useRef<BottomSheetModal>(null);
   const snapPoints = useMemo(() => ['50%'], []);
 
@@ -105,61 +106,63 @@ export default function CycleScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-surface-0">
-      <View className="px-5 pt-4 pb-4">
-        <Text className="text-text-primary font-sans-bold text-4xl">Training Cycle</Text>
-        {days.length > 0 && (
-          <Text className="text-text-secondary font-sans text-sm mt-1">
-            {days.length} days · Repeats indefinitely
-          </Text>
-        )}
-      </View>
-
-      {days.length === 0 ? (
-        <View className="flex-1 items-center justify-center px-8">
-          <Icon name="sync-circle" size={48} color="text-disabled" />
-          <Text className="text-text-secondary font-sans text-base text-center mt-4">
-            No cycle configured.{'\n'}Add split and rest days below.
-          </Text>
+    <>
+      <SafeAreaView className="flex-1 bg-surface-0">
+        <View className="px-5 pt-4 pb-4">
+          <Text className="text-text-primary font-sans-bold text-4xl">Training Cycle</Text>
+          {days.length > 0 && (
+            <Text className="text-text-secondary font-sans text-sm mt-1">
+              {days.length} days · Repeats indefinitely
+            </Text>
+          )}
         </View>
-      ) : (
-        <DraggableFlatList
-          data={days}
-          keyExtractor={(item) => item.id}
-          renderItem={renderItem}
-          onDragEnd={({ data }) => reorderDays(data)}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16 }}
-        />
-      )}
 
-      {/* Add buttons */}
-      <View className="px-5 pb-6 flex-row gap-3">
-        <TouchableOpacity
-          className="flex-1 bg-surface-1 border border-surface-2 rounded-lg py-4 flex-row items-center justify-center gap-2"
-          onPress={openSplitPicker}
-          accessibilityLabel="Add split day"
-          activeOpacity={0.7}
-        >
-          <Icon name="plus-circle-outline" size={20} color="accent" />
-          <Text className="text-accent font-sans-bold text-base">Add Split Day</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          className="flex-1 bg-surface-1 border border-surface-2 rounded-lg py-4 flex-row items-center justify-center gap-2"
-          onPress={addRestDay}
-          accessibilityLabel="Add rest day"
-          activeOpacity={0.7}
-        >
-          <Icon name="sleep" size={20} color="text-secondary" />
-          <Text className="text-text-secondary font-sans-bold text-base">Add Rest Day</Text>
-        </TouchableOpacity>
-      </View>
+        {days.length === 0 ? (
+          <View className="flex-1 items-center justify-center px-8">
+            <Icon name="sync-circle" size={48} color="text-disabled" />
+            <Text className="text-text-secondary font-sans text-base text-center mt-4">
+              No cycle configured.{'\n'}Add split and rest days below.
+            </Text>
+          </View>
+        ) : (
+          <DraggableFlatList
+            data={days}
+            keyExtractor={(item) => item.id}
+            renderItem={renderItem}
+            onDragEnd={({ data }) => reorderDays(data)}
+            contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16 }}
+          />
+        )}
+
+        {/* Add buttons */}
+        <View className="px-5 pb-6 flex-row gap-3">
+          <TouchableOpacity
+            className="flex-1 bg-surface-1 border border-surface-2 rounded-lg py-4 flex-row items-center justify-center gap-2"
+            onPress={openSplitPicker}
+            accessibilityLabel="Add split day"
+            activeOpacity={0.7}
+          >
+            <Icon name="plus-circle-outline" size={20} color="accent" />
+            <Text className="text-accent font-sans-bold text-base">Add Split Day</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            className="flex-1 bg-surface-1 border border-surface-2 rounded-lg py-4 flex-row items-center justify-center gap-2"
+            onPress={addRestDay}
+            accessibilityLabel="Add rest day"
+            activeOpacity={0.7}
+          >
+            <Icon name="sleep" size={20} color="text-secondary" />
+            <Text className="text-text-secondary font-sans-bold text-base">Add Rest Day</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
 
       {/* Split picker bottom sheet */}
       <BottomSheetModal
         ref={splitPickerRef}
         snapPoints={snapPoints}
-        index={0}
         enablePanDownToClose
+        bottomInset={insets.bottom}
         backdropComponent={renderBackdrop}
         backgroundStyle={{ backgroundColor: '#141414' }}
         handleIndicatorStyle={{ backgroundColor: '#3D3B38' }}
@@ -190,6 +193,6 @@ export default function CycleScreen() {
           )}
         </View>
       </BottomSheetModal>
-    </SafeAreaView>
+    </>
   );
 }
