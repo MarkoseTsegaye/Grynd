@@ -33,6 +33,15 @@ export function useWorkout(logSheetRef: RefObject<BottomSheetModal | null>) {
     Record<string, LoggedExercise | null>
   >({});
   const fetchedIds = useRef(new Set<string>());
+  const presentRafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (presentRafRef.current !== null) {
+        cancelAnimationFrame(presentRafRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!prefsLoaded) loadPrefs();
@@ -75,14 +84,22 @@ export function useWorkout(logSheetRef: RefObject<BottomSheetModal | null>) {
 
   const openLogSheet = useCallback(() => {
     resetLogForm();
-    logSheetRef.current?.present();
+    if (presentRafRef.current !== null) {
+      cancelAnimationFrame(presentRafRef.current);
+    }
+    presentRafRef.current = requestAnimationFrame(() => {
+      presentRafRef.current = null;
+      logSheetRef.current?.present();
+    });
   }, [logSheetRef, resetLogForm]);
 
-  const closeLogSheet = useCallback(() => {
+  const dismissLogSheet = useCallback(() => {
     logSheetRef.current?.dismiss();
-    setLogSheetVisible(false);
+  }, [logSheetRef]);
+
+  const handleLogSheetDismiss = useCallback(() => {
     resetLogForm();
-  }, [logSheetRef, resetLogForm]);
+  }, [resetLogForm]);
 
   const handleLogSheetChange = useCallback((index: number) => {
     setLogSheetVisible(index >= 0);
@@ -102,8 +119,8 @@ export function useWorkout(logSheetRef: RefObject<BottomSheetModal | null>) {
     await logSet(currentExercise.exerciseId, reps, computedWeightKg, effort);
     impact();
     setIsLogging(false);
-    closeLogSheet();
-  }, [repInput, computedWeightKg, currentExercise, toFailure, rpeInput, logSet, impact, closeLogSheet]);
+    dismissLogSheet();
+  }, [repInput, computedWeightKg, currentExercise, toFailure, rpeInput, logSet, impact, dismissLogSheet]);
 
   const handleDeleteSet = useCallback(
     async (setIndex: number) => {
@@ -188,7 +205,7 @@ export function useWorkout(logSheetRef: RefObject<BottomSheetModal | null>) {
     setRpeInput,
     isLogging,
     openLogSheet,
-    closeLogSheet,
+    handleLogSheetDismiss,
     handleLogSheetChange,
     handleConfirmSet,
     handleDeleteSet,

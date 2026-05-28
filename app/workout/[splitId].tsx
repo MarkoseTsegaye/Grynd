@@ -45,7 +45,7 @@ export default function WorkoutScreen() {
     toFailure, setToFailure,
     rpeInput, setRpeInput,
     isLogging,
-    openLogSheet, closeLogSheet, handleLogSheetChange, handleConfirmSet, handleDeleteSet,
+    openLogSheet, handleLogSheetDismiss, handleLogSheetChange, handleConfirmSet, handleDeleteSet,
     handleSwipeNext, handleSwipePrev, handleFinish,
     currentPreviousPerformance,
   } = useWorkout(logSheetRef);
@@ -321,7 +321,7 @@ export default function WorkoutScreen() {
         onChangeRpe={setRpeInput}
         isLogging={isLogging}
         onConfirm={handleConfirmSet}
-        onClose={closeLogSheet}
+        onClose={handleLogSheetDismiss}
       />
 
       {/* Cancel workout confirmation sheet */}
