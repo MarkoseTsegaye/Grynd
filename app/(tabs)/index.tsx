@@ -6,6 +6,7 @@ import { useSplitsStore } from '../../src/features/splits';
 import { useCycleStore } from '../../src/features/splits/store/cycleStore';
 import { useWorkoutStore } from '../../src/features/workout';
 import { Icon } from '../../src/shared/components/Icon';
+import { getUpcomingDaysThroughNextRest } from '../../src/features/splits/lib/cyclePreview';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -50,15 +51,7 @@ export default function HomeScreen() {
     ? splits.find((s) => s.id === todayDay.splitId)
     : null;
 
-  const nextDays = days.length > 0
-    ? Array.from({ length: 6 }, (_, i) => {
-        const idx = (currentIndex + i + 1) % days.length;
-        const day = days[idx];
-        const split = day.type === 'split' ? splits.find((s) => s.id === day.splitId) : null;
-        const offsetLabel = i === 0 ? 'Tomorrow' : `+${i + 1}`;
-        return { day, split, offsetLabel, idx };
-      })
-    : [];
+  const nextDays = getUpcomingDaysThroughNextRest(days, currentIndex, splits);
 
   const cycleLength = days.length;
   const dayNumber = cycleLength > 0 ? currentIndex + 1 : null;
@@ -141,12 +134,12 @@ export default function HomeScreen() {
             className="px-5 mb-6"
             contentContainerStyle={{ gap: 8 }}
           >
-            {nextDays.map(({ day, split, offsetLabel, idx }) => (
+            {nextDays.map(({ day, split, label, idx }) => (
               <View
                 key={`${idx}-${day.id}`}
                 className="rounded-lg px-3 py-2 items-center min-w-16 bg-surface-2"
               >
-                <Text className="font-sans-bold text-xs text-text-secondary">{offsetLabel}</Text>
+                <Text className="font-sans-bold text-xs text-text-secondary">{label}</Text>
                 <Text className="font-sans text-xs mt-0.5 text-text-secondary" numberOfLines={1}>
                   {day.type === 'split' ? (split?.name ?? 'Split').slice(0, 8) : 'Rest'}
                 </Text>
