@@ -16,6 +16,7 @@ import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import { useWorkout, ExerciseScreen, LogSheet } from '../../src/features/workout';
 import { useWorkoutStore } from '../../src/features/workout';
 import { useSplitsStore } from '../../src/features/splits';
+import { useHistoryStore } from '../../src/features/history';
 import { Icon } from '../../src/shared/components/Icon';
 import { STORAGE_KEYS } from '../../src/storage/keys';
 import {
@@ -227,9 +228,17 @@ export default function WorkoutScreen() {
     handleSwipePrev();
   }, [handleSwipePrev]);
 
-  const afterSwipeFinish = useCallback(() => {
-    void handleFinish().then(() => router.replace('/(tabs)/history'));
-  }, [handleFinish, router]);
+  const afterSwipeFinish = useCallback(async () => {
+    const sessionId = session?.id;
+    if (!sessionId) return;
+    try {
+      await handleFinish();
+      await useHistoryStore.getState().loadSessions();
+      router.replace(`/history/${sessionId}`);
+    } catch {
+      // Stay on workout screen if persistence fails
+    }
+  }, [session?.id, handleFinish, router]);
 
   const panGesture = useMemo(
     () =>
