@@ -16,7 +16,7 @@ export default function CycleScreen() {
   const { splits, isLoaded: splitsLoaded, loadData } = useSplitsStore();
 
   const splitPickerRef = useRef<BottomSheetModal>(null);
-  const snapPoints = useMemo(() => ['40%'], []);
+  const snapPoints = useMemo(() => ['50%'], []);
 
   const openSplitPicker = useCallback(() => splitPickerRef.current?.present(), []);
   const closeSplitPicker = useCallback(() => splitPickerRef.current?.dismiss(), []);
@@ -158,26 +158,37 @@ export default function CycleScreen() {
       <BottomSheetModal
         ref={splitPickerRef}
         snapPoints={snapPoints}
+        index={0}
         enablePanDownToClose
         backdropComponent={renderBackdrop}
         backgroundStyle={{ backgroundColor: '#141414' }}
         handleIndicatorStyle={{ backgroundColor: '#3D3B38' }}
       >
-        <View className="px-5 pt-2 pb-3">
-          <Text className="text-text-secondary font-sans text-sm">Select a split</Text>
-        </View>
-        {splits.length === 0 ? (
-          <View className="px-5">
-            <Text className="text-text-disabled font-sans text-base">No splits yet.</Text>
+        <View accessibilityViewIsModal>
+          <View className="px-5 pt-2 pb-3">
+            <Text
+              className="text-text-secondary font-sans text-sm"
+              accessibilityRole="header"
+              accessibilityLabel="Select a split"
+            >
+              Select a split
+            </Text>
           </View>
-        ) : (
-          <BottomSheetFlatList
-            data={splits}
-            keyExtractor={(item) => item.id}
-            renderItem={renderSplitPickerItem}
-            contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
-          />
-        )}
+          {splits.length === 0 ? (
+            <View className="px-5">
+              <Text className="text-text-disabled font-sans text-base" accessibilityLabel="No splits yet.">
+                No splits yet.
+              </Text>
+            </View>
+          ) : (
+            <BottomSheetFlatList
+              data={splits}
+              keyExtractor={(item) => item.id}
+              renderItem={renderSplitPickerItem}
+              contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
+            />
+          )}
+        </View>
       </BottomSheetModal>
     </SafeAreaView>
   );
