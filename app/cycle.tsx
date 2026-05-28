@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useMemo, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { Stack, useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import DraggableFlatList, { ScaleDecorator } from 'react-native-draggable-flatlist';
 import { BottomSheetModal, BottomSheetFlatList, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
@@ -10,7 +11,22 @@ import { Icon } from '../src/shared/components/Icon';
 import type { CycleDay } from '../src/features/splits/types';
 import type { Split } from '../src/features/splits/types';
 
+function HeaderDoneButton({ onPress }: { onPress: () => void }) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      className="px-4 py-2"
+      accessibilityLabel="Done editing training cycle"
+      accessibilityRole="button"
+      activeOpacity={0.7}
+    >
+      <Text className="text-accent font-sans-bold text-base">Done</Text>
+    </TouchableOpacity>
+  );
+}
+
 export default function CycleScreen() {
+  const router = useRouter();
   const { cycle, isLoaded, loadCycle, reorderDays, addSplitDay, addRestDay, removeDay } =
     useCycleStore();
   const { splits, isLoaded: splitsLoaded, loadData } = useSplitsStore();
@@ -21,6 +37,11 @@ export default function CycleScreen() {
 
   const openSplitPicker = useCallback(() => splitPickerRef.current?.present(), []);
   const closeSplitPicker = useCallback(() => splitPickerRef.current?.dismiss(), []);
+
+  const handleDone = useCallback(() => {
+    closeSplitPicker();
+    router.back();
+  }, [closeSplitPicker, router]);
 
   const renderBackdrop = useCallback(
     (props: BottomSheetBackdropProps) => (
@@ -107,6 +128,11 @@ export default function CycleScreen() {
 
   return (
     <>
+      <Stack.Screen
+        options={{
+          headerRight: () => <HeaderDoneButton onPress={handleDone} />,
+        }}
+      />
       <SafeAreaView className="flex-1 bg-surface-0">
         <View className="px-5 pt-4 pb-4">
           <Text className="text-text-primary font-sans-bold text-4xl">Training Cycle</Text>
