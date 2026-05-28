@@ -35,8 +35,13 @@ export const useWorkoutStore = create<WorkoutState>()(
 
       loadActiveSession: async () => {
         try {
-          const session = await getActiveSession();
-          set({ session, isLoaded: true, error: null });
+          const stored = await getActiveSession();
+          const current = get().session;
+          if (current && !stored) {
+            set({ isLoaded: true, error: null });
+            return;
+          }
+          set({ session: stored, isLoaded: true, error: null });
         } catch (err) {
           set({ error: String(err), isLoaded: true });
         }
@@ -56,8 +61,13 @@ export const useWorkoutStore = create<WorkoutState>()(
           completedAt: null,
           exercises: loggedExercises,
         };
-        set({ session, currentExerciseIndex: 0 });
-        await setActiveSession(session);
+        set({ session, currentExerciseIndex: 0, error: null });
+        try {
+          await setActiveSession(session);
+        } catch (err) {
+          set({ session: null, currentExerciseIndex: 0, error: String(err) });
+          throw err;
+        }
       },
 
       logSet: async (exerciseId, reps, weightKg, effort) => {

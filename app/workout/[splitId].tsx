@@ -22,11 +22,15 @@ import { STORAGE_KEYS } from '../../src/storage/keys';
 const SWIPE_THRESHOLD = 80;
 const SWIPE_VELOCITY_THRESHOLD = 500;
 
+type BootstrapState = 'loading' | 'ready' | 'error' | 'empty';
+
 export default function WorkoutScreen() {
   const { splitId } = useLocalSearchParams<{ splitId: string }>();
   const router = useRouter();
   const { startWorkout, abandonWorkout, loadActiveSession } = useWorkoutStore();
-  const { getSplitById, getExercisesForSplit, isLoaded, loadData } = useSplitsStore();
+  const { loadData } = useSplitsStore();
+  const [bootstrapState, setBootstrapState] = useState<BootstrapState>('loading');
+  const [bootstrapMessage, setBootstrapMessage] = useState<string | null>(null);
 
   const {
     session, currentExercise, currentExerciseIndex, totalExercises, isLastExercise,
@@ -60,13 +64,55 @@ export default function WorkoutScreen() {
   const hintTranslateX = useSharedValue(0);
 
   useEffect(() => {
-    if (!isLoaded) loadData();
-  }, [isLoaded, loadData]);
+    let cancelled = false;
 
-  // Crash recovery: check for stale ACTIVE_SESSION on mount
-  useEffect(() => {
-    loadActiveSession().then(() => {
+    const startWorkoutForSplit = async () => {
+      const { getSplitById, getExercisesForSplit } = useSplitsStore.getState();
+      const split = getSplitById(splitId);
+      const exercises = getExercisesForSplit(splitId);
+
+      if (!split) {
+        if (!cancelled) {
+          setBootstrapMessage('Split not found.');
+          setBootstrapState('error');
+        }
+        return;
+      }
+
+      if (exercises.length === 0) {
+        if (!cancelled) {
+          setBootstrapMessage('Add exercises to this split before starting a workout.');
+          setBootstrapState('empty');
+        }
+        return;
+      }
+
+      try {
+        await startWorkout(split, exercises);
+        if (!cancelled) setBootstrapState('ready');
+      } catch (err) {
+        if (!cancelled) {
+          setBootstrapMessage(String(err));
+          setBootstrapState('error');
+        }
+      }
+    };
+
+    async function init() {
+      setBootstrapState('loading');
+      setBootstrapMessage(null);
+
+      const { isLoaded } = useSplitsStore.getState();
+      if (!isLoaded) {
+        await loadData();
+        if (cancelled) return;
+      }
+
+      await loadActiveSession();
+      if (cancelled) return;
+
       const storeSession = useWorkoutStore.getState().session;
+
       if (storeSession && storeSession.splitId !== splitId) {
         Alert.alert(
           'Unfinished Workout',
@@ -75,23 +121,40 @@ export default function WorkoutScreen() {
             {
               text: 'Discard',
               style: 'destructive',
-              onPress: () => abandonWorkout(),
+              onPress: () => {
+                void (async () => {
+                  await abandonWorkout();
+                  if (cancelled) return;
+                  await startWorkoutForSplit();
+                })();
+              },
             },
-            { text: 'Resume', style: 'default' },
+            {
+              text: 'Resume',
+              style: 'default',
+              onPress: () => {
+                if (!cancelled) setBootstrapState('ready');
+              },
+            },
           ],
         );
+        return;
       }
-    });
-  }, []);
 
-  useEffect(() => {
-    if (!isLoaded) return;
-    const split = getSplitById(splitId);
-    const exercises = getExercisesForSplit(splitId);
-    if (split && exercises.length > 0 && !session) {
-      startWorkout(split, exercises);
+      if (storeSession && storeSession.splitId === splitId) {
+        if (!cancelled) setBootstrapState('ready');
+        return;
+      }
+
+      await startWorkoutForSplit();
     }
-  }, [isLoaded, splitId]);
+
+    void init();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [splitId, loadData, loadActiveSession, startWorkout, abandonWorkout]);
 
   // Show swipe hint on first workout ever
   useEffect(() => {
@@ -169,8 +232,25 @@ export default function WorkoutScreen() {
     cancelSheetRef.current?.dismiss();
   }, []);
 
-  if (!session || !currentExercise) {
-    console.log(session)
+  if (bootstrapState === 'error' || bootstrapState === 'empty') {
+    return (
+      <View className="flex-1 bg-surface-0 items-center justify-center px-8">
+        <Text className="text-text-secondary font-sans text-base text-center">
+          {bootstrapMessage}
+        </Text>
+        <TouchableOpacity
+          className="mt-6 bg-surface-2 rounded-lg px-6 py-3"
+          onPress={() => router.back()}
+          accessibilityLabel="Go back"
+          activeOpacity={0.7}
+        >
+          <Text className="text-text-primary font-sans-bold text-base">Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (bootstrapState !== 'ready' || !session || !currentExercise) {
     return (
       <View className="flex-1 bg-surface-0 items-center justify-center">
         <Text className="text-text-secondary font-sans text-base">Loading workout...</Text>
