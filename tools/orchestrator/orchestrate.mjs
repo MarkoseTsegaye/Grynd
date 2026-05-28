@@ -88,36 +88,56 @@ Now implement the ticket in the repository.
 `.trim();
 }
 
-function buildTesterReviewerPrompt(ticketMd, gitDiff, toolOutputs) {
+function buildTesterReviewerPrompt(ticketMd, gitDiff, toolOutputs, recentCommits) {
+  const commitsBlock = recentCommits?.trim()
+    ? `\n## Recent git commits (regression guard)\n\nIf the diff undoes behaviour described in any of these commits, that is a regression — mark FAIL.\n\n${recentCommits.trim()}\n`
+    : '';
+
   return `
 You are Tester/Reviewer.
 
-You have 2 jobs:
-1) Verify Implementer output matches TicketMan's spec (acceptance criteria).
-2) Verify code quality: no lint errors, no type errors, no obvious logical/syntax issues.
+Your two jobs:
+1. Verify the diff satisfies every acceptance criterion in the ticket.
+2. Verify code quality: no type errors, no lint errors, no obvious regressions.
 
-You are given:
-- The ticket (spec)
-- The git diff
-- The outputs of \`npm run typecheck\` and \`npm run lint\`
+## Required report format
 
-Return a Markdown report with:
-- **## Verdict**: PASS or FAIL
-- **## Acceptance criteria check**: checklist with each ticket AC item marked pass/fail with evidence
-- **## Typecheck**: pass/fail + key errors (if any)
-- **## Lint**: pass/fail + key errors (if any)
-- **## Risks / notes**: any logical issues you spot from the diff
-- **## Required fixes** (only if FAIL): numbered, actionable, minimal steps
+### ## Verdict
+Write exactly one word on its own line: PASS or FAIL (plain text, no bold/italic).
 
-Ticket:
+### ## Acceptance criteria check
+Checklist — each AC item marked [x] pass or [ ] fail with evidence from the diff.
+
+### ## Regression check
+Explicitly state whether the diff undoes any behaviour described in the recent commits.
+If yes → FAIL.
+
+### ## Typecheck
+Pass or Fail + key errors.
+
+### ## Lint
+Pass or Fail + key errors.
+
+### ## Risks / notes
+Any logical issues spotted in the diff.
+
+### ## Required fixes
+(Only present if FAIL) — numbered, actionable, minimal steps to reach PASS.
+
+---
+${commitsBlock}
+## Ticket
+
 ${ticketMd.trim()}
 
-Git diff:
-\`\`\`
+## Git diff
+
+\`\`\`diff
 ${gitDiff.trim()}
 \`\`\`
 
-Tool outputs:
+## Tool outputs
+
 \`\`\`
 ${toolOutputs.trim()}
 \`\`\`
@@ -175,6 +195,25 @@ async function getGitDiff(repoRoot) {
   return (diff.stdout + '\n' + diff.stderr).trim();
 }
 
+async function getRecentCommits(repoRoot, n = 8) {
+  const result = await execCapture('git', ['log', '--oneline', `-${n}`], { cwd: repoRoot });
+  return (result.stdout + result.stderr).trim();
+}
+
+async function commitChanges(repoRoot, ticketMd) {
+  const titleMatch = ticketMd.match(/^##\s+Title\s*\n(.+)$/m);
+  const title = titleMatch?.[1]?.trim() ?? 'orchestrator run';
+  const message = `[orchestrator] ${title}`;
+  await execCapture('git', ['add', '-A'], { cwd: repoRoot });
+  const commit = await execCapture('git', ['commit', '-m', message], { cwd: repoRoot });
+  const out = (commit.stdout + commit.stderr).toLowerCase();
+  if (commit.code !== 0 && !out.includes('nothing to commit') && !out.includes('nothing added')) {
+    console.warn(`git commit warning (exit ${commit.code}):\n${commit.stdout}${commit.stderr}`);
+  } else {
+    console.log(`📦 Committed: "${message}"`);
+  }
+}
+
 async function main() {
   const repoRoot = path.resolve(process.cwd());
   const userRequest = process.argv.slice(2).join(' ').trim();
@@ -216,6 +255,8 @@ async function main() {
   }
   await writeTextFile(path.join(runDir, 'ticket.md'), ticketMd + '\n');
 
+  const recentCommits = await getRecentCommits(repoRoot);
+
   let lastFailureContext;
   for (let iter = 1; iter <= maxIters; iter++) {
     let implementerSummary = '';
@@ -250,7 +291,7 @@ async function main() {
     let review = '';
     try {
       console.log(`TesterReviewer: review iteration ${iter}...`);
-      const testRun = await agent.send(buildTesterReviewerPrompt(ticketMd, diff, toolOutputs));
+      const testRun = await agent.send(buildTesterReviewerPrompt(ticketMd, diff, toolOutputs, recentCommits));
       const testResult = await testRun.wait();
       review = (testResult.result ?? '').trim();
     } catch (err) {
@@ -259,12 +300,14 @@ async function main() {
     }
     await writeTextFile(path.join(runDir, `review-${iter}.md`), review + '\n');
 
-    const verdictPass = /^##\s+Verdict\s*\n\s*PASS\s*$/im.test(review) || /\bVerdict\b.*\bPASS\b/i.test(review);
+    // Match plain PASS or markdown-bold **PASS** / *PASS* on the line after ## Verdict.
+    const verdictPass = /^##\s*Verdict\s*\n+\s*\*{0,2}PASS\*{0,2}\s*$/im.test(review);
     const gatesPass = gates.typecheck.code === 0 && gates.lint.code === 0;
 
     if (verdictPass && gatesPass) {
       await writeTextFile(path.join(runDir, 'FINAL.md'), review + '\n');
-      console.log(`PASS. Artifacts: ${path.relative(repoRoot, runDir)}`);
+      await commitChanges(repoRoot, ticketMd);
+      console.log(`PASS ✅  Artifacts: ${path.relative(repoRoot, runDir)}`);
       return;
     }
 
