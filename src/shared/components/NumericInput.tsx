@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, TextInput, Text } from 'react-native';
+import type { TextInputProps } from 'react-native';
 
 interface NumericInputProps {
   value: string;
@@ -8,10 +9,12 @@ interface NumericInputProps {
   suffix?: string;
   autoFocus?: boolean;
   onSubmitEditing?: () => void;
+  onFocus?: TextInputProps['onFocus'];
   keyboardType?: 'decimal-pad' | 'number-pad';
   returnKeyType?: 'done' | 'next';
   maxLength?: number;
   accessibilityLabel?: string;
+  InputComponent?: React.ElementType<TextInputProps>;
 }
 
 export const NumericInput = React.forwardRef<TextInput, NumericInputProps>(
@@ -23,16 +26,20 @@ export const NumericInput = React.forwardRef<TextInput, NumericInputProps>(
       suffix,
       autoFocus,
       onSubmitEditing,
+      onFocus,
       keyboardType = 'decimal-pad',
       returnKeyType = 'done',
       maxLength = 6,
       accessibilityLabel,
+      InputComponent = TextInput,
     },
     ref,
   ) => {
+    const Input = (InputComponent ?? TextInput) as typeof TextInput;
+
     return (
       <View className="flex-row items-center bg-surface-2 rounded-lg px-4 py-4">
-        <TextInput
+        <Input
           ref={ref}
           className="text-text-primary font-mono-bold text-4xl flex-1"
           keyboardType={keyboardType}
@@ -42,6 +49,7 @@ export const NumericInput = React.forwardRef<TextInput, NumericInputProps>(
           placeholderTextColor="#3D3B38"
           returnKeyType={returnKeyType}
           onSubmitEditing={onSubmitEditing}
+          onFocus={onFocus}
           autoFocus={autoFocus}
           textAlignVertical="center"
           style={{ paddingTop: 0 }}

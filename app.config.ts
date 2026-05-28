@@ -17,7 +17,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   assetBundlePatterns: ['**/*'],
   ios: { supportsTablet: false },
-  android: { adaptiveIcon: { foregroundImage: './assets/adaptive-icon.png', backgroundColor: '#0A0A0A' } },
+  android: {
+    ...(config.android ?? {}),
+    adaptiveIcon: { foregroundImage: './assets/adaptive-icon.png', backgroundColor: '#0A0A0A' },
+    softwareKeyboardLayoutMode: 'resize',
+  },
   scheme: 'workout-logger',
   extra: {
     appEnv: process.env.APP_ENV ?? 'development',

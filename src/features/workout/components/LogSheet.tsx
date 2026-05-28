@@ -1,11 +1,19 @@
-import React, { useRef, useCallback, useMemo } from 'react';
+import React, { useRef, useCallback, useMemo, useState, useEffect } from 'react';
 import type { RefObject } from 'react';
-import { View, Text, TouchableOpacity, TextInput } from 'react-native';
-import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
-import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
+import { View, Text, TouchableOpacity, TextInput, Keyboard, Platform } from 'react-native';
+import {
+  BottomSheetModal,
+  BottomSheetScrollView,
+  BottomSheetBackdrop,
+  BottomSheetTextInput,
+} from '@gorhom/bottom-sheet';
+import type { BottomSheetBackdropProps, BottomSheetScrollViewMethods } from '@gorhom/bottom-sheet';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NumericInput } from '../../../shared/components/NumericInput';
 import { Icon } from '../../../shared/components/Icon';
 import { formatWeight } from '../../../shared/lib/weight';
+
+type LogField = 'weight' | 'reps' | 'rpe';
 
 interface Props {
   sheetRef: RefObject<BottomSheetModal | null>;
@@ -51,10 +59,91 @@ export function LogSheet({
   rpeInput, onChangeRpe,
   isLogging, onConfirm, onClose,
 }: Props) {
+  const insets = useSafeAreaInsets();
+  const scrollRef = useRef<BottomSheetScrollViewMethods>(null);
   const repsRef = useRef<TextInput>(null);
   const weightRef = useRef<TextInput>(null);
   const rpeRef = useRef<TextInput>(null);
+  const fieldOffsets = useRef<Record<LogField, number>>({ weight: 0, reps: 0, rpe: 0 });
+  const confirmOffset = useRef(0);
+  const focusedFieldRef = useRef<LogField | null>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const snapPoints = useMemo(() => ['82%'], []);
+
+  const contentPaddingBottom = useMemo(
+    () => Math.max(insets.bottom, 40) + keyboardHeight,
+    [insets.bottom, keyboardHeight],
+  );
+
+  const scrollRepsIntoView = useCallback(() => {
+    requestAnimationFrame(() => {
+      const fieldY = fieldOffsets.current.reps ?? 0;
+      const confirmY = confirmOffset.current;
+      const fieldScroll = Math.max(0, fieldY - 12);
+
+      if (confirmY <= 0) {
+        scrollRef.current?.scrollTo({ y: fieldScroll, animated: true });
+        return;
+      }
+
+      const visibleEstimate = Math.max(180, keyboardHeight > 0 ? keyboardHeight * 0.55 : 220);
+      const confirmScroll = Math.max(0, confirmY - visibleEstimate);
+      const targetY = Math.min(fieldScroll, confirmScroll);
+
+      scrollRef.current?.scrollTo({ y: targetY, animated: true });
+    });
+  }, [keyboardHeight]);
+
+  const scrollFieldIntoView = useCallback((field: LogField) => {
+    if (field === 'reps') {
+      scrollRepsIntoView();
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      const fieldY = fieldOffsets.current[field] ?? 0;
+      scrollRef.current?.scrollTo({ y: Math.max(0, fieldY - 12), animated: true });
+    });
+  }, [scrollRepsIntoView]);
+
+  const handleFieldFocus = useCallback(
+    (field: LogField) => {
+      focusedFieldRef.current = field;
+      scrollFieldIntoView(field);
+    },
+    [scrollFieldIntoView],
+  );
+
+  useEffect(() => {
+    if (!sheetOpen) {
+      return;
+    }
+
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, (event) => {
+      setKeyboardHeight(event.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [sheetOpen]);
+
+  useEffect(() => {
+    if (!sheetOpen || keyboardHeight === 0 || focusedFieldRef.current !== 'reps') {
+      return;
+    }
+
+    const timer = setTimeout(() => scrollRepsIntoView(), 100);
+    return () => clearTimeout(timer);
+  }, [sheetOpen, keyboardHeight, scrollRepsIntoView]);
 
   const renderBackdrop = useCallback(
     (props: BottomSheetBackdropProps) => (
@@ -65,9 +154,15 @@ export function LogSheet({
 
   const handleSheetChange = useCallback(
     (index: number) => {
+      const isOpen = index >= 0;
+      setSheetOpen(isOpen);
       onChange(index);
-      if (index >= 0) {
+      if (isOpen) {
+        focusedFieldRef.current = 'reps';
         setTimeout(() => repsRef.current?.focus(), 200);
+      } else {
+        focusedFieldRef.current = null;
+        setKeyboardHeight(0);
       }
     },
     [onChange],
@@ -91,8 +186,10 @@ export function LogSheet({
       enablePanDownToClose
       enableHandlePanningGesture={false}
       enableContentPanningGesture={false}
-      keyboardBehavior="interactive"
+      keyboardBehavior="extend"
       keyboardBlurBehavior="restore"
+      android_keyboardInputMode="adjustResize"
+      bottomInset={insets.bottom}
       backdropComponent={renderBackdrop}
       onChange={handleSheetChange}
       onDismiss={onClose}
@@ -100,9 +197,10 @@ export function LogSheet({
       handleIndicatorStyle={{ backgroundColor: '#3D3B38' }}
     >
       <BottomSheetScrollView
+        ref={scrollRef}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}
+        contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: contentPaddingBottom }}
       >
         {/* Mode toggle */}
         <View className="flex-row gap-2 mb-5 mt-2">
@@ -129,7 +227,15 @@ export function LogSheet({
         </View>
 
         {/* Weight + Reps */}
-        <View className="flex-row gap-4 mb-1">
+        <View
+          className="mb-1"
+          onLayout={(event) => {
+            const y = event.nativeEvent.layout.y;
+            fieldOffsets.current.weight = y;
+            fieldOffsets.current.reps = y;
+          }}
+        >
+          <View className="flex-row gap-4">
           <View className="flex-1">
             <View className="flex-row items-center justify-between mb-1">
               <Text className="text-text-secondary font-sans text-sm">WEIGHT</Text>
@@ -157,11 +263,13 @@ export function LogSheet({
             {weightMode === 'straight' ? (
               <NumericInput
                 ref={weightRef}
+                InputComponent={BottomSheetTextInput}
                 value={weightInput}
                 onChangeText={onChangeWeight}
                 suffix={weightUnit}
                 returnKeyType="next"
                 onSubmitEditing={() => repsRef.current?.focus()}
+                onFocus={() => handleFieldFocus('weight')}
                 accessibilityLabel="Weight input"
               />
             ) : (
@@ -175,15 +283,18 @@ export function LogSheet({
             <Text className="text-text-secondary font-sans text-sm mb-1">REPS</Text>
             <NumericInput
               ref={repsRef}
+              InputComponent={BottomSheetTextInput}
               value={repInput}
               onChangeText={onChangeReps}
               suffix="reps"
               keyboardType="number-pad"
               returnKeyType="done"
               onSubmitEditing={onConfirm}
+              onFocus={() => handleFieldFocus('reps')}
               maxLength={3}
               accessibilityLabel="Reps input"
             />
+          </View>
           </View>
         </View>
 
@@ -245,7 +356,12 @@ export function LogSheet({
         )}
 
         {/* Effort section */}
-        <View className="border-t border-surface-2 mt-4 pt-4 mb-5">
+        <View
+          className="border-t border-surface-2 mt-4 pt-4 mb-5"
+          onLayout={(event) => {
+            fieldOffsets.current.rpe = event.nativeEvent.layout.y;
+          }}
+        >
           <Text className="text-text-secondary font-sans text-sm mb-3">Effort (optional)</Text>
           <View className="flex-row items-center justify-between">
             <TouchableOpacity
@@ -264,6 +380,7 @@ export function LogSheet({
               <View className="w-16">
                 <NumericInput
                   ref={rpeRef}
+                  InputComponent={BottomSheetTextInput}
                   value={rpeInput}
                   onChangeText={(v) => {
                     const num = parseInt(v, 10);
@@ -273,6 +390,7 @@ export function LogSheet({
                   placeholder="—"
                   keyboardType="number-pad"
                   maxLength={2}
+                  onFocus={() => handleFieldFocus('rpe')}
                   accessibilityLabel="RPE input"
                 />
               </View>
@@ -282,15 +400,21 @@ export function LogSheet({
         </View>
 
         {/* Confirm button */}
-        <TouchableOpacity
-          className={`bg-accent rounded-lg py-4 items-center ${!canConfirm ? 'opacity-40' : ''}`}
-          onPress={onConfirm}
-          disabled={!canConfirm}
-          accessibilityLabel="Log set"
-          activeOpacity={0.7}
+        <View
+          onLayout={(event) => {
+            confirmOffset.current = event.nativeEvent.layout.y;
+          }}
         >
-          <Text className="text-surface-0 font-sans-bold text-base">Log Set</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            className={`bg-accent rounded-lg py-4 items-center ${!canConfirm ? 'opacity-40' : ''}`}
+            onPress={onConfirm}
+            disabled={!canConfirm}
+            accessibilityLabel="Log set"
+            activeOpacity={0.7}
+          >
+            <Text className="text-surface-0 font-sans-bold text-base">Log Set</Text>
+          </TouchableOpacity>
+        </View>
       </BottomSheetScrollView>
     </BottomSheetModal>
   );
