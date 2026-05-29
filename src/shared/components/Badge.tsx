@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text } from 'react-native';
+import { textRoles } from '../theme/typography';
 
 interface Props {
   label: string;
@@ -22,7 +23,7 @@ export function Badge({ label, variant = 'default' }: Props) {
 
   return (
     <View className={`${variants[variant]} rounded px-3 py-1`}>
-      <Text className={`${textVariants[variant]} font-mono text-sm`}>{label}</Text>
+      <Text className={`${textVariants[variant]} ${textRoles.badge}`}>{label}</Text>
     </View>
   );
 }

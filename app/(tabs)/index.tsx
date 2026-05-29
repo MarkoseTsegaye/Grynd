@@ -7,6 +7,7 @@ import { useCycleStore } from '../../src/features/splits/store/cycleStore';
 import { useWorkoutStore } from '../../src/features/workout';
 import { Icon } from '../../src/shared/components/Icon';
 import { getUpcomingDaysThroughNextRest } from '../../src/features/splits/lib/cyclePreview';
+import { textRoles } from '../../src/shared/theme/typography';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -59,18 +60,18 @@ export default function HomeScreen() {
   return (
     <View className="flex-1 bg-surface-0">
       <View className="px-5 pt-14 pb-4">
-        <Text className="text-text-primary font-sans-bold text-4xl">Workouts</Text>
+        <Text className={`text-text-primary ${textRoles.screenTitle}`}>Workouts</Text>
       </View>
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Today card */}
         <View className="mx-5 mb-4 bg-surface-1 rounded-xl px-4 py-4">
-          <Text className="text-text-secondary font-sans text-xs mb-1 tracking-widest">TODAY</Text>
+          <Text className={`text-text-secondary ${textRoles.sectionLabelCompact} mb-1`}>TODAY</Text>
           {!cycleLoaded ? (
-            <Text className="text-text-disabled font-sans text-base">Loading...</Text>
+            <Text className={`text-text-disabled ${textRoles.body}`}>Loading...</Text>
           ) : todayDay === null ? (
             <View>
-              <Text className="text-text-secondary font-sans text-base">No cycle configured.</Text>
+              <Text className={`text-text-secondary ${textRoles.body}`}>No cycle configured.</Text>
               <TouchableOpacity
                 className="mt-3 bg-surface-2 rounded-lg py-3 flex-row items-center justify-center gap-2"
                 onPress={() => router.push('/cycle')}
@@ -78,17 +79,19 @@ export default function HomeScreen() {
                 activeOpacity={0.7}
               >
                 <Icon name="sync-circle" size={20} color="text-secondary" />
-                <Text className="text-text-secondary font-sans-bold text-base">Set Up Cycle</Text>
+                <Text className={`text-text-secondary ${textRoles.buttonLabel}`}>Set Up Cycle</Text>
               </TouchableOpacity>
             </View>
           ) : todayDay.type === 'split' ? (
             <>
               <View className="flex-row items-center gap-2 mb-1">
                 <Icon name="dumbbell" size={20} color="text-secondary" />
-                <Text className="text-text-primary font-sans text-2xl">{todaySplit?.name ?? 'Unknown'}</Text>
+                <Text className={`text-text-primary ${textRoles.listTitle}`} numberOfLines={1}>
+                  {todaySplit?.name ?? 'Unknown'}
+                </Text>
               </View>
               {dayNumber !== null && (
-                <Text className="text-text-secondary font-sans text-sm mb-3">
+                <Text className={`text-text-secondary ${textRoles.bodySmall} mb-3`}>
                   Day {dayNumber} of {cycleLength}
                 </Text>
               )}
@@ -99,17 +102,17 @@ export default function HomeScreen() {
                 activeOpacity={0.7}
               >
                 <Icon name="play-circle-outline" size={20} color="surface-0" />
-                <Text className="text-surface-0 font-sans-bold text-base">Start Workout</Text>
+                <Text className={`text-surface-0 ${textRoles.buttonLabel}`}>Start Workout</Text>
               </TouchableOpacity>
             </>
           ) : (
             <>
               <View className="flex-row items-center gap-2 mb-1">
                 <Icon name="sleep" size={20} color="text-secondary" />
-                <Text className="text-text-primary font-sans text-2xl">Rest Day</Text>
+                <Text className={`text-text-primary ${textRoles.listTitle}`}>Rest Day</Text>
               </View>
               {dayNumber !== null && (
-                <Text className="text-text-secondary font-sans text-sm mb-3">
+                <Text className={`text-text-secondary ${textRoles.bodySmall} mb-3`}>
                   Day {dayNumber} of {cycleLength}
                 </Text>
               )}
@@ -120,7 +123,7 @@ export default function HomeScreen() {
                 activeOpacity={0.7}
               >
                 <Icon name="arrow-right-circle-outline" size={20} color="text-secondary" />
-                <Text className="text-text-secondary font-sans-bold text-base">Mark Rest Done</Text>
+                <Text className={`text-text-secondary ${textRoles.buttonLabel}`}>Mark Rest Done</Text>
               </TouchableOpacity>
             </>
           )}
@@ -139,8 +142,8 @@ export default function HomeScreen() {
                 key={`${idx}-${day.id}`}
                 className="rounded-lg px-3 py-2 items-center min-w-16 bg-surface-2"
               >
-                <Text className="font-sans-bold text-xs text-text-secondary">{label}</Text>
-                <Text className="font-sans text-xs mt-0.5 text-text-secondary" numberOfLines={1}>
+                <Text className={`${textRoles.captionBold} text-text-secondary`}>{label}</Text>
+                <Text className={`${textRoles.caption} mt-0.5 text-text-secondary`} numberOfLines={1}>
                   {day.type === 'split' ? (split?.name ?? 'Split').slice(0, 8) : 'Rest'}
                 </Text>
               </View>
@@ -151,7 +154,7 @@ export default function HomeScreen() {
         {/* All Splits section */}
         {splits.length > 0 && (
           <View className="px-5 mb-8">
-            <Text className="text-text-secondary font-sans text-xs uppercase tracking-widest mb-3">
+            <Text className={`text-text-secondary ${textRoles.sectionLabel} mb-3`}>
               All Splits
             </Text>
             {splits.map((split) => (
@@ -168,7 +171,7 @@ export default function HomeScreen() {
         {splits.length === 0 && (
           <View className="flex-1 items-center justify-center px-8 py-16">
             <Icon name="dumbbell" size={48} color="text-disabled" />
-            <Text className="text-text-secondary font-sans text-base text-center mt-4">
+            <Text className={`text-text-secondary ${textRoles.body} text-center mt-4`}>
               No splits yet.{'\n'}Go to Splits to create one.
             </Text>
           </View>

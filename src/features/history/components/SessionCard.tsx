@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { formatShortDate } from '../../workout/../../shared/lib/date';
 import { usePrefsStore } from '../../../shared/store/prefsStore';
 import { formatWeight } from '../../../shared/lib/weight';
+import { textRoles } from '../../../shared/theme/typography';
 import type { WorkoutSession } from '../../workout/types';
 
 interface Props {
@@ -29,10 +30,10 @@ export function SessionCard({ session, onPress }: Props) {
     >
       {/* Level 1: header */}
       <View className="flex-row items-center justify-between mb-3">
-        <Text className="text-text-secondary font-sans text-xs">
+        <Text className={`text-text-secondary ${textRoles.caption}`}>
           {formatShortDate(session.startedAt)}
         </Text>
-        <Text className="text-text-primary font-sans text-sm" style={{ fontWeight: '500' }}>
+        <Text className={`text-text-primary ${textRoles.cardTitleSmall}`} numberOfLines={1}>
           {session.splitName}
         </Text>
       </View>
@@ -44,8 +45,8 @@ export function SessionCard({ session, onPress }: Props) {
           className={`border-t border-surface-2 pt-2 ${exIdx < visibleExercises.length - 1 || extraCount > 0 ? 'mb-3' : 'mb-0'}`}
         >
           <View className="flex-row items-center justify-between mb-1">
-            <Text className="text-text-primary font-sans text-sm">{ex.exerciseName}</Text>
-            <Text className="text-text-secondary font-sans text-xs">{ex.sets.length} sets</Text>
+            <Text className={`text-text-primary ${textRoles.bodySmall}`}>{ex.exerciseName}</Text>
+            <Text className={`text-text-secondary ${textRoles.caption}`}>{ex.sets.length} sets</Text>
           </View>
           {ex.sets.map((set, i) => {
             const w = formatWeight(set.weightKg, weightUnit);
@@ -53,14 +54,14 @@ export function SessionCard({ session, onPress }: Props) {
             const hasRpe = set.effort?.rpe !== undefined;
             return (
               <View key={`${set.loggedAt}-${i}`} className="flex-row items-center gap-1 pl-4 mb-1 flex-wrap">
-                <Text className="text-text-disabled font-sans text-xs">Set {i + 1}</Text>
-                <Text className="text-text-primary font-mono text-sm"> {w}</Text>
-                <Text className="text-text-secondary font-mono text-sm"> {weightUnit} × </Text>
-                <Text className="text-text-primary font-mono text-sm">{set.reps}</Text>
-                <Text className="text-text-secondary font-mono text-sm"> reps</Text>
+                <Text className={`text-text-disabled ${textRoles.caption}`}>Set {i + 1}</Text>
+                <Text className={`text-text-primary ${textRoles.metric}`}> {w}</Text>
+                <Text className={`text-text-secondary ${textRoles.metric}`}> {weightUnit} × </Text>
+                <Text className={`text-text-primary ${textRoles.metric}`}>{set.reps}</Text>
+                <Text className={`text-text-secondary ${textRoles.metric}`}> reps</Text>
                 {(hasFail || hasRpe) && (
                   <View className={`rounded-md px-1 py-0.5 ${hasFail ? 'bg-danger/10' : 'bg-surface-2'}`}>
-                    <Text className={`text-xs font-sans ${hasFail ? 'text-danger' : 'text-text-secondary'}`}>
+                    <Text className={`${textRoles.caption} ${hasFail ? 'text-danger' : 'text-text-secondary'}`}>
                       {hasFail && hasRpe ? `FAIL · RPE ${set.effort?.rpe}` : hasFail ? 'FAIL' : `RPE ${set.effort?.rpe}`}
                     </Text>
                   </View>
@@ -72,10 +73,10 @@ export function SessionCard({ session, onPress }: Props) {
       ))}
 
       {extraCount > 0 && (
-        <Text className="text-text-disabled font-sans text-xs mt-1">+{extraCount} exercises</Text>
+        <Text className={`text-text-disabled ${textRoles.caption} mt-1`}>+{extraCount} exercises</Text>
       )}
 
-      <Text className="text-text-disabled font-sans text-xs mt-2">{totalSets} sets total</Text>
+      <Text className={`text-text-disabled ${textRoles.caption} mt-2`}>{totalSets} sets total</Text>
     </TouchableOpacity>
   );
 }

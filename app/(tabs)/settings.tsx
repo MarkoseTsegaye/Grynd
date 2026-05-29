@@ -7,6 +7,7 @@ import { useSplitsStore } from '../../src/features/splits';
 import { usePrefsStore } from '../../src/shared/store/prefsStore';
 import { Icon } from '../../src/shared/components/Icon';
 import { colors } from '../../src/shared/theme/colors';
+import { textRoles } from '../../src/shared/theme/typography';
 import type { Split } from '../../src/features/splits/types';
 import type { WorkoutCycle } from '../../src/features/splits/types';
 
@@ -83,19 +84,19 @@ export default function SettingsScreen() {
   return (
     <View className="flex-1 bg-surface-0">
       <View className="px-5 pt-14 pb-4">
-        <Text className="text-text-primary font-sans-bold text-4xl">Settings</Text>
+        <Text className={`text-text-primary ${textRoles.screenTitle}`}>Settings</Text>
       </View>
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         <View className="px-5 mb-8">
-          <Text className="text-text-secondary font-sans text-xs uppercase tracking-widest mb-3">
+          <Text className={`text-text-secondary ${textRoles.sectionLabel} mb-3`}>
             Units
           </Text>
 
           <View className="bg-surface-1 rounded-lg px-4 py-4 mb-8 flex-row items-center">
             <View className="flex-1 mr-3">
-              <Text className="text-text-primary font-sans-bold text-base">Weight unit</Text>
-              <Text className="text-text-secondary font-sans text-sm mt-0.5">
+              <Text className={`text-text-primary ${textRoles.cardTitle}`}>Weight unit</Text>
+              <Text className={`text-text-secondary ${textRoles.bodySmall} mt-0.5`}>
                 Show and log weights in kilograms or pounds
               </Text>
             </View>
@@ -106,7 +107,7 @@ export default function SettingsScreen() {
                 accessibilityLabel="Weight unit, kilograms"
                 activeOpacity={0.7}
               >
-                <Text className={`font-sans text-sm ${weightUnit === 'kg' ? 'text-surface-0' : 'text-text-secondary'}`}>kg</Text>
+                <Text className={`font-sans ${textRoles.bodySmall} ${weightUnit === 'kg' ? 'text-surface-0' : 'text-text-secondary'}`}>kg</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 className={`px-3 py-1.5 rounded ${weightUnit === 'lbs' ? 'bg-accent' : 'bg-surface-2'}`}
@@ -114,12 +115,12 @@ export default function SettingsScreen() {
                 accessibilityLabel="Weight unit, pounds"
                 activeOpacity={0.7}
               >
-                <Text className={`font-sans text-sm ${weightUnit === 'lbs' ? 'text-surface-0' : 'text-text-secondary'}`}>lbs</Text>
+                <Text className={`font-sans ${textRoles.bodySmall} ${weightUnit === 'lbs' ? 'text-surface-0' : 'text-text-secondary'}`}>lbs</Text>
               </TouchableOpacity>
             </View>
           </View>
 
-          <Text className="text-text-secondary font-sans text-xs uppercase tracking-widest mb-3">
+          <Text className={`text-text-secondary ${textRoles.sectionLabel} mb-3`}>
             Training Cycle
           </Text>
 
@@ -130,16 +131,16 @@ export default function SettingsScreen() {
             activeOpacity={0.7}
           >
             <View className="flex-1 mr-3">
-              <Text className="text-text-primary font-sans-bold text-base">Edit Training Cycle</Text>
-              <Text className="text-text-secondary font-sans text-sm mt-0.5">{cycleSummary}</Text>
+              <Text className={`text-text-primary ${textRoles.cardTitle}`}>Edit Training Cycle</Text>
+              <Text className={`text-text-secondary ${textRoles.bodySmall} mt-0.5`}>{cycleSummary}</Text>
             </View>
             <Icon name="chevron-right" size={20} color="text-secondary" />
           </TouchableOpacity>
 
           <View className="bg-surface-1 rounded-lg px-4 py-4 mb-3 flex-row items-center">
             <View className="flex-1 mr-3">
-              <Text className="text-text-primary font-sans-bold text-base">Auto-advance after workout</Text>
-              <Text className="text-text-secondary font-sans text-sm mt-0.5">
+              <Text className={`text-text-primary ${textRoles.cardTitle}`}>Auto-advance after workout</Text>
+              <Text className={`text-text-secondary ${textRoles.bodySmall} mt-0.5`}>
                 Move to the next cycle day when a workout is finished
               </Text>
             </View>
@@ -161,8 +162,8 @@ export default function SettingsScreen() {
             activeOpacity={0.7}
           >
             <View className="flex-1">
-              <Text className="text-danger font-sans-bold text-base">Reset to Day 1</Text>
-              <Text className="text-text-secondary font-sans text-sm mt-0.5">
+              <Text className={`text-danger ${textRoles.cardTitle}`}>Reset to Day 1</Text>
+              <Text className={`text-text-secondary ${textRoles.bodySmall} mt-0.5`}>
                 {canReset ? 'Start the cycle over from day 1' : 'Configure a cycle first'}
               </Text>
             </View>

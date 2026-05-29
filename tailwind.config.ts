@@ -1,4 +1,5 @@
 import type { Config } from 'tailwindcss';
+import { buildTailwindFontSize } from './src/shared/theme/typography';
 
 export default {
   content: ['./app/**/*.{js,ts,jsx,tsx}', './src/**/*.{js,ts,jsx,tsx}'],
@@ -25,16 +26,7 @@ export default {
         mono: ['JetBrainsMono_400Regular', 'Courier'],
         'mono-bold': ['JetBrainsMono_700Bold', 'Courier'],
       },
-      fontSize: {
-        xs: ['14px', { lineHeight: '18px' }],
-        sm: ['16px', { lineHeight: '22px' }],
-        base: ['18px', { lineHeight: '26px' }],
-        lg: ['20px', { lineHeight: '30px' }],
-        xl: ['22px', { lineHeight: '30px' }],
-        '2xl': ['26px', { lineHeight: '34px' }],
-        '3xl': ['32px', { lineHeight: '38px' }],
-        '4xl': ['40px', { lineHeight: '44px' }],
-      },
+      fontSize: buildTailwindFontSize(),
     },
   },
   plugins: [],

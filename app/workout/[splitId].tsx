@@ -18,6 +18,7 @@ import { useWorkoutStore } from '../../src/features/workout';
 import { useSplitsStore } from '../../src/features/splits';
 import { useHistoryStore } from '../../src/features/history';
 import { Icon } from '../../src/shared/components/Icon';
+import { textRoles } from '../../src/shared/theme/typography';
 import { STORAGE_KEYS } from '../../src/storage/keys';
 import {
   SWIPE_THRESHOLD,
@@ -351,7 +352,7 @@ export default function WorkoutScreen() {
   if (bootstrapState === 'error' || bootstrapState === 'empty') {
     return (
       <View className="flex-1 bg-surface-0 items-center justify-center px-8">
-        <Text className="text-text-secondary font-sans text-base text-center">
+        <Text className={`text-text-secondary ${textRoles.body} text-center`}>
           {bootstrapMessage}
         </Text>
         <TouchableOpacity
@@ -360,7 +361,7 @@ export default function WorkoutScreen() {
           accessibilityLabel="Go back"
           activeOpacity={0.7}
         >
-          <Text className="text-text-primary font-sans-bold text-base">Go Back</Text>
+          <Text className={`text-text-primary ${textRoles.buttonLabel}`}>Go Back</Text>
         </TouchableOpacity>
       </View>
     );
@@ -369,7 +370,7 @@ export default function WorkoutScreen() {
   if (bootstrapState !== 'ready' || !session || !currentExercise) {
     return (
       <View className="flex-1 bg-surface-0 items-center justify-center">
-        <Text className="text-text-secondary font-sans text-base">Loading workout...</Text>
+        <Text className={`text-text-secondary ${textRoles.body}`}>Loading workout...</Text>
       </View>
     );
   }
@@ -395,7 +396,7 @@ export default function WorkoutScreen() {
           style={[hintStyle, { position: 'absolute', bottom: 120, left: 0, right: 0, alignItems: 'center', pointerEvents: 'none' }]}
         >
           <Icon name="gesture-swipe-left" size={36} color="text-secondary" />
-          <Text className="text-text-secondary font-sans text-xs mt-1">Swipe left for next exercise</Text>
+          <Text className={`text-text-secondary ${textRoles.caption} mt-1`}>Swipe left for next exercise</Text>
         </Animated.View>
       )}
 
@@ -441,7 +442,7 @@ export default function WorkoutScreen() {
             activeOpacity={0.7}
           >
             <Icon name="trash-can-outline" size={22} color="danger" />
-            <Text className="text-danger font-sans-bold text-base">Discard Workout</Text>
+            <Text className={`text-danger ${textRoles.buttonLabel}`}>Discard Workout</Text>
           </TouchableOpacity>
           <TouchableOpacity
             className="flex-row items-center gap-3 py-4"
@@ -450,7 +451,7 @@ export default function WorkoutScreen() {
             activeOpacity={0.7}
           >
             <Icon name="arrow-left" size={22} color="text-primary" />
-            <Text className="text-text-primary font-sans-bold text-base">Keep Going</Text>
+            <Text className={`text-text-primary ${textRoles.buttonLabel}`}>Keep Going</Text>
           </TouchableOpacity>
         </BottomSheetView>
       </BottomSheetModal>

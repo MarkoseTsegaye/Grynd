@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Icon } from '../../../shared/components/Icon';
+import { textRoles } from '../../../shared/theme/typography';
 import type { Split } from '../types';
 
 interface Props {
@@ -21,10 +22,10 @@ export function SplitCard({ split, exerciseCount, onPress, onManage, onDelete }:
     <View className="bg-surface-1 rounded-lg px-4 py-4 mb-3">
       <View className="flex-row items-center justify-between">
         <View className="flex-1 mr-3">
-          <Text className="text-text-primary font-sans-bold text-base" numberOfLines={1}>
+          <Text className={`text-text-primary ${textRoles.cardTitle}`} numberOfLines={1}>
             {split.name}
           </Text>
-          <Text className="text-text-secondary font-sans text-xs mt-0.5">
+          <Text className={`text-text-secondary ${textRoles.caption} mt-0.5`}>
             {exerciseCount} {exerciseCount === 1 ? 'exercise' : 'exercises'}
           </Text>
         </View>

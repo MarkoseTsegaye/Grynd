@@ -4,6 +4,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useSessionDetail, SessionDetail } from '../../src/features/history';
 import { useHistoryStore } from '../../src/features/history';
 import { useEffect } from 'react';
+import { textRoles } from '../../src/shared/theme/typography';
 
 export default function SessionDetailScreen() {
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
@@ -21,7 +22,7 @@ export default function SessionDetailScreen() {
   if (!session) {
     return (
       <View className="flex-1 bg-surface-0 items-center justify-center">
-        <Text className="text-text-secondary font-sans text-base">Session not found.</Text>
+        <Text className={`text-text-secondary ${textRoles.body}`}>Session not found.</Text>
       </View>
     );
   }

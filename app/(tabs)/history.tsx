@@ -6,6 +6,7 @@ import { Swipeable } from 'react-native-gesture-handler';
 import * as Haptics from 'expo-haptics';
 import { useHistory, SessionCard } from '../../src/features/history';
 import { Icon } from '../../src/shared/components/Icon';
+import { textRoles } from '../../src/shared/theme/typography';
 
 export default function HistoryScreen() {
   const router = useRouter();
@@ -44,11 +45,11 @@ export default function HistoryScreen() {
     return (
       <View className="flex-1 bg-surface-0">
         <View className="px-5 pt-14 pb-4">
-          <Text className="text-text-primary font-sans-bold text-4xl">History</Text>
+          <Text className={`text-text-primary ${textRoles.screenTitle}`}>History</Text>
         </View>
         <View className="flex-1 items-center justify-center px-8">
           <Icon name="clipboard-text-outline" size={48} color="text-disabled" />
-          <Text className="text-text-secondary font-sans text-base text-center mt-4">
+          <Text className={`text-text-secondary ${textRoles.body} text-center mt-4`}>
             No completed workouts yet.{'\n'}Finish a session to see it here.
           </Text>
         </View>
@@ -59,7 +60,7 @@ export default function HistoryScreen() {
   return (
     <View className="flex-1 bg-surface-0">
       <View className="px-5 pt-14 pb-4">
-        <Text className="text-text-primary font-sans-bold text-4xl">History</Text>
+        <Text className={`text-text-primary ${textRoles.screenTitle}`}>History</Text>
       </View>
       <FlatList
         data={sessions}

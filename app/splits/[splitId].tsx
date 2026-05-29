@@ -6,6 +6,7 @@ import { useManageSplit } from '../../src/features/splits';
 import { useSplitsStore } from '../../src/features/splits';
 import { Icon } from '../../src/shared/components/Icon';
 import type { Exercise } from '../../src/features/splits/types';
+import { textRoles } from '../../src/shared/theme/typography';
 
 export default function ManageSplitScreen() {
   const { splitId } = useLocalSearchParams<{ splitId: string }>();
@@ -18,7 +19,7 @@ export default function ManageSplitScreen() {
   if (!split) {
     return (
       <View className="flex-1 bg-surface-0 items-center justify-center">
-        <Text className="text-text-secondary font-sans text-base">Split not found.</Text>
+        <Text className={`text-text-secondary ${textRoles.body}`}>Split not found.</Text>
       </View>
     );
   }
@@ -31,9 +32,9 @@ export default function ManageSplitScreen() {
             <Icon name="drag-vertical" size={24} color="text-secondary" />
           </TouchableOpacity>
           <View className="flex-1 py-3">
-            <Text className="text-text-primary font-sans-medium text-base">{exercise.name}</Text>
+            <Text className={`text-text-primary ${textRoles.listItemTitle}`}>{exercise.name}</Text>
             {exercise.notes ? (
-              <Text className="text-text-secondary font-sans text-sm mt-0.5">{exercise.notes}</Text>
+              <Text className={`text-text-secondary ${textRoles.bodySmall} mt-0.5`}>{exercise.notes}</Text>
             ) : null}
           </View>
           <TouchableOpacity
@@ -42,7 +43,7 @@ export default function ManageSplitScreen() {
             className="px-4 py-4"
             activeOpacity={0.7}
           >
-            <Text className="text-danger font-sans-bold text-base">×</Text>
+            <Text className={`text-danger ${textRoles.cardTitle}`}>×</Text>
           </TouchableOpacity>
         </View>
       </ScaleDecorator>
@@ -52,14 +53,14 @@ export default function ManageSplitScreen() {
   return (
     <View className="flex-1 bg-surface-0">
       <View className="px-5 pt-4 pb-2">
-        <Text className="text-text-primary font-sans-bold text-4xl mb-1">{split.name}</Text>
-        <Text className="text-text-secondary font-mono text-sm mb-6">
+        <Text className={`text-text-primary ${textRoles.screenTitle} mb-1`} numberOfLines={2}>{split.name}</Text>
+        <Text className={`text-text-secondary ${textRoles.caption} mb-6`}>
           {exercises.length} {exercises.length === 1 ? 'exercise' : 'exercises'}
         </Text>
 
         <View className="flex-row gap-2 mb-6">
           <TextInput
-            className="flex-1 bg-surface-2 text-text-primary font-sans text-base rounded-lg px-4 py-3"
+            className={`flex-1 bg-surface-2 text-text-primary ${textRoles.body} rounded-lg px-4 py-3`}
             placeholder="Exercise name"
             placeholderTextColor="#3D3B38"
             value={newExerciseName}
@@ -79,12 +80,12 @@ export default function ManageSplitScreen() {
           </TouchableOpacity>
         </View>
 
-        {error ? <Text className="text-danger font-sans text-sm mb-4">{error}</Text> : null}
+        {error ? <Text className={`text-danger ${textRoles.bodySmall} mb-4`}>{error}</Text> : null}
       </View>
 
       {exercises.length === 0 ? (
         <View className="flex-1 items-center justify-center px-8">
-          <Text className="text-text-disabled font-sans text-base">No exercises yet.</Text>
+          <Text className={`text-text-disabled ${textRoles.body}`}>No exercises yet.</Text>
         </View>
       ) : (
         <DraggableFlatList

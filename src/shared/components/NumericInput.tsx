@@ -2,22 +2,22 @@ import React, { useCallback } from 'react';
 import { View, TextInput, Text, Platform } from 'react-native';
 import type { TextInputProps } from 'react-native';
 import { sanitizeIntegerInput } from '../lib/weight';
-import { typography } from '../theme/typography';
+import { textRoles, typography } from '../theme/typography';
 
 type NumericInputSize = 'default' | 'compact';
 
 const sizeConfig = {
   default: {
     container: 'min-h-16 px-4',
-    inputClass: 'text-4xl',
-    lineHeight: typography.sizes['4xl'],
-    suffixClass: 'text-sm ml-1.5',
+    inputClass: textRoles.inputValue,
+    lineHeight: typography.lineHeights['4xl'],
+    suffixClass: `${textRoles.inputSuffix} ml-1.5`,
   },
   compact: {
     container: 'min-h-10 px-2',
-    inputClass: 'text-2xl',
-    lineHeight: typography.sizes['2xl'],
-    suffixClass: 'text-xs ml-1',
+    inputClass: textRoles.inputValueCompact,
+    lineHeight: typography.lineHeights['2xl'],
+    suffixClass: `${textRoles.inputSuffixCompact} ml-1`,
   },
 } as const;
 

@@ -10,6 +10,7 @@ import { useSplitsStore } from '../src/features/splits';
 import { Icon } from '../src/shared/components/Icon';
 import type { CycleDay } from '../src/features/splits/types';
 import type { Split } from '../src/features/splits/types';
+import { textRoles } from '../src/shared/theme/typography';
 
 function HeaderDoneButton({ onPress }: { onPress: () => void }) {
   return (
@@ -20,7 +21,7 @@ function HeaderDoneButton({ onPress }: { onPress: () => void }) {
       accessibilityRole="button"
       activeOpacity={0.7}
     >
-      <Text className="text-accent font-sans-bold text-base">Done</Text>
+      <Text className={`text-accent ${textRoles.buttonLabel}`}>Done</Text>
     </TouchableOpacity>
   );
 }
@@ -83,14 +84,14 @@ export default function CycleScreen() {
             {item.type === 'split' ? (
               <>
                 <Icon name="dumbbell" size={20} color="text-secondary" />
-                <Text className="text-text-primary font-sans-bold text-base flex-1" numberOfLines={1}>
+                <Text className={`text-text-primary ${textRoles.cardTitle} flex-1`} numberOfLines={1}>
                   {split?.name ?? 'Unknown split'}
                 </Text>
               </>
             ) : (
               <>
                 <Icon name="sleep" size={20} color="text-secondary" />
-                <Text className="text-text-secondary font-sans text-base">Rest</Text>
+                <Text className={`text-text-secondary ${textRoles.body}`}>Rest</Text>
               </>
             )}
           </View>
@@ -121,7 +122,7 @@ export default function CycleScreen() {
         activeOpacity={0.7}
       >
         <Icon name="dumbbell" size={20} color="text-secondary" />
-        <Text className="text-text-primary font-sans text-base">{split.name}</Text>
+        <Text className={`text-text-primary ${textRoles.body}`}>{split.name}</Text>
       </TouchableOpacity>
     );
   }
@@ -135,9 +136,9 @@ export default function CycleScreen() {
       />
       <SafeAreaView className="flex-1 bg-surface-0">
         <View className="px-5 pt-4 pb-4">
-          <Text className="text-text-primary font-sans-bold text-4xl">Training Cycle</Text>
+          <Text className={`text-text-primary ${textRoles.screenTitle}`}>Training Cycle</Text>
           {days.length > 0 && (
-            <Text className="text-text-secondary font-sans text-sm mt-1">
+            <Text className={`text-text-secondary ${textRoles.bodySmall} mt-1`}>
               {days.length} days · Repeats indefinitely
             </Text>
           )}
@@ -146,7 +147,7 @@ export default function CycleScreen() {
         {days.length === 0 ? (
           <View className="flex-1 items-center justify-center px-8">
             <Icon name="sync-circle" size={48} color="text-disabled" />
-            <Text className="text-text-secondary font-sans text-base text-center mt-4">
+            <Text className={`text-text-secondary ${textRoles.body} text-center mt-4`}>
               No cycle configured.{'\n'}Add split and rest days below.
             </Text>
           </View>
@@ -169,7 +170,7 @@ export default function CycleScreen() {
             activeOpacity={0.7}
           >
             <Icon name="plus-circle-outline" size={20} color="accent" />
-            <Text className="text-accent font-sans-bold text-base">Add Split Day</Text>
+            <Text className={`text-accent ${textRoles.buttonLabel}`}>Add Split Day</Text>
           </TouchableOpacity>
           <TouchableOpacity
             className="flex-1 bg-surface-1 border border-surface-2 rounded-lg py-4 flex-row items-center justify-center gap-2"
@@ -178,7 +179,7 @@ export default function CycleScreen() {
             activeOpacity={0.7}
           >
             <Icon name="sleep" size={20} color="text-secondary" />
-            <Text className="text-text-secondary font-sans-bold text-base">Add Rest Day</Text>
+            <Text className={`text-text-secondary ${textRoles.buttonLabel}`}>Add Rest Day</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -196,7 +197,7 @@ export default function CycleScreen() {
         <View accessibilityViewIsModal>
           <View className="px-5 pt-2 pb-3">
             <Text
-              className="text-text-secondary font-sans text-sm"
+              className={`text-text-secondary ${textRoles.bodySmall}`}
               accessibilityRole="header"
               accessibilityLabel="Select a split"
             >
@@ -205,7 +206,7 @@ export default function CycleScreen() {
           </View>
           {splits.length === 0 ? (
             <View className="px-5">
-              <Text className="text-text-disabled font-sans text-base" accessibilityLabel="No splits yet.">
+              <Text className={`text-text-disabled ${textRoles.body}`} accessibilityLabel="No splits yet.">
                 No splits yet.
               </Text>
             </View>

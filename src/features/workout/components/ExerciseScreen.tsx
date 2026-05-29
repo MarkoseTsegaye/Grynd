@@ -7,6 +7,7 @@ import { Icon } from '../../../shared/components/Icon';
 import { formatShortDate } from '../../../shared/lib/date';
 import { usePrefsStore } from '../../../shared/store/prefsStore';
 import { formatWeight } from '../../../shared/lib/weight';
+import { textRoles } from '../../../shared/theme/typography';
 
 interface Props {
   exercise: LoggedExercise;
@@ -73,13 +74,13 @@ export function ExerciseScreen({
         </View>
       </View>
 
-      <Text className="text-text-primary font-sans-bold text-4xl mb-1" numberOfLines={2}>
+      <Text className={`text-text-primary ${textRoles.listTitle} mb-1`} numberOfLines={2}>
         {exercise.exerciseName}
       </Text>
 
       <View className="flex-row items-center mt-1 mb-4">
-        <Text className="text-accent font-mono-bold text-2xl">{exercise.sets.length}</Text>
-        <Text className="text-text-secondary font-mono text-base ml-1">
+        <Text className={`text-accent ${textRoles.metricLarge}`}>{exercise.sets.length}</Text>
+        <Text className={`text-text-secondary ${textRoles.bodyMono} ml-1`}>
           {exercise.sets.length === 1 ? 'set' : 'sets'}
         </Text>
       </View>
@@ -88,8 +89,8 @@ export function ExerciseScreen({
       {previousExercise && (
         <View className="bg-surface-1 rounded-lg px-4 py-3 mb-4 border border-surface-2">
           <View className="flex-row items-center justify-between mb-2">
-            <Text className="text-text-secondary font-sans text-xs">Last time</Text>
-            <Text className="text-text-secondary font-sans text-xs">
+            <Text className={`text-text-secondary ${textRoles.caption}`}>Last time</Text>
+            <Text className={`text-text-secondary ${textRoles.caption}`}>
               {previousExercise.sets.length > 0
                 ? formatShortDate(previousExercise.sets[0].loggedAt)
                 : ''}
@@ -102,14 +103,14 @@ export function ExerciseScreen({
             const hasRpe = set.effort?.rpe !== undefined;
             return (
               <View key={`prev-${i}`} className="flex-row items-center gap-1 mb-0.5 flex-wrap">
-                <Text className="text-text-disabled font-sans text-xs">Set {i + 1}</Text>
-                <Text className="text-text-primary font-mono text-sm"> {w}</Text>
-                <Text className="text-text-secondary font-mono text-sm"> {unit} × </Text>
-                <Text className="text-text-primary font-mono text-sm">{set.reps}</Text>
-                <Text className="text-text-secondary font-mono text-sm"> reps</Text>
+                <Text className={`text-text-disabled ${textRoles.caption}`}>Set {i + 1}</Text>
+                <Text className={`text-text-primary ${textRoles.metric}`}> {w}</Text>
+                <Text className={`text-text-secondary ${textRoles.metric}`}> {unit} × </Text>
+                <Text className={`text-text-primary ${textRoles.metric}`}>{set.reps}</Text>
+                <Text className={`text-text-secondary ${textRoles.metric}`}> reps</Text>
                 {(hasFail || hasRpe) && (
                   <View className={`rounded-md px-1 py-0.5 ${hasFail ? 'bg-danger/10' : 'bg-surface-2'}`}>
-                    <Text className={`text-xs font-sans ${hasFail ? 'text-danger' : 'text-text-secondary'}`}>
+                    <Text className={`${textRoles.caption} ${hasFail ? 'text-danger' : 'text-text-secondary'}`}>
                       {hasFail && hasRpe ? `FAIL · RPE ${set.effort?.rpe}` : hasFail ? 'FAIL' : `RPE ${set.effort?.rpe}`}
                     </Text>
                   </View>
@@ -118,7 +119,7 @@ export function ExerciseScreen({
             );
           })}
           {previousExercise.sets.length > 5 && (
-            <Text className="text-text-disabled font-sans text-xs mt-1">
+            <Text className={`text-text-disabled ${textRoles.caption} mt-1`}>
               +{previousExercise.sets.length - 5} more
             </Text>
           )}
@@ -157,7 +158,7 @@ export function ExerciseScreen({
           <DotProgress current={exerciseIndex} total={totalExercises} />
           <View className="flex-row items-center gap-1.5">
             <Icon name="dumbbell" size={14} color="text-secondary" />
-            <Text className="text-text-secondary font-mono text-xs">
+            <Text className={`text-text-secondary ${textRoles.captionMono}`}>
               {exerciseIndex + 1} / {totalExercises}
             </Text>
           </View>
@@ -171,7 +172,7 @@ export function ExerciseScreen({
             activeOpacity={0.7}
           >
             <Icon name="flag-checkered" size={18} color="surface-0" />
-            <Text className="text-surface-0 font-sans-bold text-sm">Finish</Text>
+            <Text className={`text-surface-0 ${textRoles.buttonLabelSmall}`}>Finish</Text>
           </TouchableOpacity>
         ) : (
           <View style={{ width: 68 }} />
@@ -189,7 +190,7 @@ export function ExerciseScreen({
         activeOpacity={0.7}
       >
         <Icon name="plus-circle-outline" size={20} color="accent" />
-        <Text className="text-accent font-sans-bold text-xl">Set</Text>
+        <Text className={`text-accent ${textRoles.actionLabel}`}>Set</Text>
       </TouchableOpacity>
     </SafeAreaView>
   );

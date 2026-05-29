@@ -1,5 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, Text } from 'react-native';
+import { textRoles } from '../theme/typography';
 
 interface Props {
   label: string;
@@ -17,9 +18,9 @@ export function Button({ label, onPress, variant = 'primary', disabled, accessib
     danger: 'bg-danger',
   };
   const textVariants = {
-    primary: 'text-surface-0 font-sans-bold text-base',
-    ghost: 'text-text-primary font-sans-medium text-base',
-    danger: 'text-text-primary font-sans-bold text-base',
+    primary: `text-surface-0 ${textRoles.buttonLabel}`,
+    ghost: `text-text-primary ${textRoles.buttonLabelMedium}`,
+    danger: `text-text-primary ${textRoles.buttonLabel}`,
   };
 
   return (

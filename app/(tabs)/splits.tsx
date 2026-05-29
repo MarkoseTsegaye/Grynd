@@ -11,6 +11,7 @@ import { useSplitsStore } from '../../src/features/splits';
 import { useCreateSplit } from '../../src/features/splits';
 import { Icon } from '../../src/shared/components/Icon';
 import type { Split } from '../../src/features/splits/types';
+import { textRoles } from '../../src/shared/theme/typography';
 
 const TAB_BAR_HEIGHT = 49;
 const FLOATING_CTA_HEIGHT = 56;
@@ -91,13 +92,13 @@ export default function SplitsScreen() {
   return (
     <View className="flex-1 bg-surface-0">
       <View className="px-5 pt-14 pb-4">
-        <Text className="text-text-primary font-sans-bold text-4xl">Splits</Text>
+        <Text className={`text-text-primary ${textRoles.screenTitle}`}>Splits</Text>
       </View>
 
       {showForm && (
         <View className="px-5 mb-4">
           <TextInput
-            className="bg-surface-2 text-text-primary font-sans text-base rounded-lg px-4 py-3 mb-3"
+            className={`bg-surface-2 text-text-primary ${textRoles.body} rounded-lg px-4 py-3 mb-3`}
             placeholder="Split name (e.g. Push, Legs)"
             placeholderTextColor="#3D3B38"
             value={name}
@@ -114,7 +115,7 @@ export default function SplitsScreen() {
             accessibilityLabel="Save new split"
             activeOpacity={0.7}
           >
-            <Text className="text-surface-0 font-sans-bold text-base">
+            <Text className={`text-surface-0 ${textRoles.buttonLabel}`}>
               {isSubmitting ? 'Creating...' : 'Create Split'}
             </Text>
           </TouchableOpacity>
@@ -127,7 +128,7 @@ export default function SplitsScreen() {
           style={{ paddingBottom: listBottomPadding }}
         >
           <Icon name="dumbbell" size={48} color="text-disabled" />
-          <Text className="text-text-secondary font-sans text-base text-center mt-4">
+          <Text className={`text-text-secondary ${textRoles.body} text-center mt-4`}>
             Create your first split to get started.
           </Text>
         </View>
@@ -160,7 +161,7 @@ export default function SplitsScreen() {
               elevation: 8,
             }}
           >
-            <Text className="text-surface-0 font-sans-bold text-base">
+            <Text className={`text-surface-0 ${textRoles.buttonLabel}`}>
               {showForm ? 'Cancel' : '+ New Split'}
             </Text>
           </TouchableOpacity>
@@ -178,10 +179,10 @@ export default function SplitsScreen() {
         handleIndicatorStyle={{ backgroundColor: '#3D3B38' }}
       >
         <BottomSheetView className="px-6 pb-8 pt-2">
-          <Text className="text-text-primary font-sans-bold text-lg mb-1">
+          <Text className={`text-text-primary ${textRoles.modalTitle} mb-1`}>
             Delete {pendingDeleteSplit?.name ?? 'Split'}?
           </Text>
-          <Text className="text-text-secondary font-sans text-sm mb-6">
+          <Text className={`text-text-secondary ${textRoles.bodySmall} mb-6`}>
             This cannot be undone. Any cycle days using this split will be set to rest days.
           </Text>
           <TouchableOpacity
@@ -190,7 +191,7 @@ export default function SplitsScreen() {
             accessibilityLabel="Confirm delete split"
             activeOpacity={0.7}
           >
-            <Text className="text-text-primary font-sans-bold text-base">Delete</Text>
+            <Text className={`text-text-primary ${textRoles.buttonLabel}`}>Delete</Text>
           </TouchableOpacity>
           <TouchableOpacity
             className="bg-surface-2 rounded-lg py-4 items-center"
@@ -198,7 +199,7 @@ export default function SplitsScreen() {
             accessibilityLabel="Cancel delete"
             activeOpacity={0.7}
           >
-            <Text className="text-text-secondary font-sans-bold text-base">Cancel</Text>
+            <Text className={`text-text-secondary ${textRoles.buttonLabel}`}>Cancel</Text>
           </TouchableOpacity>
         </BottomSheetView>
       </BottomSheetModal>
