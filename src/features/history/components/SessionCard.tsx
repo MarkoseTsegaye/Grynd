@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { formatShortDate } from '../../workout/../../shared/lib/date';
+import { usePrefsStore } from '../../../shared/store/prefsStore';
+import { formatWeight } from '../../../shared/lib/weight';
 import type { WorkoutSession } from '../../workout/types';
 
 interface Props {
@@ -9,6 +11,7 @@ interface Props {
 }
 
 export function SessionCard({ session, onPress }: Props) {
+  const { weightUnit } = usePrefsStore();
   const totalSets = session.exercises.reduce((acc, e) => acc + e.sets.length, 0);
   const visibleExercises = session.exercises.slice(0, 4);
   const extraCount = session.exercises.length - 4;
@@ -41,13 +44,14 @@ export function SessionCard({ session, onPress }: Props) {
             <Text className="text-text-secondary font-sans text-xs">{ex.sets.length} sets</Text>
           </View>
           {ex.sets.map((set, i) => {
+            const w = formatWeight(set.weightKg, weightUnit);
             const hasFail = set.effort?.toFailure;
             const hasRpe = set.effort?.rpe !== undefined;
             return (
               <View key={`${set.loggedAt}-${i}`} className="flex-row items-center gap-1 pl-4 mb-1 flex-wrap">
                 <Text className="text-text-disabled font-sans text-xs">Set {i + 1}</Text>
-                <Text className="text-text-primary font-mono text-sm"> {set.weightKg}</Text>
-                <Text className="text-text-secondary font-mono text-sm"> kg × </Text>
+                <Text className="text-text-primary font-mono text-sm"> {w}</Text>
+                <Text className="text-text-secondary font-mono text-sm"> {weightUnit} × </Text>
                 <Text className="text-text-primary font-mono text-sm">{set.reps}</Text>
                 <Text className="text-text-secondary font-mono text-sm"> reps</Text>
                 {(hasFail || hasRpe) && (

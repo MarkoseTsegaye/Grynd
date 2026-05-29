@@ -34,9 +34,11 @@ export default function SettingsScreen() {
   const { cycle, isLoaded: cycleLoaded, loadCycle, resetCyclePosition } = useCycleStore();
   const { splits, isLoaded: splitsLoaded, loadData } = useSplitsStore();
   const {
+    weightUnit,
     autoAdvanceCycle,
     isLoaded: prefsLoaded,
     loadPrefs,
+    setWeightUnit,
     setAutoAdvanceCycle,
   } = usePrefsStore();
 
@@ -86,6 +88,37 @@ export default function SettingsScreen() {
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         <View className="px-5 mb-8">
+          <Text className="text-text-secondary font-sans text-xs uppercase tracking-widest mb-3">
+            Units
+          </Text>
+
+          <View className="bg-surface-1 rounded-lg px-4 py-4 mb-8 flex-row items-center">
+            <View className="flex-1 mr-3">
+              <Text className="text-text-primary font-sans-bold text-base">Weight unit</Text>
+              <Text className="text-text-secondary font-sans text-sm mt-0.5">
+                Show and log weights in kilograms or pounds
+              </Text>
+            </View>
+            <View className="flex-row gap-1">
+              <TouchableOpacity
+                className={`px-3 py-1.5 rounded ${weightUnit === 'kg' ? 'bg-accent' : 'bg-surface-2'}`}
+                onPress={() => weightUnit !== 'kg' && setWeightUnit('kg')}
+                accessibilityLabel="Weight unit, kilograms"
+                activeOpacity={0.7}
+              >
+                <Text className={`font-sans text-sm ${weightUnit === 'kg' ? 'text-surface-0' : 'text-text-secondary'}`}>kg</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                className={`px-3 py-1.5 rounded ${weightUnit === 'lbs' ? 'bg-accent' : 'bg-surface-2'}`}
+                onPress={() => weightUnit !== 'lbs' && setWeightUnit('lbs')}
+                accessibilityLabel="Weight unit, pounds"
+                activeOpacity={0.7}
+              >
+                <Text className={`font-sans text-sm ${weightUnit === 'lbs' ? 'text-surface-0' : 'text-text-secondary'}`}>lbs</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
           <Text className="text-text-secondary font-sans text-xs uppercase tracking-widest mb-3">
             Training Cycle
           </Text>
