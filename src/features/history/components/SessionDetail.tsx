@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { formatShortDate } from '../../workout/../../shared/lib/date';
 import { usePrefsStore } from '../../../shared/store/prefsStore';
@@ -10,7 +10,11 @@ interface Props {
 }
 
 export function SessionDetail({ session }: Props) {
-  const { weightUnit } = usePrefsStore();
+  const { weightUnit, isLoaded: prefsLoaded, loadPrefs } = usePrefsStore();
+
+  useEffect(() => {
+    if (!prefsLoaded) loadPrefs();
+  }, [prefsLoaded, loadPrefs]);
 
   return (
     <ScrollView className="flex-1 bg-surface-0 px-5 pt-4" showsVerticalScrollIndicator={false}>
@@ -37,14 +41,13 @@ export function SessionDetail({ session }: Props) {
           ) : (
             exercise.sets.map((set, i) => {
               const w = formatWeight(set.weightKg, weightUnit);
-              const unit = weightUnit;
               const hasFail = set.effort?.toFailure;
               const hasRpe = set.effort?.rpe !== undefined;
               return (
                 <View key={`${set.loggedAt}-${i}`} className="flex-row items-center gap-1 pl-4 mb-1 flex-wrap">
                   <Text className="text-text-disabled font-sans text-xs">Set {i + 1}</Text>
                   <Text className="text-text-primary font-mono text-sm"> {w}</Text>
-                  <Text className="text-text-secondary font-mono text-sm"> {unit} × </Text>
+                  <Text className="text-text-secondary font-mono text-sm"> {weightUnit} × </Text>
                   <Text className="text-text-primary font-mono text-sm">{set.reps}</Text>
                   <Text className="text-text-secondary font-mono text-sm"> reps</Text>
                   {(hasFail || hasRpe) && (

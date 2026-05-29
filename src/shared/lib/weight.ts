@@ -20,8 +20,9 @@ export function sanitizeIntegerInput(text: string): string {
 }
 
 export function weightKgToDisplay(weightKg: number, unit: 'kg' | 'lbs'): number {
-  if (unit === 'lbs') return Math.round(kgToLbs(weightKg));
-  return Math.round(weightKg);
+  const kg = Number.isFinite(weightKg) ? weightKg : 0;
+  if (unit === 'lbs') return Math.round(kgToLbs(kg));
+  return Math.round(kg);
 }
 
 export function displayWeightToKg(display: number, unit: 'kg' | 'lbs'): number {

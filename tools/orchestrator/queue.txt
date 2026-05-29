@@ -4,7 +4,6 @@
 # Example:
 # fix the + Set button dead tap on second open
 # add rest timer between sets
-history should show preferenced weight unit and must be whole numbers only
 consolidate font sizes throughout app; ensure no font size is too large or too small for its container
 optional notes field alongside RPE for each exercise
 Should be able to see exercies somehow (maybe view all button) all at once during a workout (for easier substitution and general flow of workout)

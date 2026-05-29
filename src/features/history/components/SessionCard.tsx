@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { formatShortDate } from '../../workout/../../shared/lib/date';
 import { usePrefsStore } from '../../../shared/store/prefsStore';
@@ -11,7 +11,11 @@ interface Props {
 }
 
 export function SessionCard({ session, onPress }: Props) {
-  const { weightUnit } = usePrefsStore();
+  const { weightUnit, isLoaded: prefsLoaded, loadPrefs } = usePrefsStore();
+
+  useEffect(() => {
+    if (!prefsLoaded) loadPrefs();
+  }, [prefsLoaded, loadPrefs]);
   const totalSets = session.exercises.reduce((acc, e) => acc + e.sets.length, 0);
   const visibleExercises = session.exercises.slice(0, 4);
   const extraCount = session.exercises.length - 4;
