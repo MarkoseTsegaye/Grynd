@@ -22,6 +22,7 @@ export function useWorkout(logSheetRef: RefObject<BottomSheetModal | null>) {
   const { impact, light, success } = useHaptics();
 
   const [logSheetVisible, setLogSheetVisible] = useState(false);
+  const [overviewSheetVisible, setOverviewSheetVisible] = useState(false);
   const [repInput, setRepInput] = useState('');
   const [weightInput, setWeightInput] = useState('');
   const [weightMode, setWeightMode] = useState<WeightMode>('straight');
@@ -104,6 +105,18 @@ export function useWorkout(logSheetRef: RefObject<BottomSheetModal | null>) {
     setLogSheetVisible(index >= 0);
   }, []);
 
+  const handleOverviewSheetChange = useCallback((index: number) => {
+    setOverviewSheetVisible(index >= 0);
+  }, []);
+
+  const handleGoToExercise = useCallback(
+    (index: number) => {
+      if (index < 0 || index >= totalExercises) return;
+      goToExercise(index);
+    },
+    [goToExercise, totalExercises],
+  );
+
   const handleConfirmSet = useCallback(async () => {
     const reps = parseInt(repInput, 10);
     if (!currentExercise || isNaN(reps) || reps <= 0 || computedWeightKg <= 0) return;
@@ -183,6 +196,7 @@ export function useWorkout(logSheetRef: RefObject<BottomSheetModal | null>) {
     totalExercises,
     isLastExercise,
     logSheetVisible,
+    overviewSheetVisible,
     repInput,
     setRepInput,
     weightInput,
@@ -204,6 +218,8 @@ export function useWorkout(logSheetRef: RefObject<BottomSheetModal | null>) {
     openLogSheet,
     handleLogSheetDismiss,
     handleLogSheetChange,
+    handleOverviewSheetChange,
+    handleGoToExercise,
     handleConfirmSet,
     handleDeleteSet,
     handleSwipeNext,

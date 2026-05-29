@@ -13,7 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { BottomSheetModal, BottomSheetView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
-import { useWorkout, ExerciseScreen, LogSheet } from '../../src/features/workout';
+import { useWorkout, ExerciseScreen, LogSheet, ExerciseOverviewSheet } from '../../src/features/workout';
 import { useWorkoutStore } from '../../src/features/workout';
 import { useSplitsStore } from '../../src/features/splits';
 import { useHistoryStore } from '../../src/features/history';
@@ -42,10 +42,11 @@ export default function WorkoutScreen() {
   const [bootstrapMessage, setBootstrapMessage] = useState<string | null>(null);
 
   const logSheetRef = useRef<BottomSheetModal>(null);
+  const overviewSheetRef = useRef<BottomSheetModal>(null);
 
   const {
     session, currentExercise, currentExerciseIndex, totalExercises, isLastExercise,
-    logSheetVisible,
+    logSheetVisible, overviewSheetVisible,
     repInput, setRepInput,
     weightInput, setWeightInput,
     weightMode, toggleWeightMode,
@@ -55,13 +56,26 @@ export default function WorkoutScreen() {
     rpeInput, setRpeInput,
     isLogging,
     openLogSheet, handleLogSheetDismiss, handleLogSheetChange, handleConfirmSet, handleDeleteSet,
+    handleOverviewSheetChange, handleGoToExercise,
     handleSwipeNext, handleSwipePrev, handleFinish,
     currentPreviousPerformance,
   } = useWorkout(logSheetRef);
 
+  const openOverview = useCallback(() => {
+    overviewSheetRef.current?.present();
+  }, []);
+
+  const handleSelectExercise = useCallback(
+    (index: number) => {
+      handleGoToExercise(index);
+    },
+    [handleGoToExercise],
+  );
+
   // Cancel sheet
   const cancelSheetRef = useRef<BottomSheetModal>(null);
   const cancelSnapPoints = useMemo(() => ['28%'], []);
+  const sheetBlocksSwipe = logSheetVisible || overviewSheetVisible;
   const renderBackdrop = useCallback(
     (props: BottomSheetBackdropProps) => (
       <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.7} />
@@ -201,11 +215,11 @@ export default function WorkoutScreen() {
   }, [canGoPrev, currentExerciseIndex, isLastExercise, isLastExerciseSV]);
 
   useEffect(() => {
-    if (!logSheetVisible) {
+    if (!sheetBlocksSwipe) {
       translateX.value = 0;
       isAnimating.value = false;
     }
-  }, [isAnimating, logSheetVisible, translateX]);
+  }, [isAnimating, sheetBlocksSwipe, translateX]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextState) => {
@@ -244,7 +258,7 @@ export default function WorkoutScreen() {
   const panGesture = useMemo(
     () =>
       Gesture.Pan()
-        .enabled(!logSheetVisible)
+        .enabled(!sheetBlocksSwipe)
         .activeOffsetX([-20, 20])
         .onUpdate((e) => {
           if (isAnimating.value) return;
@@ -316,6 +330,8 @@ export default function WorkoutScreen() {
       isAnimating,
       isLastExerciseSV,
       logSheetVisible,
+      overviewSheetVisible,
+      sheetBlocksSwipe,
       translateX,
       triggerSwipeCommitHaptic,
     ],
@@ -387,6 +403,8 @@ export default function WorkoutScreen() {
         onDeleteSet={handleDeleteSet}
         onFinish={async () => { await handleFinish(); router.replace('/(tabs)/history'); }}
         onCancel={handleCancelPress}
+        onOpenOverview={openOverview}
+        overviewDisabled={logSheetVisible}
         renderSwipeable={renderSwipeable}
       />
 
@@ -424,6 +442,16 @@ export default function WorkoutScreen() {
         onConfirm={handleConfirmSet}
         onClose={handleLogSheetDismiss}
       />
+
+      {session && (
+        <ExerciseOverviewSheet
+          sheetRef={overviewSheetRef}
+          exercises={session.exercises}
+          currentExerciseIndex={currentExerciseIndex}
+          onSelectExercise={handleSelectExercise}
+          onChange={handleOverviewSheetChange}
+        />
+      )}
 
       {/* Cancel workout confirmation sheet */}
       <BottomSheetModal

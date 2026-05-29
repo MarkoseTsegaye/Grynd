@@ -19,6 +19,8 @@ interface Props {
   onDeleteSet: (index: number) => void;
   onFinish: () => void;
   onCancel: () => void;
+  onOpenOverview?: () => void;
+  overviewDisabled?: boolean;
   renderSwipeable?: (body: React.ReactNode) => React.ReactNode;
 }
 
@@ -56,7 +58,8 @@ function DotProgress({ current, total }: { current: number; total: number }) {
 
 export function ExerciseScreen({
   exercise, exerciseIndex, totalExercises, isLastExercise, previousExercise,
-  onOpenLog, onDeleteSet, onFinish, onCancel, renderSwipeable,
+  onOpenLog, onDeleteSet, onFinish, onCancel, onOpenOverview, overviewDisabled,
+  renderSwipeable,
 }: Props) {
   const isFirst = exerciseIndex === 0;
   const { weightUnit } = usePrefsStore();
@@ -162,6 +165,19 @@ export function ExerciseScreen({
               {exerciseIndex + 1} / {totalExercises}
             </Text>
           </View>
+          {onOpenOverview && (
+            <TouchableOpacity
+              onPress={onOpenOverview}
+              disabled={overviewDisabled}
+              accessibilityLabel="View all exercises"
+              accessibilityRole="button"
+              accessibilityState={{ disabled: overviewDisabled }}
+              activeOpacity={0.7}
+              className={`mt-1 ${overviewDisabled ? 'opacity-40' : ''}`}
+            >
+              <Text className={`text-accent ${textRoles.caption}`}>View all</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {isLastExercise ? (
