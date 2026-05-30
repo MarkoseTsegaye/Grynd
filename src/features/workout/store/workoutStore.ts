@@ -19,6 +19,7 @@ interface WorkoutState {
     reps: number,
     weightKg: number,
     effort?: { toFailure: boolean; rpe?: number },
+    notes?: string,
   ) => Promise<void>;
   deleteSet: (exerciseId: string, setIndex: number) => Promise<void>;
   goToExercise: (index: number) => void;
@@ -71,7 +72,7 @@ export const useWorkoutStore = create<WorkoutState>()(
         }
       },
 
-      logSet: async (exerciseId, reps, weightKg, effort) => {
+      logSet: async (exerciseId, reps, weightKg, effort, notes) => {
         const { session } = get();
         if (!session) return;
 
@@ -79,6 +80,7 @@ export const useWorkoutStore = create<WorkoutState>()(
           reps,
           weightKg,
           ...(effort ? { effort } : {}),
+          ...(notes ? { notes } : {}),
           loggedAt: Date.now(),
         };
         const exercises = session.exercises.map((e) =>

@@ -29,6 +29,7 @@ export function useWorkout(logSheetRef: RefObject<BottomSheetModal | null>) {
   const [plates, setPlates] = useState<Record<number, number>>({});
   const [toFailure, setToFailure] = useState(false);
   const [rpeInput, setRpeInput] = useState('');
+  const [notesInput, setNotesInput] = useState('');
   const [isLogging, setIsLogging] = useState(false);
 
   const [previousPerformances, setPreviousPerformances] = useState<
@@ -80,6 +81,7 @@ export function useWorkout(logSheetRef: RefObject<BottomSheetModal | null>) {
     setPlates({});
     setToFailure(false);
     setRpeInput('');
+    setNotesInput('');
   }, []);
 
   const openLogSheet = useCallback(() => {
@@ -126,13 +128,15 @@ export function useWorkout(logSheetRef: RefObject<BottomSheetModal | null>) {
       toFailure || rpeNum !== undefined
         ? { toFailure, ...(rpeNum !== undefined ? { rpe: rpeNum } : {}) }
         : undefined;
+    const trimmedNotes = notesInput.trim();
+    const notes = trimmedNotes.length > 0 ? trimmedNotes : undefined;
 
     setIsLogging(true);
-    await logSet(currentExercise.exerciseId, reps, computedWeightKg, effort);
+    await logSet(currentExercise.exerciseId, reps, computedWeightKg, effort, notes);
     impact();
     setIsLogging(false);
     dismissLogSheet();
-  }, [repInput, computedWeightKg, currentExercise, toFailure, rpeInput, logSet, impact, dismissLogSheet]);
+  }, [repInput, computedWeightKg, currentExercise, toFailure, rpeInput, notesInput, logSet, impact, dismissLogSheet]);
 
   const handleDeleteSet = useCallback(
     async (setIndex: number) => {
@@ -214,6 +218,8 @@ export function useWorkout(logSheetRef: RefObject<BottomSheetModal | null>) {
     setToFailure,
     rpeInput,
     setRpeInput,
+    notesInput,
+    setNotesInput,
     isLogging,
     openLogSheet,
     handleLogSheetDismiss,

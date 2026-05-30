@@ -54,6 +54,7 @@ export default function WorkoutScreen() {
     plates, plateList, addPlate, removePlate, computedWeightKg,
     toFailure, setToFailure,
     rpeInput, setRpeInput,
+    notesInput, setNotesInput,
     isLogging,
     openLogSheet, handleLogSheetDismiss, handleLogSheetChange, handleConfirmSet, handleDeleteSet,
     handleOverviewSheetChange, handleGoToExercise,
@@ -438,6 +439,8 @@ export default function WorkoutScreen() {
         onToggleFailure={() => setToFailure((v) => !v)}
         rpeInput={rpeInput}
         onChangeRpe={setRpeInput}
+        notesInput={notesInput}
+        onChangeNotes={setNotesInput}
         isLogging={isLogging}
         onConfirm={handleConfirmSet}
         onClose={handleLogSheetDismiss}

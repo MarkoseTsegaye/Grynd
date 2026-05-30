@@ -14,7 +14,9 @@ import { Icon } from '../../../shared/components/Icon';
 import { formatWeight } from '../../../shared/lib/weight';
 import { textRoles } from '../../../shared/theme/typography';
 
-type LogField = 'weight' | 'reps' | 'rpe';
+const MAX_SET_NOTES_LENGTH = 200;
+
+type LogField = 'weight' | 'reps' | 'rpe' | 'notes';
 
 interface Props {
   sheetRef: RefObject<BottomSheetModal | null>;
@@ -42,6 +44,8 @@ interface Props {
   onToggleFailure: () => void;
   rpeInput: string;
   onChangeRpe: (val: string) => void;
+  notesInput: string;
+  onChangeNotes: (val: string) => void;
   // Control
   isLogging: boolean;
   onConfirm: () => void;
@@ -58,6 +62,7 @@ export function LogSheet({
   plates, plateList, onAddPlate, onRemovePlate, computedWeightKg,
   toFailure, onToggleFailure,
   rpeInput, onChangeRpe,
+  notesInput, onChangeNotes,
   isLogging, onConfirm, onClose,
 }: Props) {
   const insets = useSafeAreaInsets();
@@ -65,7 +70,8 @@ export function LogSheet({
   const repsRef = useRef<TextInput>(null);
   const weightRef = useRef<TextInput>(null);
   const rpeRef = useRef<TextInput>(null);
-  const fieldOffsets = useRef<Record<LogField, number>>({ weight: 0, reps: 0, rpe: 0 });
+  const fieldOffsets = useRef<Record<LogField, number>>({ weight: 0, reps: 0, rpe: 0, notes: 0 });
+  const effortSectionY = useRef(0);
   const confirmOffset = useRef(0);
   const focusedFieldRef = useRef<LogField | null>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -370,6 +376,7 @@ export function LogSheet({
         <View
           className="border-t border-surface-2 mt-4 pt-4 mb-5"
           onLayout={(event) => {
+            effortSectionY.current = event.nativeEvent.layout.y;
             fieldOffsets.current.rpe = event.nativeEvent.layout.y;
           }}
         >
@@ -410,6 +417,26 @@ export function LogSheet({
               </View>
               <Text className={`text-text-secondary ${textRoles.bodySmall}`}>/ 10</Text>
             </View>
+          </View>
+          <View
+            className="mt-3"
+            onLayout={(event) => {
+              fieldOffsets.current.notes = effortSectionY.current + event.nativeEvent.layout.y;
+            }}
+          >
+            <Text className={`text-text-secondary ${textRoles.bodySmall} mb-1`}>Notes (optional)</Text>
+            <BottomSheetTextInput
+              className="bg-surface-2 rounded-lg px-4 py-3 text-text-primary font-sans text-base min-h-12"
+              value={notesInput}
+              onChangeText={onChangeNotes}
+              placeholder="e.g. used straps, paused mid-set"
+              placeholderTextColor="#8A8580"
+              multiline
+              maxLength={MAX_SET_NOTES_LENGTH}
+              onFocus={() => handleFieldFocus('notes')}
+              onBlur={handleFieldBlur}
+              accessibilityLabel="Set notes input"
+            />
           </View>
         </View>
 

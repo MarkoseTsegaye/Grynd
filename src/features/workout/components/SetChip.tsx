@@ -51,6 +51,13 @@ export function SetChip({ setNumber, set, onDelete }: Props) {
         <Text className={`text-text-primary ${textRoles.metricBold}`}>{set.reps}</Text>
         <Text className={`text-text-secondary ${textRoles.metric}`}> reps</Text>
         {set.effort && <EffortBadge effort={set.effort} />}
+        {set.notes ? (
+          <View className="rounded-md px-1.5 py-0.5 bg-surface-1 max-w-[140px]">
+            <Text className={`text-text-secondary ${textRoles.caption}`} numberOfLines={1}>
+              {set.notes}
+            </Text>
+          </View>
+        ) : null}
       </View>
       <Icon name="close-circle" size={16} color="danger" />
     </TouchableOpacity>

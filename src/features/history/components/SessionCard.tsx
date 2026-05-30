@@ -4,6 +4,10 @@ import { formatShortDate } from '../../workout/../../shared/lib/date';
 import { usePrefsStore } from '../../../shared/store/prefsStore';
 import { formatWeight } from '../../../shared/lib/weight';
 import { textRoles } from '../../../shared/theme/typography';
+import { useHistoryStore } from '../store/historyStore';
+import { compareSets } from '../lib/compareSetPerformance';
+import { getPriorExerciseSets } from '../lib/getPriorExerciseSets';
+import { SetProgressIndicator } from './SetProgressIndicator';
 import type { WorkoutSession } from '../../workout/types';
 
 interface Props {
@@ -13,6 +17,7 @@ interface Props {
 
 export function SessionCard({ session, onPress }: Props) {
   const { weightUnit, isLoaded: prefsLoaded, loadPrefs } = usePrefsStore();
+  const { sessions } = useHistoryStore();
 
   useEffect(() => {
     if (!prefsLoaded) loadPrefs();
@@ -39,7 +44,9 @@ export function SessionCard({ session, onPress }: Props) {
       </View>
 
       {/* Level 2 + 3: exercises */}
-      {visibleExercises.map((ex, exIdx) => (
+      {visibleExercises.map((ex, exIdx) => {
+        const priorSets = getPriorExerciseSets(session, ex.exerciseId, sessions);
+        return (
         <View
           key={ex.exerciseId}
           className={`border-t border-surface-2 pt-2 ${exIdx < visibleExercises.length - 1 || extraCount > 0 ? 'mb-3' : 'mb-0'}`}
@@ -52,6 +59,9 @@ export function SessionCard({ session, onPress }: Props) {
             const w = formatWeight(set.weightKg, weightUnit);
             const hasFail = set.effort?.toFailure;
             const hasRpe = set.effort?.rpe !== undefined;
+            const hasNotes = !!set.notes;
+            const priorSet = priorSets && i < priorSets.length ? priorSets[i] : null;
+            const comparison = priorSet ? compareSets(priorSet, set) : null;
             return (
               <View key={`${set.loggedAt}-${i}`} className="flex-row items-center gap-1 pl-4 mb-1 flex-wrap">
                 <Text className={`text-text-disabled ${textRoles.caption}`}>Set {i + 1}</Text>
@@ -59,6 +69,14 @@ export function SessionCard({ session, onPress }: Props) {
                 <Text className={`text-text-secondary ${textRoles.metric}`}> {weightUnit} × </Text>
                 <Text className={`text-text-primary ${textRoles.metric}`}>{set.reps}</Text>
                 <Text className={`text-text-secondary ${textRoles.metric}`}> reps</Text>
+                {comparison && priorSet && (
+                  <SetProgressIndicator
+                    setNumber={i + 1}
+                    prev={priorSet}
+                    current={set}
+                    result={comparison}
+                  />
+                )}
                 {(hasFail || hasRpe) && (
                   <View className={`rounded-md px-1 py-0.5 ${hasFail ? 'bg-danger/10' : 'bg-surface-2'}`}>
                     <Text className={`${textRoles.caption} ${hasFail ? 'text-danger' : 'text-text-secondary'}`}>
@@ -66,11 +84,19 @@ export function SessionCard({ session, onPress }: Props) {
                     </Text>
                   </View>
                 )}
+                {hasNotes && (
+                  <View className="rounded-md px-1 py-0.5 bg-surface-2 max-w-[120px]">
+                    <Text className={`text-text-secondary ${textRoles.caption}`} numberOfLines={1}>
+                      {set.notes}
+                    </Text>
+                  </View>
+                )}
               </View>
             );
           })}
         </View>
-      ))}
+        );
+      })}
 
       {extraCount > 0 && (
         <Text className={`text-text-disabled ${textRoles.caption} mt-1`}>+{extraCount} exercises</Text>

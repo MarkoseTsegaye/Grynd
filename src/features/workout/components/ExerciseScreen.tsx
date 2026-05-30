@@ -104,6 +104,7 @@ export function ExerciseScreen({
             const unit = weightUnit;
             const hasFail = set.effort?.toFailure;
             const hasRpe = set.effort?.rpe !== undefined;
+            const hasNotes = !!set.notes;
             return (
               <View key={`prev-${i}`} className="flex-row items-center gap-1 mb-0.5 flex-wrap">
                 <Text className={`text-text-disabled ${textRoles.caption}`}>Set {i + 1}</Text>
@@ -115,6 +116,13 @@ export function ExerciseScreen({
                   <View className={`rounded-md px-1 py-0.5 ${hasFail ? 'bg-danger/10' : 'bg-surface-2'}`}>
                     <Text className={`${textRoles.caption} ${hasFail ? 'text-danger' : 'text-text-secondary'}`}>
                       {hasFail && hasRpe ? `FAIL · RPE ${set.effort?.rpe}` : hasFail ? 'FAIL' : `RPE ${set.effort?.rpe}`}
+                    </Text>
+                  </View>
+                )}
+                {hasNotes && (
+                  <View className="rounded-md px-1 py-0.5 bg-surface-2 max-w-[120px]">
+                    <Text className={`text-text-secondary ${textRoles.caption}`} numberOfLines={1}>
+                      {set.notes}
                     </Text>
                   </View>
                 )}

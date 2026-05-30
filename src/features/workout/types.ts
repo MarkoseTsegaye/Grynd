@@ -5,6 +5,7 @@ export interface LoggedSet {
     toFailure: boolean;
     rpe?: number;
   };
+  notes?: string;
   loggedAt: number;
 }
 
