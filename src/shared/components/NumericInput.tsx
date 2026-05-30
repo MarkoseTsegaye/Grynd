@@ -29,6 +29,7 @@ interface NumericInputProps {
   autoFocus?: boolean;
   onSubmitEditing?: () => void;
   onFocus?: TextInputProps['onFocus'];
+  onBlur?: TextInputProps['onBlur'];
   keyboardType?: 'decimal-pad' | 'number-pad';
   returnKeyType?: 'done' | 'next';
   maxLength?: number;
@@ -48,6 +49,7 @@ export const NumericInput = React.forwardRef<TextInput, NumericInputProps>(
       autoFocus,
       onSubmitEditing,
       onFocus,
+      onBlur,
       keyboardType = 'number-pad',
       returnKeyType = 'done',
       maxLength = 6,
@@ -81,6 +83,7 @@ export const NumericInput = React.forwardRef<TextInput, NumericInputProps>(
           returnKeyType={returnKeyType}
           onSubmitEditing={onSubmitEditing}
           onFocus={onFocus}
+          onBlur={onBlur}
           autoFocus={autoFocus}
           textAlignVertical="center"
           textAlign={size === 'compact' ? 'center' : 'left'}

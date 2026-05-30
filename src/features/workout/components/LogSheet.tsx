@@ -72,9 +72,11 @@ export function LogSheet({
   const [sheetOpen, setSheetOpen] = useState(false);
   const snapPoints = useMemo(() => ['82%'], []);
 
+  const bottomInset = keyboardHeight > 0 ? keyboardHeight : insets.bottom;
+
   const contentPaddingBottom = useMemo(
-    () => Math.max(insets.bottom, 40) + keyboardHeight,
-    [insets.bottom, keyboardHeight],
+    () => Math.max(insets.bottom, 40),
+    [insets.bottom],
   );
 
   const scrollRepsIntoView = useCallback(() => {
@@ -116,6 +118,15 @@ export function LogSheet({
     [scrollFieldIntoView],
   );
 
+  const handleFieldBlur = useCallback(() => {
+    focusedFieldRef.current = null;
+  }, []);
+
+  const handleKeyboardHide = useCallback(() => {
+    focusedFieldRef.current = null;
+    setKeyboardHeight(0);
+  }, []);
+
   useEffect(() => {
     if (!sheetOpen) {
       return;
@@ -127,15 +138,13 @@ export function LogSheet({
     const showSub = Keyboard.addListener(showEvent, (event) => {
       setKeyboardHeight(event.endCoordinates.height);
     });
-    const hideSub = Keyboard.addListener(hideEvent, () => {
-      setKeyboardHeight(0);
-    });
+    const hideSub = Keyboard.addListener(hideEvent, handleKeyboardHide);
 
     return () => {
       showSub.remove();
       hideSub.remove();
     };
-  }, [sheetOpen]);
+  }, [sheetOpen, handleKeyboardHide]);
 
   useEffect(() => {
     if (!sheetOpen || keyboardHeight === 0 || focusedFieldRef.current !== 'reps') {
@@ -159,11 +168,10 @@ export function LogSheet({
       setSheetOpen(isOpen);
       onChange(index);
       if (!isOpen) {
-        focusedFieldRef.current = null;
-        setKeyboardHeight(0);
+        handleKeyboardHide();
       }
     },
-    [onChange],
+    [onChange, handleKeyboardHide],
   );
 
   const reps = parseInt(repInput, 10);
@@ -187,7 +195,7 @@ export function LogSheet({
       keyboardBehavior="extend"
       keyboardBlurBehavior="restore"
       android_keyboardInputMode="adjustResize"
-      bottomInset={insets.bottom}
+      bottomInset={bottomInset}
       backdropComponent={renderBackdrop}
       onChange={handleSheetChange}
       onDismiss={onClose}
@@ -269,6 +277,7 @@ export function LogSheet({
                 returnKeyType="next"
                 onSubmitEditing={() => repsRef.current?.focus()}
                 onFocus={() => handleFieldFocus('weight')}
+                onBlur={handleFieldBlur}
                 accessibilityLabel="Weight input"
               />
             ) : (
@@ -292,6 +301,7 @@ export function LogSheet({
               returnKeyType="done"
               onSubmitEditing={onConfirm}
               onFocus={() => handleFieldFocus('reps')}
+              onBlur={handleFieldBlur}
               maxLength={3}
               accessibilityLabel="Reps input"
             />
@@ -394,6 +404,7 @@ export function LogSheet({
                   keyboardType="number-pad"
                   maxLength={2}
                   onFocus={() => handleFieldFocus('rpe')}
+                  onBlur={handleFieldBlur}
                   accessibilityLabel="RPE input"
                 />
               </View>

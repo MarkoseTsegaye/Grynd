@@ -5,5 +5,4 @@
 # fix the + Set button dead tap on second open
 # add rest timer between sets
 optional notes field alongside RPE for each exercise
-Should be able to see exercies somehow (maybe view all button) all at once during a workout (for easier substitution and general flow of workout)
-In history log, should be able to visually see progress or decline (single, double, triple colored (green or red) arrows)
+In history log, should be able to visually see progress or decline (single, double, triple colored (green or red) arrows). Ruleset: If new weight > prev weight -> progress, if new reps > old reps && new weight == old weight -> progress. if new reps < old reps && new weight == old weight -> decline. if new weight < old weight -> decline.
