@@ -3,4 +3,7 @@
 #
 # Example:
 # fix the + Set button dead tap on second open
-# add rest timer between sets
+# add rest timer between set
+add rest timer between sets, a timer that can be started and stopped but also a -15sec button to let user spam it if they are ready for the next set and vice versa.
+a substition page for any exercise. if a machine is taken and i want to do a different exercise instead, pull up a temp exercise page and log that to the history instead (one offs, ad hocs)
+implement a simple visualiztion chart page, nothing too concrete but ready to elevate after this prompt, should focus on functional use like showing progress and decline over fanciness.

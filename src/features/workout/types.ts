@@ -13,6 +13,7 @@ export interface LoggedExercise {
   exerciseId: string;
   exerciseName: string;
   sets: LoggedSet[];
+  firstLoggedAt?: number;
 }
 
 export interface WorkoutSession {

@@ -4,6 +4,7 @@ import { getActiveSession, setActiveSession, clearActiveSession, saveSession } f
 import { useCycleStore } from '../../splits/store/cycleStore';
 import { usePrefsStore } from '../../../shared/store/prefsStore';
 import { generateId } from '../../../shared/lib/id';
+import { sortExercisesByPerformedOrder } from '../lib/sortExercisesByPerformedOrder';
 import type { WorkoutSession, LoggedExercise, LoggedSet } from '../types';
 import type { Split, Exercise } from '../../splits/types';
 
@@ -84,7 +85,13 @@ export const useWorkoutStore = create<WorkoutState>()(
           loggedAt: Date.now(),
         };
         const exercises = session.exercises.map((e) =>
-          e.exerciseId === exerciseId ? { ...e, sets: [...e.sets, newSet] } : e,
+          e.exerciseId === exerciseId
+            ? {
+                ...e,
+                sets: [...e.sets, newSet],
+                ...(e.sets.length === 0 ? { firstLoggedAt: newSet.loggedAt } : {}),
+              }
+            : e,
         );
         const updated = { ...session, exercises };
         set({ session: updated });
@@ -95,11 +102,15 @@ export const useWorkoutStore = create<WorkoutState>()(
         const { session } = get();
         if (!session) return;
 
-        const exercises = session.exercises.map((e) =>
-          e.exerciseId === exerciseId
-            ? { ...e, sets: e.sets.filter((_, i) => i !== setIndex) }
-            : e,
-        );
+        const exercises = session.exercises.map((e) => {
+          if (e.exerciseId !== exerciseId) return e;
+
+          const sets = e.sets.filter((_, i) => i !== setIndex);
+          if (sets.length === 0) {
+            return { exerciseId: e.exerciseId, exerciseName: e.exerciseName, sets };
+          }
+          return { ...e, sets };
+        });
         const updated = { ...session, exercises };
         set({ session: updated });
         await setActiveSession(updated);
@@ -113,7 +124,11 @@ export const useWorkoutStore = create<WorkoutState>()(
         const { session } = get();
         if (!session) return;
 
-        const completed = { ...session, completedAt: Date.now() };
+        const completed = {
+          ...session,
+          completedAt: Date.now(),
+          exercises: sortExercisesByPerformedOrder(session.exercises),
+        };
         // BUG-01 fix: ensure write completes before navigation
         await saveSession(completed);
         await clearActiveSession();

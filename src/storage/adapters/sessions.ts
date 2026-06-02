@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEYS } from '../keys';
+import { sortExercisesByPerformedOrder } from '../../features/workout/lib/sortExercisesByPerformedOrder';
 import type { WorkoutSession, LoggedExercise } from '../../features/workout/types';
 
 export async function getSessions(): Promise<WorkoutSession[]> {
@@ -9,13 +10,15 @@ export async function getSessions(): Promise<WorkoutSession[]> {
     const parsed = JSON.parse(raw) as WorkoutSession[];
     return parsed.map((session) => ({
       ...session,
-      exercises: session.exercises.map((ex) => ({
-        ...ex,
-        sets: ex.sets.map((set) => ({
-          ...set,
-          weightKg: (set as { weightKg?: number }).weightKg ?? 0,
+      exercises: sortExercisesByPerformedOrder(
+        session.exercises.map((ex) => ({
+          ...ex,
+          sets: ex.sets.map((set) => ({
+            ...set,
+            weightKg: (set as { weightKg?: number }).weightKg ?? 0,
+          })),
         })),
-      })),
+      ),
     }));
   } catch {
     return [];
