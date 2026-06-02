@@ -13,7 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { BottomSheetModal, BottomSheetView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
-import { useWorkout, ExerciseScreen, LogSheet, ExerciseOverviewSheet } from '../../src/features/workout';
+import { useWorkout, ExerciseScreen, LogSheet, ExerciseOverviewSheet, SubstituteExerciseSheet } from '../../src/features/workout';
 import { useWorkoutStore } from '../../src/features/workout';
 import { useSplitsStore } from '../../src/features/splits';
 import { useHistoryStore } from '../../src/features/history';
@@ -43,10 +43,11 @@ export default function WorkoutScreen() {
 
   const logSheetRef = useRef<BottomSheetModal>(null);
   const overviewSheetRef = useRef<BottomSheetModal>(null);
+  const substituteSheetRef = useRef<BottomSheetModal>(null);
 
   const {
     session, currentExercise, currentExerciseIndex, totalExercises, isLastExercise,
-    logSheetVisible, overviewSheetVisible,
+    logSheetVisible, overviewSheetVisible, substituteSheetVisible, substitutionLabel,
     repInput, setRepInput,
     weightInput, setWeightInput,
     weightMode, toggleWeightMode,
@@ -57,7 +58,8 @@ export default function WorkoutScreen() {
     notesInput, setNotesInput,
     isLogging,
     openLogSheet, handleLogSheetDismiss, handleLogSheetChange, handleConfirmSet, handleDeleteSet,
-    handleOverviewSheetChange, handleGoToExercise,
+    handleOverviewSheetChange, handleSubstituteSheetChange, handleSubstitutePress, handleConfirmSubstitute,
+    handleGoToExercise,
     handleSwipeNext, handleSwipePrev, handleFinish,
     currentPreviousPerformance,
     restTimerStatus,
@@ -68,7 +70,7 @@ export default function WorkoutScreen() {
     adjustRestSeconds,
     dismissRestComplete,
     resetRestTimer,
-  } = useWorkout(logSheetRef);
+  } = useWorkout(logSheetRef, substituteSheetRef);
 
   const openOverview = useCallback(() => {
     overviewSheetRef.current?.present();
@@ -84,7 +86,7 @@ export default function WorkoutScreen() {
   // Cancel sheet
   const cancelSheetRef = useRef<BottomSheetModal>(null);
   const cancelSnapPoints = useMemo(() => ['28%'], []);
-  const sheetBlocksSwipe = logSheetVisible || overviewSheetVisible;
+  const sheetBlocksSwipe = logSheetVisible || overviewSheetVisible || substituteSheetVisible;
   const renderBackdrop = useCallback(
     (props: BottomSheetBackdropProps) => (
       <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.7} />
@@ -340,6 +342,7 @@ export default function WorkoutScreen() {
       isLastExerciseSV,
       logSheetVisible,
       overviewSheetVisible,
+      substituteSheetVisible,
       sheetBlocksSwipe,
       translateX,
       triggerSwipeCommitHaptic,
@@ -414,7 +417,9 @@ export default function WorkoutScreen() {
         onFinish={async () => { await handleFinish(); router.replace('/(tabs)/history'); }}
         onCancel={handleCancelPress}
         onOpenOverview={openOverview}
-        overviewDisabled={logSheetVisible}
+        onSubstitute={handleSubstitutePress}
+        substitutionLabel={substitutionLabel}
+        overviewDisabled={logSheetVisible || substituteSheetVisible}
         renderSwipeable={renderSwipeable}
         restTimerVisible={restTimerVisible}
         restTimerStatus={restTimerStatus}
@@ -472,6 +477,13 @@ export default function WorkoutScreen() {
           onChange={handleOverviewSheetChange}
         />
       )}
+
+      <SubstituteExerciseSheet
+        sheetRef={substituteSheetRef}
+        onChange={handleSubstituteSheetChange}
+        onConfirm={handleConfirmSubstitute}
+        onClose={() => {}}
+      />
 
       {/* Cancel workout confirmation sheet */}
       <BottomSheetModal

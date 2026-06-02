@@ -84,12 +84,19 @@ export function ExerciseOverviewSheet({
           <Text className={`text-text-secondary ${textRoles.captionMono}`}>
             {index + 1}
           </Text>
-          <Text
-            className={`flex-1 ${textRoles.bodySmall} ${state === 'current' ? 'text-accent' : state === 'upcoming' ? 'text-text-disabled' : 'text-text-primary'}`}
-            numberOfLines={1}
-          >
-            {item.exerciseName}
-          </Text>
+          <View className="flex-1">
+            <Text
+              className={`${textRoles.bodySmall} ${state === 'current' ? 'text-accent' : state === 'upcoming' ? 'text-text-disabled' : 'text-text-primary'}`}
+              numberOfLines={1}
+            >
+              {item.exerciseName}
+            </Text>
+            {item.substitutedForExerciseName && (
+              <Text className={`text-text-disabled ${textRoles.caption}`} numberOfLines={1}>
+                Sub for {item.substitutedForExerciseName}
+              </Text>
+            )}
+          </View>
           <Text
             className={`${textRoles.caption} ${state === 'completed' ? 'text-text-primary' : 'text-text-secondary'}`}
           >

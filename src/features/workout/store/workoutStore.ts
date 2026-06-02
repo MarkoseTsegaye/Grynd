@@ -24,6 +24,7 @@ interface WorkoutState {
   ) => Promise<void>;
   deleteSet: (exerciseId: string, setIndex: number) => Promise<void>;
   goToExercise: (index: number) => void;
+  substituteExercise: (index: number, substituteName: string) => Promise<void>;
   finishWorkout: () => Promise<void>;
   abandonWorkout: () => Promise<void>;
 }
@@ -107,7 +108,8 @@ export const useWorkoutStore = create<WorkoutState>()(
 
           const sets = e.sets.filter((_, i) => i !== setIndex);
           if (sets.length === 0) {
-            return { exerciseId: e.exerciseId, exerciseName: e.exerciseName, sets };
+            const { firstLoggedAt: _, ...rest } = e;
+            return { ...rest, sets };
           }
           return { ...e, sets };
         });
@@ -118,6 +120,31 @@ export const useWorkoutStore = create<WorkoutState>()(
 
       goToExercise: (index) => {
         set({ currentExerciseIndex: index });
+      },
+
+      substituteExercise: async (index, substituteName) => {
+        const trimmed = substituteName.trim();
+        if (!trimmed) return;
+
+        const { session } = get();
+        if (!session || index < 0 || index >= session.exercises.length) return;
+
+        const current = session.exercises[index];
+        const plannedId = current.substitutedForExerciseId ?? current.exerciseId;
+        const plannedName = current.substitutedForExerciseName ?? current.exerciseName;
+
+        const substitute: LoggedExercise = {
+          exerciseId: generateId(),
+          exerciseName: trimmed,
+          sets: [],
+          substitutedForExerciseId: plannedId,
+          substitutedForExerciseName: plannedName,
+        };
+
+        const exercises = session.exercises.map((e, i) => (i === index ? substitute : e));
+        const updated = { ...session, exercises };
+        set({ session: updated });
+        await setActiveSession(updated);
       },
 
       finishWorkout: async () => {

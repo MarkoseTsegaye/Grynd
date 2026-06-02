@@ -23,6 +23,8 @@ interface Props {
   onCancel: () => void;
   onOpenOverview?: () => void;
   overviewDisabled?: boolean;
+  onSubstitute?: () => void;
+  substitutionLabel?: string;
   renderSwipeable?: (body: React.ReactNode) => React.ReactNode;
   restTimerStatus?: RestTimerStatus;
   restTimerRemainingMs?: number;
@@ -69,6 +71,7 @@ function DotProgress({ current, total }: { current: number; total: number }) {
 export function ExerciseScreen({
   exercise, exerciseIndex, totalExercises, isLastExercise, previousExercise,
   onOpenLog, onDeleteSet, onFinish, onCancel, onOpenOverview, overviewDisabled,
+  onSubstitute, substitutionLabel,
   renderSwipeable,
   restTimerStatus, restTimerRemainingMs, restTimerVisible,
   onRestTimerStart, onRestTimerStop, onRestTimerAdjustMinus, onRestTimerAdjustPlus,
@@ -90,9 +93,29 @@ export function ExerciseScreen({
         </View>
       </View>
 
-      <Text className={`text-text-primary ${textRoles.listTitle} mb-1`} numberOfLines={2}>
-        {exercise.exerciseName}
-      </Text>
+      <View className="flex-row items-start justify-between mb-1">
+        <View className="flex-1 mr-2">
+          <Text className={`text-text-primary ${textRoles.listTitle}`} numberOfLines={2}>
+            {exercise.exerciseName}
+          </Text>
+          {substitutionLabel && (
+            <Text className={`text-text-secondary ${textRoles.caption} mt-0.5`}>
+              {substitutionLabel}
+            </Text>
+          )}
+        </View>
+        {onSubstitute && (
+          <TouchableOpacity
+            onPress={onSubstitute}
+            accessibilityLabel="Substitute exercise"
+            accessibilityRole="button"
+            activeOpacity={0.7}
+            className="pt-0.5"
+          >
+            <Text className={`text-accent ${textRoles.caption}`}>Substitute</Text>
+          </TouchableOpacity>
+        )}
+      </View>
 
       <View className="flex-row items-center mt-1 mb-4">
         <Text className={`text-accent ${textRoles.metricLarge}`}>{exercise.sets.length}</Text>

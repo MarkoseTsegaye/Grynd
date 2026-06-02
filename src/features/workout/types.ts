@@ -14,6 +14,8 @@ export interface LoggedExercise {
   exerciseName: string;
   sets: LoggedSet[];
   firstLoggedAt?: number;
+  substitutedForExerciseId?: string;
+  substitutedForExerciseName?: string;
 }
 
 export interface WorkoutSession {

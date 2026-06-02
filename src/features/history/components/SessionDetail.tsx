@@ -43,6 +43,11 @@ export function SessionDetail({ session }: Props) {
             <Text className={`text-text-primary ${textRoles.bodySmall}`}>{exercise.exerciseName}</Text>
             <Text className={`text-text-secondary ${textRoles.caption}`}>{exercise.sets.length} sets</Text>
           </View>
+          {exercise.substitutedForExerciseName && (
+            <Text className={`text-text-disabled ${textRoles.caption} mb-1`}>
+              Substitute for {exercise.substitutedForExerciseName}
+            </Text>
+          )}
 
           {exercise.sets.length === 0 ? (
             <Text className={`text-text-disabled ${textRoles.caption} pl-4`}>No sets logged</Text>
