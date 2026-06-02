@@ -47,6 +47,7 @@ export default function RootLayout() {
           <Stack.Screen name="splits/[splitId]" options={{ animation: 'slide_from_right', headerShown: true, headerStyle: { backgroundColor: '#141414' }, headerTintColor: '#F0EDE8', headerTitle: 'Manage Split' }} />
           <Stack.Screen name="history/[sessionId]" options={{ animation: 'slide_from_right', headerShown: true, headerStyle: { backgroundColor: '#141414' }, headerTintColor: '#F0EDE8', headerTitle: 'Session' }} />
           <Stack.Screen name="cycle" options={{ animation: 'slide_from_right', headerShown: true, headerStyle: { backgroundColor: '#141414' }, headerTintColor: '#F0EDE8', headerTitle: 'Training Cycle' }} />
+          <Stack.Screen name="progress" options={{ animation: 'slide_from_right', headerShown: true, headerStyle: { backgroundColor: '#141414' }, headerTintColor: '#F0EDE8', headerTitle: 'Progress' }} />
         </Stack>
         <DevBadge />
       </BottomSheetModalProvider>

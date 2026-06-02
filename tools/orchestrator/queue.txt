@@ -4,4 +4,3 @@
 # Example:
 # fix the + Set button dead tap on second open
 # add rest timer between set
-implement a simple visualiztion chart page, nothing too concrete but ready to elevate after this prompt, should focus on functional use like showing progress and decline over fanciness.
