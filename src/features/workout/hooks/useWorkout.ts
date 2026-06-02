@@ -3,6 +3,7 @@ import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useWorkoutStore } from '../store/workoutStore';
 import { usePrefsStore } from '../../../shared/store/prefsStore';
 import { useHaptics } from '../../../shared/hooks/useHaptics';
+import { useRestTimer } from './useRestTimer';
 import { getPreviousPerformance } from '../../../storage/adapters/sessions';
 import {
   computePlateWeightKg,
@@ -18,8 +19,20 @@ type WeightMode = 'straight' | 'plates';
 export function useWorkout(logSheetRef: RefObject<BottomSheetModal | null>) {
   const { session, currentExerciseIndex, logSet, deleteSet, goToExercise, finishWorkout } =
     useWorkoutStore();
-  const { weightUnit, loadPrefs, isLoaded: prefsLoaded, setWeightUnit } = usePrefsStore();
+  const { weightUnit, defaultRestSeconds, loadPrefs, isLoaded: prefsLoaded, setWeightUnit } =
+    usePrefsStore();
   const { impact, light, success } = useHaptics();
+  const {
+    start: startRestTimer,
+    reset: resetRestTimer,
+    pause: pauseRestTimer,
+    resume: resumeRestTimer,
+    adjustSeconds: adjustRestSeconds,
+    dismissComplete: dismissRestComplete,
+    status: restTimerStatus,
+    remainingMs: restTimerRemainingMs,
+    isVisible: restTimerVisible,
+  } = useRestTimer(light);
 
   const [logSheetVisible, setLogSheetVisible] = useState(false);
   const [overviewSheetVisible, setOverviewSheetVisible] = useState(false);
@@ -114,9 +127,10 @@ export function useWorkout(logSheetRef: RefObject<BottomSheetModal | null>) {
   const handleGoToExercise = useCallback(
     (index: number) => {
       if (index < 0 || index >= totalExercises) return;
+      resetRestTimer();
       goToExercise(index);
     },
-    [goToExercise, totalExercises],
+    [goToExercise, totalExercises, resetRestTimer],
   );
 
   const handleConfirmSet = useCallback(async () => {
@@ -131,38 +145,60 @@ export function useWorkout(logSheetRef: RefObject<BottomSheetModal | null>) {
     const trimmedNotes = notesInput.trim();
     const notes = trimmedNotes.length > 0 ? trimmedNotes : undefined;
 
+    const setCountBeforeLog = currentExercise.sets.length;
+
     setIsLogging(true);
     await logSet(currentExercise.exerciseId, reps, computedWeightKg, effort, notes);
     impact();
     setIsLogging(false);
     dismissLogSheet();
-  }, [repInput, computedWeightKg, currentExercise, toFailure, rpeInput, notesInput, logSet, impact, dismissLogSheet]);
+
+    if (setCountBeforeLog >= 1) {
+      startRestTimer(defaultRestSeconds);
+    }
+  }, [
+    repInput,
+    computedWeightKg,
+    currentExercise,
+    toFailure,
+    rpeInput,
+    notesInput,
+    logSet,
+    impact,
+    dismissLogSheet,
+    defaultRestSeconds,
+    startRestTimer,
+  ]);
 
   const handleDeleteSet = useCallback(
     async (setIndex: number) => {
       if (!currentExercise) return;
       light();
       await deleteSet(currentExercise.exerciseId, setIndex);
+      resetRestTimer();
     },
-    [currentExercise, deleteSet, light],
+    [currentExercise, deleteSet, light, resetRestTimer],
   );
 
   const handleSwipeNext = useCallback(() => {
     if (currentExerciseIndex < totalExercises - 1) {
+      resetRestTimer();
       goToExercise(currentExerciseIndex + 1);
     }
-  }, [currentExerciseIndex, totalExercises, goToExercise]);
+  }, [currentExerciseIndex, totalExercises, goToExercise, resetRestTimer]);
 
   const handleSwipePrev = useCallback(() => {
     if (currentExerciseIndex > 0) {
+      resetRestTimer();
       goToExercise(currentExerciseIndex - 1);
     }
-  }, [currentExerciseIndex, goToExercise]);
+  }, [currentExerciseIndex, goToExercise, resetRestTimer]);
 
   const handleFinish = useCallback(async () => {
+    resetRestTimer();
     success();
     await finishWorkout();
-  }, [finishWorkout, success]);
+  }, [finishWorkout, success, resetRestTimer]);
 
   const toggleWeightMode = useCallback(() => {
     setWeightMode((m) => (m === 'straight' ? 'plates' : 'straight'));
@@ -232,5 +268,13 @@ export function useWorkout(logSheetRef: RefObject<BottomSheetModal | null>) {
     handleSwipePrev,
     handleFinish,
     currentPreviousPerformance,
+    restTimerStatus,
+    restTimerRemainingMs,
+    restTimerVisible,
+    pauseRestTimer,
+    resumeRestTimer,
+    adjustRestSeconds,
+    dismissRestComplete,
+    resetRestTimer,
   };
 }

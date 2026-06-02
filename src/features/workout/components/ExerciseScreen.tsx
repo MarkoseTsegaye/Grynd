@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { SetChip } from './SetChip';
+import { RestTimerBar } from './RestTimerBar';
 import type { LoggedExercise } from '../types';
+import type { RestTimerStatus } from '../hooks/useRestTimer';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Icon } from '../../../shared/components/Icon';
 import { formatShortDate } from '../../../shared/lib/date';
@@ -22,6 +24,14 @@ interface Props {
   onOpenOverview?: () => void;
   overviewDisabled?: boolean;
   renderSwipeable?: (body: React.ReactNode) => React.ReactNode;
+  restTimerStatus?: RestTimerStatus;
+  restTimerRemainingMs?: number;
+  restTimerVisible?: boolean;
+  onRestTimerStart?: () => void;
+  onRestTimerStop?: () => void;
+  onRestTimerAdjustMinus?: () => void;
+  onRestTimerAdjustPlus?: () => void;
+  onRestTimerDismissComplete?: () => void;
 }
 
 const MAX_DOTS = 8;
@@ -60,6 +70,9 @@ export function ExerciseScreen({
   exercise, exerciseIndex, totalExercises, isLastExercise, previousExercise,
   onOpenLog, onDeleteSet, onFinish, onCancel, onOpenOverview, overviewDisabled,
   renderSwipeable,
+  restTimerStatus, restTimerRemainingMs, restTimerVisible,
+  onRestTimerStart, onRestTimerStop, onRestTimerAdjustMinus, onRestTimerAdjustPlus,
+  onRestTimerDismissComplete,
 }: Props) {
   const isFirst = exerciseIndex === 0;
   const { weightUnit } = usePrefsStore();
@@ -206,6 +219,25 @@ export function ExerciseScreen({
       <View className="flex-1">
         {renderSwipeable ? renderSwipeable(body) : body}
       </View>
+
+      {restTimerVisible &&
+        restTimerStatus &&
+        restTimerRemainingMs !== undefined &&
+        onRestTimerStart &&
+        onRestTimerStop &&
+        onRestTimerAdjustMinus &&
+        onRestTimerAdjustPlus &&
+        onRestTimerDismissComplete && (
+          <RestTimerBar
+            status={restTimerStatus}
+            remainingMs={restTimerRemainingMs}
+            onStart={onRestTimerStart}
+            onStop={onRestTimerStop}
+            onAdjustMinus={onRestTimerAdjustMinus}
+            onAdjustPlus={onRestTimerAdjustPlus}
+            onDismissComplete={onRestTimerDismissComplete}
+          />
+        )}
 
       <TouchableOpacity
         className="bg-surface-1 border border-text-disabled rounded-lg py-5 flex-row items-center justify-center gap-2 mt-4"

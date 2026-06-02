@@ -60,6 +60,14 @@ export default function WorkoutScreen() {
     handleOverviewSheetChange, handleGoToExercise,
     handleSwipeNext, handleSwipePrev, handleFinish,
     currentPreviousPerformance,
+    restTimerStatus,
+    restTimerRemainingMs,
+    restTimerVisible,
+    pauseRestTimer,
+    resumeRestTimer,
+    adjustRestSeconds,
+    dismissRestComplete,
+    resetRestTimer,
   } = useWorkout(logSheetRef);
 
   const openOverview = useCallback(() => {
@@ -358,9 +366,10 @@ export default function WorkoutScreen() {
   const handleDiscard = useCallback(async () => {
     cancelSheetRef.current?.dismiss();
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    resetRestTimer();
     await abandonWorkout();
     router.replace('/(tabs)');
-  }, [abandonWorkout, router]);
+  }, [abandonWorkout, router, resetRestTimer]);
 
   const handleKeepGoing = useCallback(() => {
     cancelSheetRef.current?.dismiss();
@@ -407,6 +416,14 @@ export default function WorkoutScreen() {
         onOpenOverview={openOverview}
         overviewDisabled={logSheetVisible}
         renderSwipeable={renderSwipeable}
+        restTimerVisible={restTimerVisible}
+        restTimerStatus={restTimerStatus}
+        restTimerRemainingMs={restTimerRemainingMs}
+        onRestTimerStart={resumeRestTimer}
+        onRestTimerStop={pauseRestTimer}
+        onRestTimerAdjustMinus={() => adjustRestSeconds(-15)}
+        onRestTimerAdjustPlus={() => adjustRestSeconds(15)}
+        onRestTimerDismissComplete={dismissRestComplete}
       />
 
       {/* Swipe hint overlay */}
