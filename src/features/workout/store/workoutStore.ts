@@ -21,6 +21,7 @@ interface WorkoutState {
     weightKg: number,
     effort?: { toFailure: boolean; rpe?: number },
     notes?: string,
+    plates?: LoggedSet['plates'],
   ) => Promise<void>;
   deleteSet: (exerciseId: string, setIndex: number) => Promise<void>;
   goToExercise: (index: number) => void;
@@ -74,13 +75,14 @@ export const useWorkoutStore = create<WorkoutState>()(
         }
       },
 
-      logSet: async (exerciseId, reps, weightKg, effort, notes) => {
+      logSet: async (exerciseId, reps, weightKg, effort, notes, plates) => {
         const { session } = get();
         if (!session) return;
 
         const newSet: LoggedSet = {
           reps,
           weightKg,
+          ...(plates ? { plates } : {}),
           ...(effort ? { effort } : {}),
           ...(notes ? { notes } : {}),
           loggedAt: Date.now(),

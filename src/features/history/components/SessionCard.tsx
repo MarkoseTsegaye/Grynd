@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { formatShortDate } from '../../workout/../../shared/lib/date';
 import { usePrefsStore } from '../../../shared/store/prefsStore';
-import { formatWeight } from '../../../shared/lib/weight';
+import { formatSetWeightDisplay } from '../../../shared/lib/weight';
 import { textRoles } from '../../../shared/theme/typography';
 import { useHistoryStore } from '../store/historyStore';
 import { compareSets } from '../lib/compareSetPerformance';
@@ -56,7 +56,7 @@ export function SessionCard({ session, onPress }: Props) {
             <Text className={`text-text-secondary ${textRoles.caption}`}>{ex.sets.length} sets</Text>
           </View>
           {ex.sets.map((set, i) => {
-            const w = formatWeight(set.weightKg, weightUnit);
+            const { weightText, unitLabel } = formatSetWeightDisplay(set, weightUnit);
             const hasFail = set.effort?.toFailure;
             const hasRpe = set.effort?.rpe !== undefined;
             const hasNotes = !!set.notes;
@@ -65,8 +65,12 @@ export function SessionCard({ session, onPress }: Props) {
             return (
               <View key={`${set.loggedAt}-${i}`} className="flex-row items-center gap-1 pl-4 mb-1 flex-wrap">
                 <Text className={`text-text-disabled ${textRoles.caption}`}>Set {i + 1}</Text>
-                <Text className={`text-text-primary ${textRoles.metric}`}> {w}</Text>
-                <Text className={`text-text-secondary ${textRoles.metric}`}> {weightUnit} × </Text>
+                <Text className={`text-text-primary ${textRoles.metric}`}> {weightText}</Text>
+                {unitLabel ? (
+                  <Text className={`text-text-secondary ${textRoles.metric}`}> {unitLabel} × </Text>
+                ) : (
+                  <Text className={`text-text-secondary ${textRoles.metric}`}> × </Text>
+                )}
                 <Text className={`text-text-primary ${textRoles.metric}`}>{set.reps}</Text>
                 <Text className={`text-text-secondary ${textRoles.metric}`}> reps</Text>
                 {comparison && priorSet && (

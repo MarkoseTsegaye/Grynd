@@ -1,6 +1,12 @@
+export interface PlateLoad {
+  unit: 'kg' | 'lbs';
+  perSide: Record<number, number>;
+}
+
 export interface LoggedSet {
   reps: number;
   weightKg: number;
+  plates?: PlateLoad;
   effort?: {
     toFailure: boolean;
     rpe?: number;

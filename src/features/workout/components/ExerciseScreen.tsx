@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Icon } from '../../../shared/components/Icon';
 import { formatShortDate } from '../../../shared/lib/date';
 import { usePrefsStore } from '../../../shared/store/prefsStore';
-import { formatWeight } from '../../../shared/lib/weight';
+import { formatSetWeightDisplay } from '../../../shared/lib/weight';
 import { textRoles } from '../../../shared/theme/typography';
 
 interface Props {
@@ -136,16 +136,19 @@ export function ExerciseScreen({
             </Text>
           </View>
           {previousExercise.sets.slice(0, 5).map((set, i) => {
-            const w = formatWeight(set.weightKg, weightUnit);
-            const unit = weightUnit;
+            const { weightText, unitLabel } = formatSetWeightDisplay(set, weightUnit);
             const hasFail = set.effort?.toFailure;
             const hasRpe = set.effort?.rpe !== undefined;
             const hasNotes = !!set.notes;
             return (
               <View key={`prev-${i}`} className="flex-row items-center gap-1 mb-0.5 flex-wrap">
                 <Text className={`text-text-disabled ${textRoles.caption}`}>Set {i + 1}</Text>
-                <Text className={`text-text-primary ${textRoles.metric}`}> {w}</Text>
-                <Text className={`text-text-secondary ${textRoles.metric}`}> {unit} × </Text>
+                <Text className={`text-text-primary ${textRoles.metric}`}> {weightText}</Text>
+                {unitLabel ? (
+                  <Text className={`text-text-secondary ${textRoles.metric}`}> {unitLabel} × </Text>
+                ) : (
+                  <Text className={`text-text-secondary ${textRoles.metric}`}> × </Text>
+                )}
                 <Text className={`text-text-primary ${textRoles.metric}`}>{set.reps}</Text>
                 <Text className={`text-text-secondary ${textRoles.metric}`}> reps</Text>
                 {(hasFail || hasRpe) && (

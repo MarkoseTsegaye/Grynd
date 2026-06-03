@@ -11,7 +11,7 @@ import type { BottomSheetBackdropProps, BottomSheetScrollViewMethods } from '@go
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NumericInput } from '../../../shared/components/NumericInput';
 import { Icon } from '../../../shared/components/Icon';
-import { formatWeight } from '../../../shared/lib/weight';
+import { formatPlatesPerSide } from '../../../shared/lib/weight';
 import { textRoles } from '../../../shared/theme/typography';
 
 const MAX_SET_NOTES_LENGTH = 200;
@@ -181,15 +181,17 @@ export function LogSheet({
   );
 
   const reps = parseInt(repInput, 10);
-  const weightValid = computedWeightKg > 0;
-  const canConfirm = !isLogging && !isNaN(reps) && reps > 0 && weightValid;
 
   const plateSummary = Object.entries(plates)
     .map(([w, c]) => ({ weight: Number(w), count: c }))
     .filter((p) => p.count > 0)
     .sort((a, b) => b.weight - a.weight);
 
-  const displayTotal = formatWeight(computedWeightKg, weightUnit);
+  const weightValid =
+    weightMode === 'plates' ? plateSummary.length > 0 : computedWeightKg > 0;
+  const canConfirm = !isLogging && !isNaN(reps) && reps > 0 && weightValid;
+
+  const platesDisplay = plateSummary.length > 0 ? formatPlatesPerSide(plates) : '0';
 
   return (
     <BottomSheetModal
@@ -288,10 +290,10 @@ export function LogSheet({
               />
             ) : (
               <View className="bg-surface-2 rounded-lg px-4 py-4 items-center justify-center min-h-16">
-                <Text className={`text-text-primary ${textRoles.metricDisplayCompact}`} numberOfLines={1} adjustsFontSizeToFit>
-                  {displayTotal}
+                <Text className={`text-text-primary ${textRoles.metricDisplayCompact}`} numberOfLines={2} adjustsFontSizeToFit>
+                  {platesDisplay}
                 </Text>
-                <Text className={`text-text-secondary ${textRoles.caption} mt-0.5`}>{weightUnit} total</Text>
+                <Text className={`text-text-secondary ${textRoles.caption} mt-0.5`}>one side</Text>
               </View>
             )}
           </View>
@@ -366,7 +368,6 @@ export function LogSheet({
                     </View>
                   ))}
                 </View>
-                <Text className={`text-accent ${textRoles.metricLarge} mt-2`}>{displayTotal} {weightUnit}</Text>
               </View>
             )}
           </View>

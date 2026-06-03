@@ -216,7 +216,11 @@ export function useWorkout(
 
   const handleConfirmSet = useCallback(async () => {
     const reps = parseInt(repInput, 10);
-    if (!currentExercise || isNaN(reps) || reps <= 0 || computedWeightKg <= 0) return;
+    const hasValidWeight =
+      weightMode === 'plates'
+        ? Object.values(plates).some((count) => count > 0)
+        : computedWeightKg > 0;
+    if (!currentExercise || isNaN(reps) || reps <= 0 || !hasValidWeight) return;
 
     const rpeNum = rpeInput ? Math.min(10, Math.max(1, parseInt(rpeInput, 10))) : undefined;
     const effort =
@@ -226,8 +230,18 @@ export function useWorkout(
     const trimmedNotes = notesInput.trim();
     const notes = trimmedNotes.length > 0 ? trimmedNotes : undefined;
 
+    const plateMeta =
+      weightMode === 'plates'
+        ? {
+            unit: weightUnit,
+            perSide: Object.fromEntries(
+              Object.entries(plates).filter(([, count]) => count > 0),
+            ),
+          }
+        : undefined;
+
     setIsLogging(true);
-    await logSet(currentExercise.exerciseId, reps, computedWeightKg, effort, notes);
+    await logSet(currentExercise.exerciseId, reps, computedWeightKg, effort, notes, plateMeta);
     impact();
     setIsLogging(false);
     dismissLogSheet();
@@ -240,6 +254,9 @@ export function useWorkout(
     toFailure,
     rpeInput,
     notesInput,
+    weightMode,
+    plates,
+    weightUnit,
     logSet,
     impact,
     dismissLogSheet,

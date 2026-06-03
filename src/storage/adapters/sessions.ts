@@ -1,7 +1,25 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEYS } from '../keys';
 import { sortExercisesByPerformedOrder } from '../../features/workout/lib/sortExercisesByPerformedOrder';
-import type { WorkoutSession, LoggedExercise } from '../../features/workout/types';
+import type { WorkoutSession, LoggedExercise, LoggedSet } from '../../features/workout/types';
+
+function normalizeLoggedSet(set: LoggedSet): LoggedSet {
+  const normalized: LoggedSet = {
+    ...set,
+    weightKg: set.weightKg ?? 0,
+  };
+
+  if (set.plates) {
+    normalized.plates = {
+      unit: set.plates.unit,
+      perSide: Object.fromEntries(
+        Object.entries(set.plates.perSide).filter(([, count]) => count > 0),
+      ),
+    };
+  }
+
+  return normalized;
+}
 
 export async function getSessions(): Promise<WorkoutSession[]> {
   try {
@@ -13,10 +31,7 @@ export async function getSessions(): Promise<WorkoutSession[]> {
       exercises: sortExercisesByPerformedOrder(
         session.exercises.map((ex) => ({
           ...ex,
-          sets: ex.sets.map((set) => ({
-            ...set,
-            weightKg: (set as { weightKg?: number }).weightKg ?? 0,
-          })),
+          sets: ex.sets.map((set) => normalizeLoggedSet(set)),
         })),
       ),
     }));
