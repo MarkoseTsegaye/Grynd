@@ -4,3 +4,5 @@
 # Example:
 # fix the + Set button dead tap on second open
 # add rest timer between set
+plates tracking should not include bar: start at 0 and plates tracking should display plates and count when viewing each set, not total weight (e.g logging 2 45-plates should show "45 x 2 then reps etc..", not "90lbs - reps")
+pressing a set in an exercise should go into edit more not remove (unless user pressed the x)

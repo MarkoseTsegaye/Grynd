@@ -226,17 +226,13 @@ export function useWorkout(
     const trimmedNotes = notesInput.trim();
     const notes = trimmedNotes.length > 0 ? trimmedNotes : undefined;
 
-    const setCountBeforeLog = currentExercise.sets.length;
-
     setIsLogging(true);
     await logSet(currentExercise.exerciseId, reps, computedWeightKg, effort, notes);
     impact();
     setIsLogging(false);
     dismissLogSheet();
 
-    if (setCountBeforeLog >= 1) {
-      startRestTimer(defaultRestSeconds);
-    }
+    startRestTimer(defaultRestSeconds);
   }, [
     repInput,
     computedWeightKg,
