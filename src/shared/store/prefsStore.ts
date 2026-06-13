@@ -5,6 +5,12 @@ import { STORAGE_KEYS } from '../../storage/keys';
 
 type WeightUnit = 'kg' | 'lbs';
 
+export type BackupPrefs = {
+  weightUnit: WeightUnit;
+  autoAdvanceCycle: boolean;
+  defaultRestSeconds: number;
+};
+
 export const REST_DURATION_OPTIONS = [60, 90, 120, 180] as const;
 export const DEFAULT_REST_SECONDS = 90;
 
@@ -22,6 +28,7 @@ interface PrefsState {
   setWeightUnit: (unit: WeightUnit) => Promise<void>;
   setAutoAdvanceCycle: (value: boolean) => Promise<void>;
   setDefaultRestSeconds: (seconds: number) => Promise<void>;
+  importPrefs: (prefs: BackupPrefs) => Promise<void>;
 }
 
 export const usePrefsStore = create<PrefsState>()(
@@ -74,6 +81,26 @@ export const usePrefsStore = create<PrefsState>()(
           await AsyncStorage.setItem(STORAGE_KEYS.DEFAULT_REST_SECONDS, String(seconds));
         } catch {
           // ignore
+        }
+      },
+
+      importPrefs: async (prefs) => {
+        const weightUnit: WeightUnit = prefs.weightUnit === 'lbs' ? 'lbs' : 'kg';
+        const autoAdvanceCycle = prefs.autoAdvanceCycle;
+        const defaultRestSeconds = prefs.defaultRestSeconds;
+
+        set({ weightUnit, autoAdvanceCycle, defaultRestSeconds });
+        try {
+          await Promise.all([
+            AsyncStorage.setItem(STORAGE_KEYS.WEIGHT_UNIT, weightUnit),
+            AsyncStorage.setItem(
+              STORAGE_KEYS.AUTO_ADVANCE_CYCLE,
+              autoAdvanceCycle ? 'true' : 'false',
+            ),
+            AsyncStorage.setItem(STORAGE_KEYS.DEFAULT_REST_SECONDS, String(defaultRestSeconds)),
+          ]);
+        } catch (err) {
+          throw new Error(`Failed to import preferences: ${String(err)}`);
         }
       },
     }),

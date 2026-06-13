@@ -11,8 +11,8 @@ import {
 import { Icon } from '../../src/shared/components/Icon';
 import { colors } from '../../src/shared/theme/colors';
 import { textRoles } from '../../src/shared/theme/typography';
-import type { Split } from '../../src/features/splits/types';
-import type { WorkoutCycle } from '../../src/features/splits/types';
+import type { Split, WorkoutCycle } from '../../src/features/splits/types';
+import { DataBackupSection } from '../../src/features/settings/components/DataBackupSection';
 
 function getCycleSummary(cycle: WorkoutCycle | null, splits: Split[]): string {
   const days = cycle?.days ?? [];
@@ -203,6 +203,8 @@ export default function SettingsScreen() {
               </Text>
             </View>
           </TouchableOpacity>
+
+          <DataBackupSection />
         </View>
       </ScrollView>
     </View>

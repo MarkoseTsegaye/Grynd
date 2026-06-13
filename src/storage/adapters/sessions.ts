@@ -3,6 +3,18 @@ import { STORAGE_KEYS } from '../keys';
 import { sortExercisesByPerformedOrder } from '../../features/workout/lib/sortExercisesByPerformedOrder';
 import type { WorkoutSession, LoggedExercise, LoggedSet } from '../../features/workout/types';
 
+function normalizeSession(session: WorkoutSession): WorkoutSession {
+  return {
+    ...session,
+    exercises: sortExercisesByPerformedOrder(
+      session.exercises.map((ex) => ({
+        ...ex,
+        sets: ex.sets.map((set) => normalizeLoggedSet(set)),
+      })),
+    ),
+  };
+}
+
 function normalizeLoggedSet(set: LoggedSet): LoggedSet {
   const normalized: LoggedSet = {
     ...set,
@@ -26,17 +38,18 @@ export async function getSessions(): Promise<WorkoutSession[]> {
     const raw = await AsyncStorage.getItem(STORAGE_KEYS.SESSIONS);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as WorkoutSession[];
-    return parsed.map((session) => ({
-      ...session,
-      exercises: sortExercisesByPerformedOrder(
-        session.exercises.map((ex) => ({
-          ...ex,
-          sets: ex.sets.map((set) => normalizeLoggedSet(set)),
-        })),
-      ),
-    }));
+    return parsed.map(normalizeSession);
   } catch {
     return [];
+  }
+}
+
+export async function saveSessions(sessions: WorkoutSession[]): Promise<void> {
+  try {
+    const normalized = sessions.map(normalizeSession);
+    await AsyncStorage.setItem(STORAGE_KEYS.SESSIONS, JSON.stringify(normalized));
+  } catch (err) {
+    throw new Error(`Failed to save sessions: ${String(err)}`);
   }
 }
 

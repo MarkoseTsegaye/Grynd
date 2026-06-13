@@ -16,7 +16,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     backgroundColor: '#0A0A0A',
   },
   assetBundlePatterns: ['**/*'],
-  ios: { supportsTablet: false },
+  ios: { supportsTablet: false, bundleIdentifier: 'com.anonymous.workoutlogger' },
   android: {
     ...(config.android ?? {}),
     adaptiveIcon: { foregroundImage: './assets/adaptive-icon.png', backgroundColor: '#0A0A0A' },
