@@ -22,7 +22,7 @@ export function buildImplementerPrompt(opts: ImplementerOptions): string {
     : '';
 
   return `
-You are Implementer.
+You are Implementer (Dev role per .squad/agents/dev/charter.md).
 
 You write clean, functional code for the Grynd Expo/TypeScript app.
 

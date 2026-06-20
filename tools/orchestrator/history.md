@@ -46,6 +46,9 @@
 
 ### Orchestrator
 
-- **DecisionLog runs only after PASS** to keep this file current; capture durable decisions, not ticket/diff noise.
+- **Squad convention:** `.squad/` defines agents, ceremonies, and skills; CLI in `tools/orchestrator/` implements Standard ceremony.
+- **Flow:** TicketMan → Implementer → gates (typecheck, lint, test) → 3-pass review (different models) → DecisionLog → traceability → commit.
 - **CLI entry:** `orchestrate.mjs` delegates to `tsx tools/orchestrator/src/orchestrate.ts`; agent prompts live under `src/agents/`.
-- **Reviewer stop conditions:** PASS + green gates → success + DecisionLog; **ACCEPT** or **Stop: YES** → stop iterating without DecisionLog; **FAIL** → retry until `ORCH_MAX_ITERS`.
+- **3-pass review:** Pass 1 code quality, Pass 2 tests/AC, Pass 3 security — models from `.squad/config.json → reviewModelOverrides`.
+- **DecisionLog runs only after PASS** to keep this file current; capture durable decisions, not ticket/diff noise.
+- **Reviewer stop conditions:** all 3 passes PASS + green gates → success + DecisionLog + traceability; any FAIL → retry until `ORCH_MAX_ITERS`.

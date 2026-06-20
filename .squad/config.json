@@ -1,0 +1,22 @@
+{
+  "models": {
+    "coordinator": "composer-2.5",
+    "dev": "composer-2.5",
+    "lead": "claude-4.6-sonnet-medium-thinking",
+    "tester": "gpt-5.5-medium"
+  },
+  "reviewModelOverrides": {
+    "pass1_codeQuality": "composer-2.5",
+    "pass2_tests": "gpt-5.5-medium",
+    "pass3_security": "claude-4.6-sonnet-medium-thinking"
+  },
+  "gates": {
+    "typecheck": "npm run typecheck",
+    "lint": "npm run lint",
+    "test": "npm run test"
+  },
+  "defaults": {
+    "maxIterations": 3,
+    "reviewPassesRequired": 3
+  }
+}

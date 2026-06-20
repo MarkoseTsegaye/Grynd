@@ -36,7 +36,7 @@ export function ticketmanOutputInstructions(): string {
     ...REQUIRED_TICKET_SECTIONS.map((s) => `- ${s}`),
     'Acceptance criteria MUST be a checklist using "- [ ]" items.',
     'Be specific about what files to touch in Implementation notes.',
-    'In Test plan, include commands: "npm run typecheck" and "npm run lint" (and any manual steps if UI changes).',
+    'In Test plan, include commands: "npm run typecheck", "npm run lint", and "npm run test" (and any manual steps if UI changes).',
   ].join('\n');
 }
 
