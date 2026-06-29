@@ -100,8 +100,21 @@ describe('useWorkoutStore pause/resume', () => {
     expect(useWorkoutStore.getState().session?.pausedAt).toBe(42_000);
   });
 
-  it('resumeWorkoutEntry no-ops when session is not paused', async () => {
-    const session = makeSession();
+  it('resumeWorkoutEntry syncs legacy incomplete session without pausedAt', async () => {
+    const session = makeSession({ currentExerciseIndex: 2 });
+    useWorkoutStore.setState({ session, currentExerciseIndex: 2 });
+
+    await useWorkoutStore.getState().resumeWorkoutEntry('split-1');
+
+    expect(mockSetActiveSession).toHaveBeenCalledWith({
+      ...session,
+      currentExerciseIndex: 2,
+    });
+    expect(useWorkoutStore.getState().session?.pausedAt).toBeUndefined();
+  });
+
+  it('resumeWorkoutEntry no-ops for completed session', async () => {
+    const session = makeSession({ completedAt: 9000, pausedAt: 42_000 });
     useWorkoutStore.setState({ session, currentExerciseIndex: 0 });
 
     await useWorkoutStore.getState().resumeWorkoutEntry('split-1');

@@ -203,7 +203,7 @@ export const useWorkoutStore = create<WorkoutState>()(
 
       resumeWorkoutEntry: async (splitId) => {
         const { session, currentExerciseIndex } = get();
-        if (!session || session.splitId !== splitId || session.pausedAt === undefined) return;
+        if (!session || session.splitId !== splitId || session.completedAt !== null) return;
 
         const { pausedAt: _, ...rest } = session;
         const updated = { ...rest, currentExerciseIndex };

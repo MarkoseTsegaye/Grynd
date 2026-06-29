@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSplitsList, SplitCard } from '../../src/features/splits';
 import { useSplitsStore } from '../../src/features/splits';
@@ -14,7 +14,12 @@ export default function HomeScreen() {
   const { splits, isLoaded } = useSplitsList();
   const { getExercisesForSplit } = useSplitsStore();
   const { cycle, isLoaded: cycleLoaded, loadCycle, advanceCycle } = useCycleStore();
-  const { loadActiveSession, session: activeSession, isLoaded: sessionLoaded } = useWorkoutStore();
+  const {
+    loadActiveSession,
+    session: activeSession,
+    isLoaded: sessionLoaded,
+    abandonWorkout,
+  } = useWorkoutStore();
 
   useEffect(() => {
     if (!cycleLoaded) loadCycle();
@@ -45,6 +50,35 @@ export default function HomeScreen() {
   const handleResumePausedWorkout = () => {
     if (!activeSession) return;
     router.push(`/workout/${activeSession.splitId}`);
+  };
+
+  const startWorkoutForSplit = (targetSplitId: string) => {
+    if (showPausedResume && activeSession && activeSession.splitId !== targetSplitId) {
+      Alert.alert(
+        'Unfinished Workout',
+        `You have an unfinished ${activeSession.splitName} workout.`,
+        [
+          {
+            text: 'Discard',
+            style: 'destructive',
+            onPress: () => {
+              void abandonWorkout().then(() => {
+                router.push(`/workout/${targetSplitId}`);
+              });
+            },
+          },
+          {
+            text: 'Resume',
+            style: 'default',
+            onPress: () => {
+              router.push(`/workout/${activeSession.splitId}`);
+            },
+          },
+        ],
+      );
+      return;
+    }
+    router.push(`/workout/${targetSplitId}`);
   };
 
   return (
@@ -94,7 +128,7 @@ export default function HomeScreen() {
               )}
               <TouchableOpacity
                 className="bg-accent rounded-lg py-3 flex-row items-center justify-center gap-2"
-                onPress={() => todaySplit && router.push(`/workout/${todaySplit.id}`)}
+                onPress={() => todaySplit && startWorkoutForSplit(todaySplit.id)}
                 accessibilityLabel="Start today's workout"
                 activeOpacity={0.7}
               >
@@ -159,7 +193,7 @@ export default function HomeScreen() {
                 key={split.id}
                 split={split}
                 exerciseCount={getExercisesForSplit(split.id).length}
-                onPress={() => router.push(`/workout/${split.id}`)}
+                onPress={() => startWorkoutForSplit(split.id)}
               />
             ))}
           </View>
