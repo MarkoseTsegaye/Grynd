@@ -437,6 +437,7 @@ export default function WorkoutScreen() {
     overviewSheetRef.current?.dismiss();
     substituteSheetRef.current?.dismiss();
     finishSheetRef.current?.dismiss();
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     resetRestTimer();
     isLeavingIntentionallyRef.current = true;
     await leaveWorkout();

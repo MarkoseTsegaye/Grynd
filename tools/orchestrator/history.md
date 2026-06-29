@@ -79,6 +79,8 @@
 ### Haptics API
 
 - **`useHaptics`** exposes `medium`, `heavy`, `light`, `success`. `impact` is a backward-compat alias for `medium`.
+- **Cancel-sheet haptic weights:** `Heavy` for destructive actions (Discard), `Medium` for non-destructive exits (Leave Workout). Distinction is intentional — intensity signals consequence.
+- **`app/workout/[splitId].tsx` uses raw `expo-haptics` directly** (not `useHaptics`) throughout the file. New additions in this file should follow the existing raw-call convention to avoid mixing two haptics patterns in one file.
 
 ### Orchestrator
 
