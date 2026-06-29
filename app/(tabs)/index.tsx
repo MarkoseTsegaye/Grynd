@@ -24,7 +24,7 @@ export default function HomeScreen() {
     if (!sessionLoaded) loadActiveSession();
   }, [sessionLoaded, loadActiveSession]);
 
-  if (!isLoaded) {
+  if (!isLoaded || !sessionLoaded) {
     return <View className="flex-1 bg-surface-0" />;
   }
 
