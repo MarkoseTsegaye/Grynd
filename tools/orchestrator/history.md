@@ -28,6 +28,7 @@
 - **`useResumeWorkoutPrompt` hook (centralized):** lives in `src/features/workout/hooks/` and is wired in `app/(tabs)/_layout.tsx` (not Home-only) so the prompt fires regardless of which tab is active. Handles both cold-start and foreground-return paths. Cold-start alert was removed from `app/(tabs)/index.tsx` to avoid duplication.
 - **Duplicate-alert guard:** `alertVisibleRef` (single-flight) + `coldStartPromptAtRef` with a 2 s `COLD_START_GUARD_MS` window suppress a foreground-return alert immediately after a cold-start alert. `isWorkoutRoute` check prevents the prompt while the user is already on the workout screen.
 - **Home resume CTA:** shows a paused-workout card when `activeSession.splitId !== todaySplit.id`; replaces the "Start Workout" button with "Resume {splitName}" when the paused session matches today's split. `accessibilityLabel="Resume paused workout"` on all resume touch targets.
+- **Conflict-alert Resume navigation:** when the user starts a different split while a session is paused, the conflict alert's Resume button calls `router.replace('/workout/${storeSession.splitId}')` — not `setBootstrapState('ready')`. Forcing ready on the wrong route left the user on the requested split with the paused split's data; replacing the route lets the correct screen run its own bootstrap/resume flow. `router` must be in the init-effect dependency array for this to be stable.
 
 ### Workout exercise swipe navigation
 

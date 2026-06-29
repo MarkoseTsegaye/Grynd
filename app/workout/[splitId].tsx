@@ -169,7 +169,8 @@ export default function WorkoutScreen() {
               text: 'Resume',
               style: 'default',
               onPress: () => {
-                if (!cancelled) setBootstrapState('ready');
+                if (cancelled) return;
+                router.replace(`/workout/${storeSession.splitId}`);
               },
             },
           ],
@@ -190,7 +191,7 @@ export default function WorkoutScreen() {
     return () => {
       cancelled = true;
     };
-  }, [splitId, loadData, loadActiveSession, startWorkout, abandonWorkout]);
+  }, [splitId, loadData, loadActiveSession, startWorkout, abandonWorkout, router]);
 
   // Show swipe hint on first workout ever
   useEffect(() => {
