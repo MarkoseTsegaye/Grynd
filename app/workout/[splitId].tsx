@@ -402,6 +402,10 @@ export default function WorkoutScreen() {
 
   const handleLeaveWorkout = useCallback(async () => {
     cancelSheetRef.current?.dismiss();
+    logSheetRef.current?.dismiss();
+    overviewSheetRef.current?.dismiss();
+    substituteSheetRef.current?.dismiss();
+    finishSheetRef.current?.dismiss();
     resetRestTimer();
     await leaveWorkout();
     router.replace('/(tabs)');

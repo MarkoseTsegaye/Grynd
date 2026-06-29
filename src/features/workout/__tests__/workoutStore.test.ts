@@ -112,6 +112,16 @@ describe('useWorkoutStore pause/resume', () => {
     expect(useWorkoutStore.getState().currentExerciseIndex).toBe(0);
   });
 
+  it('loadActiveSession keeps in-memory session when storage returns null', async () => {
+    const session = makeSession({ currentExerciseIndex: 1 });
+    useWorkoutStore.setState({ session, currentExerciseIndex: 1 });
+
+    await useWorkoutStore.getState().loadActiveSession();
+
+    expect(useWorkoutStore.getState().session).toEqual(session);
+    expect(useWorkoutStore.getState().currentExerciseIndex).toBe(1);
+  });
+
   it('abandonWorkout clears session and resets index', async () => {
     useWorkoutStore.setState({
       session: makeSession({ currentExerciseIndex: 2 }),
