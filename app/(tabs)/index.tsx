@@ -51,6 +51,13 @@ export default function HomeScreen() {
   const dayNumber = cycleLength > 0 ? currentIndex + 1 : null;
 
   const showPausedResume = hasPausedSession(activeSession);
+  const pausedMatchesToday =
+    showPausedResume &&
+    activeSession != null &&
+    todayDay?.type === 'split' &&
+    todaySplit != null &&
+    activeSession.splitId === todaySplit.id;
+  const showPausedCard = showPausedResume && !pausedMatchesToday;
 
   const handleResumePausedWorkout = () => {
     if (!activeSession) return;
@@ -96,7 +103,7 @@ export default function HomeScreen() {
       </View>
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        {showPausedResume && activeSession && (
+        {showPausedCard && activeSession && (
           <PausedWorkoutResumeCard
             splitName={activeSession.splitName}
             onResume={handleResumePausedWorkout}
@@ -134,15 +141,29 @@ export default function HomeScreen() {
                   Day {dayNumber} of {cycleLength}
                 </Text>
               )}
-              <TouchableOpacity
-                className="bg-accent rounded-lg py-3 flex-row items-center justify-center gap-2"
-                onPress={() => todaySplit && startWorkoutForSplit(todaySplit.id)}
-                accessibilityLabel="Start today's workout"
-                activeOpacity={0.7}
-              >
-                <Icon name="play-circle-outline" size={20} color="surface-0" />
-                <Text className={`text-surface-0 ${textRoles.buttonLabel}`}>Start Workout</Text>
-              </TouchableOpacity>
+              {pausedMatchesToday && activeSession ? (
+                <TouchableOpacity
+                  className="bg-accent rounded-lg py-3 flex-row items-center justify-center gap-2"
+                  onPress={handleResumePausedWorkout}
+                  accessibilityLabel="Resume paused workout"
+                  activeOpacity={0.7}
+                >
+                  <Icon name="play-circle-outline" size={20} color="surface-0" />
+                  <Text className={`text-surface-0 ${textRoles.buttonLabel}`}>
+                    Resume {activeSession.splitName}
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  className="bg-accent rounded-lg py-3 flex-row items-center justify-center gap-2"
+                  onPress={() => todaySplit && startWorkoutForSplit(todaySplit.id)}
+                  accessibilityLabel="Start today's workout"
+                  activeOpacity={0.7}
+                >
+                  <Icon name="play-circle-outline" size={20} color="surface-0" />
+                  <Text className={`text-surface-0 ${textRoles.buttonLabel}`}>Start Workout</Text>
+                </TouchableOpacity>
+              )}
             </>
           ) : (
             <>
