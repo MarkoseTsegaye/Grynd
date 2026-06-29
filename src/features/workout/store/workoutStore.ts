@@ -47,8 +47,16 @@ export const useWorkoutStore = create<WorkoutState>()(
             set({ isLoaded: true, error: null });
             return;
           }
-          const currentExerciseIndex = stored?.currentExerciseIndex ?? 0;
-          set({ session: stored, currentExerciseIndex, isLoaded: true, error: null });
+          let currentExerciseIndex = stored?.currentExerciseIndex ?? 0;
+          if (stored && stored.exercises.length > 0) {
+            currentExerciseIndex = Math.max(
+              0,
+              Math.min(currentExerciseIndex, stored.exercises.length - 1),
+            );
+          }
+          const session =
+            stored !== null ? { ...stored, currentExerciseIndex } : null;
+          set({ session, currentExerciseIndex, isLoaded: true, error: null });
         } catch (err) {
           set({ error: String(err), isLoaded: true });
         }

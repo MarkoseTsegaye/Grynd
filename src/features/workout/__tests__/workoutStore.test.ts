@@ -87,12 +87,21 @@ describe('useWorkoutStore pause/resume', () => {
   });
 
   it('loadActiveSession restores stored exercise index', async () => {
-    mockGetActiveSession.mockResolvedValue(makeSession({ currentExerciseIndex: 3 }));
+    mockGetActiveSession.mockResolvedValue(makeSession({ currentExerciseIndex: 1 }));
 
     await useWorkoutStore.getState().loadActiveSession();
 
-    expect(useWorkoutStore.getState().currentExerciseIndex).toBe(3);
-    expect(useWorkoutStore.getState().session?.currentExerciseIndex).toBe(3);
+    expect(useWorkoutStore.getState().currentExerciseIndex).toBe(1);
+    expect(useWorkoutStore.getState().session?.currentExerciseIndex).toBe(1);
+  });
+
+  it('loadActiveSession clamps stale exercise index', async () => {
+    mockGetActiveSession.mockResolvedValue(makeSession({ currentExerciseIndex: 99 }));
+
+    await useWorkoutStore.getState().loadActiveSession();
+
+    expect(useWorkoutStore.getState().currentExerciseIndex).toBe(1);
+    expect(useWorkoutStore.getState().session?.currentExerciseIndex).toBe(1);
   });
 
   it('loadActiveSession defaults exercise index to 0 when absent', async () => {
