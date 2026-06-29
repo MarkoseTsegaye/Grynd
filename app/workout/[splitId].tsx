@@ -109,6 +109,7 @@ export default function WorkoutScreen() {
 
   useEffect(() => {
     let cancelled = false;
+    isLeavingIntentionallyRef.current = false;
 
     const startWorkoutForSplit = async () => {
       const { getSplitById, getExercisesForSplit } = useSplitsStore.getState();
