@@ -8,7 +8,7 @@ export interface CodeReviewOptions {
   recentCommits: string;
 }
 
-const PASS_FOCUS: Record<ReviewPass, { role: string; skill: string; focus: string }> = {
+const PASS_FOCUS: Record<ReviewPass, { role: string; skill: string; focus: string; automatedNote?: string }> = {
   pass1_codeQuality: {
     role: 'Lead (Pass 1 — Code Quality)',
     skill: '.squad/skills/code-review/SKILL.md',
@@ -18,6 +18,14 @@ const PASS_FOCUS: Record<ReviewPass, { role: string; skill: string; focus: strin
     role: 'Tester (Pass 2 — Tests & AC)',
     skill: '.squad/skills/testing/SKILL.md',
     focus: 'acceptance criteria evidence, test gate, regressions, missing tests',
+    automatedNote: `
+## Automated orchestrator context (IMPORTANT)
+
+This review runs in the CLI orchestrator — no human is available for manual device testing.
+
+- PASS UI-only tickets when automated gates are green AND the diff provides reasonable static evidence for each AC.
+- Manual-only ACs (visual keyboard behavior, tap targets on device): mark as "deferred to manual QA" — do NOT fail solely because manual iOS/Android tests were not run.
+- FAIL only when: gates fail, a logic AC lacks diff evidence, new pure functions lack unit tests, or the diff regresses recent commits.`,
   },
   pass3_security: {
     role: 'Lead (Pass 3 — Security)',
@@ -38,6 +46,7 @@ export function buildCodeReviewPrompt(opts: CodeReviewOptions): string {
 You are ${meta.role}.
 
 Follow ${meta.skill}. Focus: ${meta.focus}.
+${meta.automatedNote ?? ''}
 
 ## Required report format
 

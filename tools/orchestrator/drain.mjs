@@ -1,14 +1,15 @@
 /**
  * drain.mjs — sequential orchestrator queue runner
  *
- * Reads tasks from queue.txt one line at a time, runs `npm run orchestrate`
- * on each, waits for it to finish, then moves to the next.
- *
- * Failed tasks are re-queued at the front so nothing is lost.
- * Ctrl+C re-queues the in-flight task before exiting.
+ * Processes queue.txt top-to-bottom. On failure: logs to failed.txt and
+ * continues with the next task (no infinite retry loop).
+ * Ctrl+C re-queues only the in-flight task before exiting.
  *
  * Usage:
  *   npm run orchestrate:drain
+ *
+ * Set ORCH_RETRY_FAILED=1 to append failed tasks to the END of the queue
+ * (one extra attempt later in the same drain run, not an immediate re-run).
  */
 
 import { readFile, writeFile, appendFile } from 'node:fs/promises';
@@ -21,11 +22,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const QUEUE_FILE = path.join(__dirname, 'queue.txt');
 const FAILED_FILE = path.join(__dirname, 'failed.txt');
 const repoRoot = path.resolve(__dirname, '..', '..');
+const retryFailed = process.env.ORCH_RETRY_FAILED === '1';
 
 const DEFAULT_HEADER = [
   '# One request per line. Lines starting with # are comments and are skipped.',
   '# Add tasks below — drain.mjs processes them one at a time, committing after each PASS.',
-  '# Failed tasks are re-queued at the front automatically.',
+  '# Failed tasks are logged to failed.txt and skipped (not retried immediately).',
+  '# Set ORCH_RETRY_FAILED=1 to append failures to the end of the queue for one later retry.',
   '#',
   '# Example:',
   '# fix the + Set button dead tap on second open',
@@ -61,6 +64,11 @@ async function writeQueue(lines) {
 async function prependTask(task) {
   const rest = await readQueue();
   await writeQueue([task, ...rest]);
+}
+
+async function appendTask(task) {
+  const rest = await readQueue();
+  await writeQueue([...rest, task]);
 }
 
 async function logFailure(task, code) {
@@ -111,6 +119,9 @@ async function main() {
 
     if (tasks.length === 0) {
       log(`Queue empty. Processed ${processed} task(s), ${failed} failed. Exiting.`);
+      if (failed > 0) {
+        log(`See tools/orchestrator/failed.txt for failed task(s). Re-add manually to retry.`);
+      }
       break;
     }
 
@@ -127,8 +138,12 @@ async function main() {
     if (code !== 0) {
       failed++;
       await logFailure(next, code);
-      await prependTask(next);
-      log(`Re-queued failed task at front of queue.`);
+      if (retryFailed) {
+        await appendTask(next);
+        log(`Appended failed task to end of queue (ORCH_RETRY_FAILED=1).`);
+      } else {
+        log(`Skipped failed task — logged to failed.txt. Moving to next.`);
+      }
     }
   }
 

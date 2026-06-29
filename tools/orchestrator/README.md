@@ -36,7 +36,7 @@ Add tasks to `queue.txt` (one per line), then:
 npm run orchestrate:drain
 ```
 
-Failed tasks are **re-queued at the front** automatically. Ctrl+C re-queues the in-flight task. Failures are also logged to `tools/orchestrator/failed.txt`.
+Failed tasks are **logged to `failed.txt` and skipped** so the queue keeps moving. They are not re-run immediately (that caused infinite loops). Set `ORCH_RETRY_FAILED=1` to append failures to the **end** of the queue for one later attempt. Ctrl+C re-queues the in-flight task.
 
 ### Environment
 
