@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSplitsList, SplitCard } from '../../src/features/splits';
 import { useSplitsStore } from '../../src/features/splits';
@@ -14,32 +14,15 @@ export default function HomeScreen() {
   const { splits, isLoaded } = useSplitsList();
   const { getExercisesForSplit } = useSplitsStore();
   const { cycle, isLoaded: cycleLoaded, loadCycle, advanceCycle } = useCycleStore();
-  const { loadActiveSession, abandonWorkout, session: activeSession } = useWorkoutStore();
+  const { loadActiveSession, session: activeSession, isLoaded: sessionLoaded } = useWorkoutStore();
 
   useEffect(() => {
     if (!cycleLoaded) loadCycle();
   }, [cycleLoaded, loadCycle]);
 
-  // Crash recovery: prompt if there's a stale ACTIVE_SESSION on cold start
   useEffect(() => {
-    loadActiveSession().then(() => {
-      const s = useWorkoutStore.getState().session;
-      if (s) {
-        Alert.alert(
-          'Resume Workout?',
-          `You have an unfinished ${s.splitName} workout.`,
-          [
-            { text: 'Discard', style: 'destructive', onPress: () => abandonWorkout() },
-            {
-              text: 'Resume',
-              style: 'default',
-              onPress: () => router.push(`/workout/${s.splitId}`),
-            },
-          ],
-        );
-      }
-    });
-  }, []);
+    if (!sessionLoaded) loadActiveSession();
+  }, [sessionLoaded, loadActiveSession]);
 
   if (!isLoaded) {
     return <View className="flex-1 bg-surface-0" />;
@@ -57,6 +40,19 @@ export default function HomeScreen() {
   const cycleLength = days.length;
   const dayNumber = cycleLength > 0 ? currentIndex + 1 : null;
 
+  const pausedForTodaySplit =
+    activeSession !== null &&
+    todaySplit !== null &&
+    todaySplit !== undefined &&
+    activeSession.splitId === todaySplit.id;
+
+  const showPausedResumeCard = activeSession !== null && !pausedForTodaySplit;
+
+  const handleResumePausedWorkout = () => {
+    if (!activeSession) return;
+    router.push(`/workout/${activeSession.splitId}`);
+  };
+
   return (
     <View className="flex-1 bg-surface-0">
       <View className="px-5 pt-14 pb-4">
@@ -64,6 +60,28 @@ export default function HomeScreen() {
       </View>
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+        {showPausedResumeCard && (
+          <View className="mx-5 mb-4 bg-surface-1 rounded-xl px-4 py-4">
+            <Text className={`text-text-secondary ${textRoles.sectionLabelCompact} mb-1`}>
+              PAUSED WORKOUT
+            </Text>
+            <Text className={`text-text-primary ${textRoles.listTitle} mb-3`} numberOfLines={1}>
+              {activeSession.splitName}
+            </Text>
+            <TouchableOpacity
+              className="bg-accent rounded-lg py-3 flex-row items-center justify-center gap-2"
+              onPress={handleResumePausedWorkout}
+              accessibilityLabel="Resume paused workout"
+              activeOpacity={0.7}
+            >
+              <Icon name="play-circle-outline" size={20} color="surface-0" />
+              <Text className={`text-surface-0 ${textRoles.buttonLabel}`}>
+                Resume {activeSession.splitName}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Today card */}
         <View className="mx-5 mb-4 bg-surface-1 rounded-xl px-4 py-4">
           <Text className={`text-text-secondary ${textRoles.sectionLabelCompact} mb-1`}>TODAY</Text>
@@ -95,15 +113,29 @@ export default function HomeScreen() {
                   Day {dayNumber} of {cycleLength}
                 </Text>
               )}
-              <TouchableOpacity
-                className="bg-accent rounded-lg py-3 flex-row items-center justify-center gap-2"
-                onPress={() => todaySplit && router.push(`/workout/${todaySplit.id}`)}
-                accessibilityLabel="Start today's workout"
-                activeOpacity={0.7}
-              >
-                <Icon name="play-circle-outline" size={20} color="surface-0" />
-                <Text className={`text-surface-0 ${textRoles.buttonLabel}`}>Start Workout</Text>
-              </TouchableOpacity>
+              {pausedForTodaySplit ? (
+                <TouchableOpacity
+                  className="bg-accent rounded-lg py-3 flex-row items-center justify-center gap-2"
+                  onPress={handleResumePausedWorkout}
+                  accessibilityLabel="Resume paused workout"
+                  activeOpacity={0.7}
+                >
+                  <Icon name="play-circle-outline" size={20} color="surface-0" />
+                  <Text className={`text-surface-0 ${textRoles.buttonLabel}`}>
+                    Resume {activeSession.splitName}
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  className="bg-accent rounded-lg py-3 flex-row items-center justify-center gap-2"
+                  onPress={() => todaySplit && router.push(`/workout/${todaySplit.id}`)}
+                  accessibilityLabel="Start today's workout"
+                  activeOpacity={0.7}
+                >
+                  <Icon name="play-circle-outline" size={20} color="surface-0" />
+                  <Text className={`text-surface-0 ${textRoles.buttonLabel}`}>Start Workout</Text>
+                </TouchableOpacity>
+              )}
             </>
           ) : (
             <>

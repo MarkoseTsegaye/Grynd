@@ -36,7 +36,7 @@ type BootstrapState = 'loading' | 'ready' | 'error' | 'empty';
 export default function WorkoutScreen() {
   const { splitId } = useLocalSearchParams<{ splitId: string }>();
   const router = useRouter();
-  const { startWorkout, abandonWorkout, loadActiveSession } = useWorkoutStore();
+  const { startWorkout, abandonWorkout, leaveWorkout, loadActiveSession } = useWorkoutStore();
   const { loadData } = useSplitsStore();
   const [bootstrapState, setBootstrapState] = useState<BootstrapState>('loading');
   const [bootstrapMessage, setBootstrapMessage] = useState<string | null>(null);
@@ -85,7 +85,7 @@ export default function WorkoutScreen() {
 
   // Cancel sheet
   const cancelSheetRef = useRef<BottomSheetModal>(null);
-  const cancelSnapPoints = useMemo(() => ['28%'], []);
+  const cancelSnapPoints = useMemo(() => ['38%'], []);
   const sheetBlocksSwipe = logSheetVisible || overviewSheetVisible || substituteSheetVisible;
   const renderBackdrop = useCallback(
     (props: BottomSheetBackdropProps) => (
@@ -374,6 +374,13 @@ export default function WorkoutScreen() {
     router.replace('/(tabs)');
   }, [abandonWorkout, router, resetRestTimer]);
 
+  const handleLeaveWorkout = useCallback(async () => {
+    cancelSheetRef.current?.dismiss();
+    resetRestTimer();
+    await leaveWorkout();
+    router.replace('/(tabs)');
+  }, [leaveWorkout, router, resetRestTimer]);
+
   const handleKeepGoing = useCallback(() => {
     cancelSheetRef.current?.dismiss();
   }, []);
@@ -503,6 +510,15 @@ export default function WorkoutScreen() {
           >
             <Icon name="trash-can-outline" size={22} color="danger" />
             <Text className={`text-danger ${textRoles.buttonLabel}`}>Discard Workout</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            className="flex-row items-center gap-3 py-4 border-b border-surface-2"
+            onPress={handleLeaveWorkout}
+            accessibilityLabel="Leave workout"
+            activeOpacity={0.7}
+          >
+            <Icon name="exit-to-app" size={22} color="text-primary" />
+            <Text className={`text-text-primary ${textRoles.buttonLabel}`}>Leave Workout</Text>
           </TouchableOpacity>
           <TouchableOpacity
             className="flex-row items-center gap-3 py-4"

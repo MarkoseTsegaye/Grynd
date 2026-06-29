@@ -31,4 +31,5 @@ export interface WorkoutSession {
   startedAt: number;
   completedAt: number | null;
   exercises: LoggedExercise[];
+  currentExerciseIndex?: number;
 }

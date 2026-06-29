@@ -1,5 +1,6 @@
 export { useWorkoutStore } from './store/workoutStore';
 export { useWorkout } from './hooks/useWorkout';
+export { useResumeWorkoutPrompt } from './hooks/useResumeWorkoutPrompt';
 export { ExerciseScreen } from './components/ExerciseScreen';
 export { LogSheet } from './components/LogSheet';
 export { ExerciseOverviewSheet } from './components/ExerciseOverviewSheet';

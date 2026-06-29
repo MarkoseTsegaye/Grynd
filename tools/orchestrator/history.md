@@ -20,6 +20,15 @@
 - **`startWorkout` persistence:** on `setActiveSession` failure, roll back in-memory session and rethrow so the screen can surface error instead of a stuck loading state.
 - **Expo Router params:** normalize dynamic route ids before lookups — e.g. `const id = Array.isArray(splitId) ? splitId[0] : splitId ?? ''`.
 
+### Workout pause / leave / resume
+
+- **`leaveWorkout()` store action:** persists the current session + `currentExerciseIndex` to `ACTIVE_SESSION` without calling `clearActiveSession`. Resets only in-memory rest-timer state (same as discard); navigation to `/(tabs)` is the caller's responsibility.
+- **`currentExerciseIndex` embedded on `WorkoutSession`:** optional field (default `0` on absent/legacy data) stored inside the existing `ACTIVE_SESSION` key — no new storage key. Written on `goToExercise`, `leaveWorkout`, `logSet`, `deleteSet`, and `substituteExercise`; hydrated in `loadActiveSession`. `goToExercise` clamps the value to `[0, exercises.length - 1]` before writing; `loadActiveSession` does not re-clamp (known robustness gap, not a security risk).
+- **`goToExercise` persistence:** fire-and-forget (`void setActiveSession`) — consistent with existing store patterns; silent divergence on storage failure is accepted.
+- **`useResumeWorkoutPrompt` hook (centralized):** lives in `src/features/workout/hooks/` and is wired in `app/(tabs)/_layout.tsx` (not Home-only) so the prompt fires regardless of which tab is active. Handles both cold-start and foreground-return paths. Cold-start alert was removed from `app/(tabs)/index.tsx` to avoid duplication.
+- **Duplicate-alert guard:** `alertVisibleRef` (single-flight) + `coldStartPromptAtRef` with a 2 s `COLD_START_GUARD_MS` window suppress a foreground-return alert immediately after a cold-start alert. `isWorkoutRoute` check prevents the prompt while the user is already on the workout screen.
+- **Home resume CTA:** shows a paused-workout card when `activeSession.splitId !== todaySplit.id`; replaces the "Start Workout" button with "Resume {splitName}" when the paused session matches today's split. `accessibilityLabel="Resume paused workout"` on all resume touch targets.
+
 ### Workout exercise swipe navigation
 
 - **Gesture lives in `app/workout/[splitId].tsx`.** `ExerciseScreen` is presentation-only; pan + commit logic stay in the screen file.

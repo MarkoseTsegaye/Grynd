@@ -28,6 +28,7 @@ interface WorkoutState {
   substituteExercise: (index: number, substituteName: string) => Promise<void>;
   finishWorkout: () => Promise<void>;
   abandonWorkout: () => Promise<void>;
+  leaveWorkout: () => Promise<void>;
 }
 
 export const useWorkoutStore = create<WorkoutState>()(
@@ -46,7 +47,8 @@ export const useWorkoutStore = create<WorkoutState>()(
             set({ isLoaded: true, error: null });
             return;
           }
-          set({ session: stored, isLoaded: true, error: null });
+          const currentExerciseIndex = stored?.currentExerciseIndex ?? 0;
+          set({ session: stored, currentExerciseIndex, isLoaded: true, error: null });
         } catch (err) {
           set({ error: String(err), isLoaded: true });
         }
@@ -65,6 +67,7 @@ export const useWorkoutStore = create<WorkoutState>()(
           startedAt: Date.now(),
           completedAt: null,
           exercises: loggedExercises,
+          currentExerciseIndex: 0,
         };
         set({ session, currentExerciseIndex: 0, error: null });
         try {
@@ -96,7 +99,7 @@ export const useWorkoutStore = create<WorkoutState>()(
               }
             : e,
         );
-        const updated = { ...session, exercises };
+        const updated = { ...session, exercises, currentExerciseIndex: get().currentExerciseIndex };
         set({ session: updated });
         await setActiveSession(updated);
       },
@@ -115,13 +118,21 @@ export const useWorkoutStore = create<WorkoutState>()(
           }
           return { ...e, sets };
         });
-        const updated = { ...session, exercises };
+        const updated = { ...session, exercises, currentExerciseIndex: get().currentExerciseIndex };
         set({ session: updated });
         await setActiveSession(updated);
       },
 
       goToExercise: (index) => {
-        set({ currentExerciseIndex: index });
+        const { session } = get();
+        if (!session) {
+          set({ currentExerciseIndex: index });
+          return;
+        }
+        const clamped = Math.max(0, Math.min(index, session.exercises.length - 1));
+        const updated = { ...session, currentExerciseIndex: clamped };
+        set({ session: updated, currentExerciseIndex: clamped });
+        void setActiveSession(updated);
       },
 
       substituteExercise: async (index, substituteName) => {
@@ -144,7 +155,7 @@ export const useWorkoutStore = create<WorkoutState>()(
         };
 
         const exercises = session.exercises.map((e, i) => (i === index ? substitute : e));
-        const updated = { ...session, exercises };
+        const updated = { ...session, exercises, currentExerciseIndex: get().currentExerciseIndex };
         set({ session: updated });
         await setActiveSession(updated);
       },
@@ -170,6 +181,15 @@ export const useWorkoutStore = create<WorkoutState>()(
       abandonWorkout: async () => {
         await clearActiveSession();
         set({ session: null, currentExerciseIndex: 0 });
+      },
+
+      leaveWorkout: async () => {
+        const { session, currentExerciseIndex } = get();
+        if (!session) return;
+
+        const updated = { ...session, currentExerciseIndex };
+        set({ session: updated });
+        await setActiveSession(updated);
       },
     }),
     { name: 'WorkoutStore', enabled: process.env.APP_ENV === 'development' },
