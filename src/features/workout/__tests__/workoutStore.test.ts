@@ -144,6 +144,18 @@ describe('useWorkoutStore pause/resume', () => {
     expect(useWorkoutStore.getState().session?.currentExerciseIndex).toBe(1);
   });
 
+  it('loadActiveSession rehydrates paused session', async () => {
+    mockGetActiveSession.mockResolvedValue(
+      makeSession({ pausedAt: 42_000, currentExerciseIndex: 1 }),
+    );
+
+    await useWorkoutStore.getState().loadActiveSession();
+
+    expect(useWorkoutStore.getState().session?.pausedAt).toBe(42_000);
+    expect(useWorkoutStore.getState().session?.completedAt).toBeNull();
+    expect(useWorkoutStore.getState().currentExerciseIndex).toBe(1);
+  });
+
   it('loadActiveSession clamps stale exercise index', async () => {
     mockGetActiveSession.mockResolvedValue(makeSession({ currentExerciseIndex: 99 }));
 
