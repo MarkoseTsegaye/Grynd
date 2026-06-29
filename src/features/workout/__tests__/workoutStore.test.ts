@@ -56,9 +56,10 @@ describe('useWorkoutStore pause/resume', () => {
     });
   });
 
-  it('leaveWorkout retains session in storage', async () => {
+  it('leaveWorkout retains session in storage and sets pausedAt', async () => {
     const session = makeSession();
     useWorkoutStore.setState({ session, currentExerciseIndex: 2 });
+    vi.spyOn(Date, 'now').mockReturnValue(42_000);
 
     await useWorkoutStore.getState().leaveWorkout();
 
@@ -66,11 +67,46 @@ describe('useWorkoutStore pause/resume', () => {
     expect(mockSetActiveSession).toHaveBeenCalledWith({
       ...session,
       currentExerciseIndex: 2,
+      pausedAt: 42_000,
     });
     expect(useWorkoutStore.getState().session).toEqual({
       ...session,
       currentExerciseIndex: 2,
+      pausedAt: 42_000,
     });
+  });
+
+  it('resumeWorkoutEntry clears pausedAt for matching split', async () => {
+    const session = makeSession({ pausedAt: 42_000, currentExerciseIndex: 2 });
+    useWorkoutStore.setState({ session, currentExerciseIndex: 2 });
+
+    await useWorkoutStore.getState().resumeWorkoutEntry('split-1');
+
+    const { pausedAt: _, ...cleared } = session;
+    expect(mockSetActiveSession).toHaveBeenCalledWith({
+      ...cleared,
+      currentExerciseIndex: 2,
+    });
+    expect(useWorkoutStore.getState().session?.pausedAt).toBeUndefined();
+  });
+
+  it('resumeWorkoutEntry no-ops for non-matching split', async () => {
+    const session = makeSession({ pausedAt: 42_000 });
+    useWorkoutStore.setState({ session, currentExerciseIndex: 0 });
+
+    await useWorkoutStore.getState().resumeWorkoutEntry('other-split');
+
+    expect(mockSetActiveSession).not.toHaveBeenCalled();
+    expect(useWorkoutStore.getState().session?.pausedAt).toBe(42_000);
+  });
+
+  it('resumeWorkoutEntry no-ops when session is not paused', async () => {
+    const session = makeSession();
+    useWorkoutStore.setState({ session, currentExerciseIndex: 0 });
+
+    await useWorkoutStore.getState().resumeWorkoutEntry('split-1');
+
+    expect(mockSetActiveSession).not.toHaveBeenCalled();
   });
 
   it('goToExercise persists index on the active session', async () => {

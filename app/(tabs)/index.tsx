@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { useSplitsList, SplitCard } from '../../src/features/splits';
 import { useSplitsStore } from '../../src/features/splits';
 import { useCycleStore } from '../../src/features/splits/store/cycleStore';
-import { useWorkoutStore } from '../../src/features/workout';
+import { useWorkoutStore, PausedWorkoutResumeCard, hasPausedSession } from '../../src/features/workout';
 import { Icon } from '../../src/shared/components/Icon';
 import { getUpcomingDaysThroughNextRest } from '../../src/features/splits/lib/cyclePreview';
 import { textRoles } from '../../src/shared/theme/typography';
@@ -40,13 +40,7 @@ export default function HomeScreen() {
   const cycleLength = days.length;
   const dayNumber = cycleLength > 0 ? currentIndex + 1 : null;
 
-  const pausedForTodaySplit =
-    activeSession !== null &&
-    todaySplit !== null &&
-    todaySplit !== undefined &&
-    activeSession.splitId === todaySplit.id;
-
-  const showPausedResumeCard = activeSession !== null && !pausedForTodaySplit;
+  const showPausedResume = hasPausedSession(activeSession);
 
   const handleResumePausedWorkout = () => {
     if (!activeSession) return;
@@ -60,26 +54,11 @@ export default function HomeScreen() {
       </View>
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        {showPausedResumeCard && (
-          <View className="mx-5 mb-4 bg-surface-1 rounded-xl px-4 py-4">
-            <Text className={`text-text-secondary ${textRoles.sectionLabelCompact} mb-1`}>
-              PAUSED WORKOUT
-            </Text>
-            <Text className={`text-text-primary ${textRoles.listTitle} mb-3`} numberOfLines={1}>
-              {activeSession.splitName}
-            </Text>
-            <TouchableOpacity
-              className="bg-accent rounded-lg py-3 flex-row items-center justify-center gap-2"
-              onPress={handleResumePausedWorkout}
-              accessibilityLabel="Resume paused workout"
-              activeOpacity={0.7}
-            >
-              <Icon name="play-circle-outline" size={20} color="surface-0" />
-              <Text className={`text-surface-0 ${textRoles.buttonLabel}`}>
-                Resume {activeSession.splitName}
-              </Text>
-            </TouchableOpacity>
-          </View>
+        {showPausedResume && activeSession && (
+          <PausedWorkoutResumeCard
+            splitName={activeSession.splitName}
+            onResume={handleResumePausedWorkout}
+          />
         )}
 
         {/* Today card */}
@@ -113,29 +92,15 @@ export default function HomeScreen() {
                   Day {dayNumber} of {cycleLength}
                 </Text>
               )}
-              {pausedForTodaySplit ? (
-                <TouchableOpacity
-                  className="bg-accent rounded-lg py-3 flex-row items-center justify-center gap-2"
-                  onPress={handleResumePausedWorkout}
-                  accessibilityLabel="Resume paused workout"
-                  activeOpacity={0.7}
-                >
-                  <Icon name="play-circle-outline" size={20} color="surface-0" />
-                  <Text className={`text-surface-0 ${textRoles.buttonLabel}`}>
-                    Resume {activeSession.splitName}
-                  </Text>
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity
-                  className="bg-accent rounded-lg py-3 flex-row items-center justify-center gap-2"
-                  onPress={() => todaySplit && router.push(`/workout/${todaySplit.id}`)}
-                  accessibilityLabel="Start today's workout"
-                  activeOpacity={0.7}
-                >
-                  <Icon name="play-circle-outline" size={20} color="surface-0" />
-                  <Text className={`text-surface-0 ${textRoles.buttonLabel}`}>Start Workout</Text>
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity
+                className="bg-accent rounded-lg py-3 flex-row items-center justify-center gap-2"
+                onPress={() => todaySplit && router.push(`/workout/${todaySplit.id}`)}
+                accessibilityLabel="Start today's workout"
+                activeOpacity={0.7}
+              >
+                <Icon name="play-circle-outline" size={20} color="surface-0" />
+                <Text className={`text-surface-0 ${textRoles.buttonLabel}`}>Start Workout</Text>
+              </TouchableOpacity>
             </>
           ) : (
             <>

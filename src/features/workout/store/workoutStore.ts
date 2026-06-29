@@ -29,6 +29,7 @@ interface WorkoutState {
   finishWorkout: (completedAt?: number) => Promise<void>;
   abandonWorkout: () => Promise<void>;
   leaveWorkout: () => Promise<void>;
+  resumeWorkoutEntry: (splitId: string) => Promise<void>;
 }
 
 export const useWorkoutStore = create<WorkoutState>()(
@@ -195,7 +196,17 @@ export const useWorkoutStore = create<WorkoutState>()(
         const { session, currentExerciseIndex } = get();
         if (!session) return;
 
-        const updated = { ...session, currentExerciseIndex };
+        const updated = { ...session, currentExerciseIndex, pausedAt: Date.now() };
+        set({ session: updated });
+        await setActiveSession(updated);
+      },
+
+      resumeWorkoutEntry: async (splitId) => {
+        const { session, currentExerciseIndex } = get();
+        if (!session || session.splitId !== splitId || session.pausedAt === undefined) return;
+
+        const { pausedAt: _, ...rest } = session;
+        const updated = { ...rest, currentExerciseIndex };
         set({ session: updated });
         await setActiveSession(updated);
       },

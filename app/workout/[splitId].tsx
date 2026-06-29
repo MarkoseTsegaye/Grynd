@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { View, Text, TouchableOpacity, Alert, Dimensions, AppState } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, Dimensions, AppState, BackHandler } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
@@ -37,7 +38,9 @@ type BootstrapState = 'loading' | 'ready' | 'error' | 'empty';
 export default function WorkoutScreen() {
   const { splitId } = useLocalSearchParams<{ splitId: string }>();
   const router = useRouter();
-  const { startWorkout, abandonWorkout, leaveWorkout, loadActiveSession } = useWorkoutStore();
+  const navigation = useNavigation();
+  const { startWorkout, abandonWorkout, leaveWorkout, loadActiveSession, resumeWorkoutEntry } =
+    useWorkoutStore();
   const { loadData } = useSplitsStore();
   const [bootstrapState, setBootstrapState] = useState<BootstrapState>('loading');
   const [bootstrapMessage, setBootstrapMessage] = useState<string | null>(null);
@@ -87,6 +90,7 @@ export default function WorkoutScreen() {
 
   // Cancel sheet
   const cancelSheetRef = useRef<BottomSheetModal>(null);
+  const isLeavingIntentionallyRef = useRef(false);
   const cancelSnapPoints = useMemo(() => ['38%'], []);
   const [finishSheetVisible, setFinishSheetVisible] = useState(false);
   const sheetBlocksSwipe =
@@ -183,6 +187,7 @@ export default function WorkoutScreen() {
       }
 
       if (storeSession && storeSession.splitId === splitId) {
+        await resumeWorkoutEntry(splitId);
         if (!cancelled) setBootstrapState('ready');
         return;
       }
@@ -195,7 +200,31 @@ export default function WorkoutScreen() {
     return () => {
       cancelled = true;
     };
-  }, [splitId, loadData, loadActiveSession, startWorkout, abandonWorkout, router]);
+  }, [splitId, loadData, loadActiveSession, startWorkout, abandonWorkout, resumeWorkoutEntry, router]);
+
+  useEffect(() => {
+    if (bootstrapState !== 'ready' || !session) return;
+
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (isLeavingIntentionallyRef.current) return;
+      e.preventDefault();
+      cancelSheetRef.current?.present();
+    });
+
+    return unsubscribe;
+  }, [navigation, bootstrapState, session]);
+
+  useEffect(() => {
+    if (bootstrapState !== 'ready' || !session) return;
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (isLeavingIntentionallyRef.current) return false;
+      cancelSheetRef.current?.present();
+      return true;
+    });
+
+    return () => subscription.remove();
+  }, [bootstrapState, session]);
 
   // Show swipe hint on first workout ever
   useEffect(() => {
@@ -286,6 +315,7 @@ export default function WorkoutScreen() {
       await useHistoryStore.getState().loadSessions();
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       finishSheetRef.current?.dismiss();
+      isLeavingIntentionallyRef.current = true;
       router.replace(`/history/${sessionId}`);
     },
     [handleFinish, router, session?.id],
@@ -396,6 +426,7 @@ export default function WorkoutScreen() {
     cancelSheetRef.current?.dismiss();
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     resetRestTimer();
+    isLeavingIntentionallyRef.current = true;
     await abandonWorkout();
     router.replace('/(tabs)');
   }, [abandonWorkout, router, resetRestTimer]);
@@ -407,6 +438,7 @@ export default function WorkoutScreen() {
     substituteSheetRef.current?.dismiss();
     finishSheetRef.current?.dismiss();
     resetRestTimer();
+    isLeavingIntentionallyRef.current = true;
     await leaveWorkout();
     router.replace('/(tabs)');
   }, [leaveWorkout, router, resetRestTimer]);

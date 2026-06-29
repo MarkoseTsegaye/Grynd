@@ -6,4 +6,10 @@ export { LogSheet } from './components/LogSheet';
 export { ExerciseOverviewSheet } from './components/ExerciseOverviewSheet';
 export { SubstituteExerciseSheet } from './components/SubstituteExerciseSheet';
 export { SetChip } from './components/SetChip';
+export { PausedWorkoutResumeCard } from './components/PausedWorkoutResumeCard';
+export {
+  hasPausedSession,
+  isIncompleteActiveSession,
+  shouldPromptResumeSession,
+} from './lib/workoutRoute';
 export type { WorkoutSession, LoggedExercise, LoggedSet } from './types';

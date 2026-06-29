@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'expo-router';
 import { useWorkoutStore } from '../store/workoutStore';
 import {
   isWorkoutRoute,
+  shouldPromptResumeSession,
   shouldSuppressForegroundPrompt,
 } from '../lib/workoutRoute';
 
@@ -63,9 +64,9 @@ export function useResumeWorkoutPrompt() {
 
     void loadActiveSession().then(() => {
       const s = useWorkoutStore.getState().session;
-      if (s) {
+      if (shouldPromptResumeSession(s, pathnameRef.current)) {
         coldStartPromptAtRef.current = Date.now();
-        showPrompt(s.splitId, s.splitName);
+        showPrompt(s!.splitId, s!.splitName);
       }
     });
   }, [loadActiveSession, showPrompt]);
@@ -85,13 +86,16 @@ export function useResumeWorkoutPrompt() {
       debounceTimer = setTimeout(() => {
         debounceTimer = null;
 
-        if (shouldSuppressForegroundPrompt(coldStartPromptAtRef.current, Date.now())) {
-          return;
-        }
+        void loadActiveSession().then(() => {
+          if (shouldSuppressForegroundPrompt(coldStartPromptAtRef.current, Date.now())) {
+            return;
+          }
 
-        const s = useWorkoutStore.getState().session;
-        if (!s) return;
-        showPrompt(s.splitId, s.splitName);
+          const s = useWorkoutStore.getState().session;
+          if (shouldPromptResumeSession(s, pathnameRef.current)) {
+            showPrompt(s!.splitId, s!.splitName);
+          }
+        });
       }, FOREGROUND_DEBOUNCE_MS);
     };
 
@@ -100,5 +104,5 @@ export function useResumeWorkoutPrompt() {
       subscription.remove();
       if (debounceTimer) clearTimeout(debounceTimer);
     };
-  }, [showPrompt]);
+  }, [loadActiveSession, showPrompt]);
 }
