@@ -16,7 +16,6 @@ import { textRoles } from '../../../shared/theme/typography';
 
 const MAX_SET_NOTES_LENGTH = 200;
 const NOTES_MIN_HEIGHT = 48;
-const NOTES_MAX_HEIGHT = 120;
 
 type LogField = 'weight' | 'reps' | 'rpe' | 'notes';
 
@@ -76,6 +75,7 @@ export function LogSheet({
   const effortSectionY = useRef(0);
   const confirmOffset = useRef(0);
   const notesContentHeight = useRef(NOTES_MIN_HEIGHT);
+  const [notesInputHeight, setNotesInputHeight] = useState(NOTES_MIN_HEIGHT);
   const [focusedField, setFocusedField] = useState<LogField | null>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -83,10 +83,7 @@ export function LogSheet({
 
   const contentPaddingBottom = useMemo(() => {
     const base = Math.max(insets.bottom, 40);
-    if (
-      keyboardHeight > 0
-      && (focusedField === 'notes' || focusedField === 'rpe')
-    ) {
+    if (keyboardHeight > 0 && focusedField !== null) {
       return base + Math.max(24, keyboardHeight * 0.25);
     }
     return base;
@@ -157,12 +154,21 @@ export function LogSheet({
   const handleKeyboardHide = useCallback(() => {
     setFocusedField(null);
     setKeyboardHeight(0);
+  }, []);
+
+  const resetSheetScrollState = useCallback(() => {
+    setFocusedField(null);
+    setKeyboardHeight(0);
+    setNotesInputHeight(NOTES_MIN_HEIGHT);
     notesContentHeight.current = NOTES_MIN_HEIGHT;
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
   }, []);
 
   const handleNotesContentSizeChange = useCallback(
     (height: number) => {
-      notesContentHeight.current = Math.max(NOTES_MIN_HEIGHT, height);
+      const nextHeight = Math.max(NOTES_MIN_HEIGHT, height);
+      notesContentHeight.current = nextHeight;
+      setNotesInputHeight(nextHeight);
       if (focusedField === 'notes') {
         scrollNotesIntoView();
       }
@@ -220,10 +226,10 @@ export function LogSheet({
       setSheetOpen(isOpen);
       onChange(index);
       if (!isOpen) {
-        handleKeyboardHide();
+        resetSheetScrollState();
       }
     },
-    [onChange, handleKeyboardHide],
+    [onChange, resetSheetScrollState],
   );
 
   const reps = parseInt(repInput, 10);
@@ -249,7 +255,7 @@ export function LogSheet({
       keyboardBehavior="interactive"
       keyboardBlurBehavior="restore"
       android_keyboardInputMode="adjustResize"
-      bottomInset={insets.bottom}
+      bottomInset={0}
       backdropComponent={renderBackdrop}
       onChange={handleSheetChange}
       onDismiss={onClose}
@@ -474,13 +480,13 @@ export function LogSheet({
             <Text className={`text-text-secondary ${textRoles.bodySmall} mb-1`}>Notes (optional)</Text>
             <BottomSheetTextInput
               className="bg-surface-2 rounded-lg px-4 py-3 text-text-primary font-sans text-base"
-              style={{ minHeight: NOTES_MIN_HEIGHT, maxHeight: NOTES_MAX_HEIGHT }}
+              style={{ minHeight: NOTES_MIN_HEIGHT, height: notesInputHeight }}
               value={notesInput}
               onChangeText={onChangeNotes}
               placeholder="e.g. used straps, paused mid-set"
               placeholderTextColor="#8A8580"
               multiline
-              scrollEnabled
+              scrollEnabled={false}
               textAlignVertical="top"
               maxLength={MAX_SET_NOTES_LENGTH}
               onContentSizeChange={(event) => {

@@ -39,7 +39,7 @@
 ### Workout log sheet
 
 - **`present()` timing:** defer `BottomSheetModal.present()` one frame via `requestAnimationFrame`; effect cleanup cancels pending rAF and focus timer.
-- **Bottom anchoring:** `bottomInset={0}` on `BottomSheetModal`; safe-area bottom is applied via `contentPaddingBottom` (`Math.max(insets.bottom, 24)`) instead — avoids double-padding that caused the sheet to float above the screen bottom. Sibling sheets (`ExerciseOverviewSheet`, `SubstituteExerciseSheet`) still use `insets.bottom` directly.
+- **Bottom anchoring:** `bottomInset={0}` on `BottomSheetModal`; safe-area bottom is applied via `contentPaddingBottom` (`Math.max(insets.bottom, 40)`) instead — avoids double-padding that caused the sheet to float above the screen bottom. Sibling sheets (`ExerciseOverviewSheet`, `SubstituteExerciseSheet`) still use `insets.bottom` directly.
 - **Notes input growth:** removed `NOTES_MAX_HEIGHT = 120` cap (root cause of ~2-line clipping). Notes `BottomSheetTextInput` uses `height: notesInputHeight` (state driven by `onContentSizeChange`) with `scrollEnabled={false}`; parent `BottomSheetScrollView` handles scroll. Minimum height stays at `NOTES_MIN_HEIGHT = 48`.
 - **Keyboard avoidance scope:** `contentPaddingBottom` now adds padding for any focused field when keyboard is open (`focusedField !== null`), not only notes/RPE. Single `scrollFieldIntoView(focusedField)` effect replaces separate reps/notes effects — consistent avoidance across all fields.
 - **`scrollNotesIntoView` strategy:** when keyboard is open, calls `scrollToEnd`; when closed, computes offset from `confirmOffset` + `CONFIRM_BUTTON_HEIGHT = 56`. `weight` and `reps` share `scrollRepsIntoView`; `rpe` with keyboard open routes to `scrollNotesIntoView`.
