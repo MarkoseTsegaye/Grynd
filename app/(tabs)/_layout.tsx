@@ -1,13 +1,10 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { useResumeWorkoutPrompt } from '../../src/features/workout';
 import { colors } from '../../src/shared/theme/colors';
 import { typography } from '../../src/shared/theme/typography';
 
 export default function TabsLayout() {
-  useResumeWorkoutPrompt();
-
   return (
     <Tabs
       screenOptions={{

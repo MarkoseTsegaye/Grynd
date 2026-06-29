@@ -16,9 +16,12 @@ import {
 } from '@expo-google-fonts/jetbrains-mono';
 import { View } from 'react-native';
 import { usePrefsStore } from '../src/shared/store/prefsStore';
+import { useResumeWorkoutPrompt } from '../src/features/workout';
 import { DevBadge } from '../src/shared/components/DevBadge';
 
 export default function RootLayout() {
+  useResumeWorkoutPrompt();
+
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
