@@ -205,9 +205,13 @@ export const useWorkoutStore = create<WorkoutState>()(
         const { session, currentExerciseIndex } = get();
         if (!session || session.splitId !== splitId || session.completedAt !== null) return;
 
+        let index = session.currentExerciseIndex ?? currentExerciseIndex;
+        if (session.exercises.length > 0) {
+          index = Math.max(0, Math.min(index, session.exercises.length - 1));
+        }
         const { pausedAt: _, ...rest } = session;
-        const updated = { ...rest, currentExerciseIndex };
-        set({ session: updated });
+        const updated = { ...rest, currentExerciseIndex: index };
+        set({ session: updated, currentExerciseIndex: index });
         await setActiveSession(updated);
       },
     }),

@@ -576,3 +576,199 @@ PASS
 - **Duplicate-prompt guard** — `alertVisibleRef` and `coldStartPromptAtRef` together prevent both concurrent duplicates and the cold-start + immediate-foreground double-fire race. Logic is straightforward and correctly resets on dismiss/action.
 
 - **Regression check** — The diff only adds two previously-implemented helpers (`isWorkoutRoute`, `shouldSuppressForegroundPrompt`) to the public barrel. All three user flows (leave → browse → resume from Home; return-to-workout prompt; conflict handling) remain intact. No regression against the listed commits detected.
+## Run 2026-06-29T04:48:02.218Z
+
+Artifacts: `tickets/20260629-004453`
+
+### Ticket
+## Title
+
+Pause (leave) active workout to browse tabs, resume from Home, and prompt on app return
+
+## Context
+
+During an active workout, the user is on the stack screen `app/workout/[splitId].tsx`. Accidental navigation away is blocked via `beforeRemove` / hardware back, which opens a cancel sheet with **Discard**, **Leave Workout**, and **Keep Going**. Today there is no first-class “pause and browse the app” flow: users cannot intentionally step out to History, Splits, or other tabs while preserving in-progress sets and exercise position.
+
+The workout store (`src/features/workout/store/workoutStore.ts`) already persists an active session via `src/storage/adapters/sessions.ts`. Branch `feat/workout-enhancements` has prior orchestrator work toward pause/resume; this ticket defines the complete, verifiable behavior Dev should implement or reconcile against existing code.
+
+**Response mode:** Standard ceremony.
+
+## Goal
+
+Let users explicitly **leave (pause)** an in-progress workout to browse the rest of the app, then **resume** from Home or via a **return-to-workout prompt** after leaving and reopening the app — without losing logged sets or current exercise index.
+
+## Non-goals
+
+- Auto-pausing when the app backgrounds without the user choosing **Leave Workout**
+- Resuming legacy incomplete sessions that were never explicitly paused (no `pausedAt`)
+- Persisting or restoring rest-timer countdown state across leave/resume
+- Changing finish/discard workout flows beyond wiring **Leave Workout**
+- New dependencies or storage schema migrations beyond optional `pausedAt` on `WorkoutSession`
+
+## Requirements
+
+1. **Explicit pause via Leave Workout**
+   - Cancel sheet option **Leave Workout** (already present in UI) must call a store action that:
+     - Keeps the session in active storage (does not call `clearActiveSession`)
+     - Persists `currentExerciseIndex`
+     - Sets `pausedAt: Date.now()` on the session
+   - After pause, navigate to `/(tabs)` so the user can use tab navigation freely.
+   - Reset the in-session rest timer on leave (same as discard).
+
+2. **Resume entry clears pause flag**
+   - When the user opens `/workout/[splitId]` for a paused session matching that split, clear `pausedAt` and restore `currentExerciseIndex` before showing the exercise UI.
+   - Do not start a new session if a matching incomplete session already exists.
+
+3. **Home resume affordances** (`app/(tabs)/index.tsx`)
+   - Load active session on Home mount (existing `loadActiveSession` pattern).
+   - If `hasPausedSession(session)`:
+     - **Paused split matches today’s cycle split:** replace the Today card **Start Workout** CTA with **Resume {splitName}**.
+     - **Paused split does not match today** (including rest days): show a dedicated paused card (`PausedWorkoutResumeCard`) above the Today card with **Resume {splitName}**.
+   - Tapping resume navigates to `/workout/{splitId}` (workout screen handles `resumeWorkoutEntry`).
+
+4. **App-return prompt** (`useResumeWorkoutPrompt` in root layout)
+   - On cold start and when returning from background, if there is a paused session (`pausedAt` set, `completedAt === null`) and the user is **not** on a `/workout/*` route, show the existing Alert pattern:
+     - Title: “Resume Workout?”
+     - Body: “You have an unfinished {splitName} workout.”
+     - Actions: **Discard** (calls `abandonWorkout`) and **Resume** (navigates to workout).
+   - Suppress duplicate foreground prompt within 2s of a cold-start prompt (`shouldSuppressForegroundPrompt` / `COLD_START_GUARD_MS`).
+
+5. **Session helpers**
+   - Pure helpers in `src/features/workout/lib/workoutRoute.ts`:
+     - `hasPausedSession`, `shouldPromptResumeSession`, `isWorkoutRoute`, `isIncompleteActiveSession`
+   - Export public API from `src/features/workout/index.ts`.
+
+6. **Conflict handling (unchanged behavior)**
+   - Starting a different split while another incomplete session exists continues to show the existing **Unfinished Workout** alert (Discard / Resume).
+
+## Acceptance criteria
+
+- [ ] From an active workout, opening the cancel sheet and tapping **Leave Workout** saves the session with `pausedAt`, preserves logged sets and `currentExerciseIndex`, and lands the user on the Home tab.
+- [ ] After leaving, the user can navigate all tabs (Home, Splits, History, etc.) without being blocked by workout navigation guards.
+- [ ] On Home, when a paused session’s split matches today’s cycle split, the Today card shows **Resume {splitName}** instead of **Start Workout**.
+- [ ] On Home, when a paused session’s split does not match today (or today is a rest day), a **Paused Workout** card appears above Today with **Resume {splitName}**.
+- [ ] Tapping either Home resume control opens the workout at the correct exercise index with all previously logged sets intact and `pausedAt` cleared.
+- [ ] Force-quitting or backgrounding the app while a workout is paused, then reopening on a non-workout screen, shows the **Resume Workout?** alert with working Discard and Resume actions.
+- [ ] The return prompt does **not** appear when the user is already on `/workout/[splitId]` or when there is no paused session.
+- [ ] **Discard Workout** still clears the active session; finishing a workout still saves history and clears active storage.
+- [ ] Accidental back/swipe-away from an **unpaused** active workout still opens the cancel sheet (does not silently pause).
+
+## Edge cases
+
+- User pauses workout A, then tries to start workout B from Home or All Splits → existing unfinished-workout alert; Resume goes to A, Discard clears A then starts B.
+- User taps **Resume** on Home while already navigating → no duplicate sessions; idempotent `resumeWorkoutEntry`.
+- Cold start shows prompt, then immediate foreground event → second prompt suppressed within guard window.
+- Paused session references a deleted split → workout bootstrap shows existing error/empty states; no crash.
+- Completed session (`completedAt !== null`) → no Home resume UI and no return prompt even if stale `pausedAt` exists in storage.
+- Legacy incomplete session without `pausedAt` → no Home paused card and no app-return prompt (only explicit Leave sets pause).
+
+## Implementation notes
+
+**Store & types**
+
+- `src/features/workout/types.ts` — ensure `pausedAt?: number` and `currentExerciseIndex?: number` on `WorkoutSession`.
+- `src/features/workout/store/workoutStore.ts` — implement/verify `leaveWorkout()` (set `pausedAt`, persist via `setActiveSession`) and `resumeWorkoutEntry(splitId)` (clear `pausedAt`, sync index). Reuse existing `abandonWorkout`, `loadActiveSession`.
+
+**Helpers & hook**
+
+- `src/features/workout/lib/workoutRoute.ts` — pause/prompt route helpers.
+- `src/features/workout/hooks/useResumeWorkoutPrompt.ts` — cold-start + `AppState` foreground listener; mount from `app/_layout.tsx`.
+- `src/features/workout/components/PausedWorkoutResumeCard.tsx` — Home paused card UI.
+- `src/features/workout/index.ts` — export hook, card, helpers.
+
+**Screens**
+
+- `app/workout/[splitId].tsx`:
+  - Wire **Leave Workout** → `leaveWorkout()` + `router.replace('/(tabs)')`; set `isLeavingIntentionallyRef` before navigate (same pattern as discard).
+  - On init: if stored session matches `splitId`, call `resumeWorkoutEntry(splitId)` instead of `startWorkout`.
+  - Keep `beforeRemove` / `BackHandler` guard for **unpaused** active sessions only (paused users are already off the workout route).
+- `app/(tabs)/index.tsx`:
+  - Use `hasPausedSession`, `PausedWorkoutResumeCard`, and Today-card resume CTA per Requirements §3.
+  - Reuse existing `handleResumePausedWorkout` → `router.push(\`/workout/${activeSession.splitId}\`)`.
+
+**Tests** (required for store + pure helpers per `.squad/skills/testing/SKILL.md`)
+
+- `src/features/workout/__tests__/workoutStore.test.ts` — `leaveWorkout`, `resumeWorkoutEntry`, rehydration of paused session.
+- `src/features/workout/__tests__/useResumeWorkoutPrompt.test.ts` — `hasPausedSession`, `shouldPromptResumeSession`, `shouldSuppressForegroundPrompt`, `isWorkoutRoute`.
+
+Keep diffs small; do not refactor unrelated workout logging, swipe, or finish flows.
+
+## Test plan
+
+**Automated (required):**
+
+```bash
+npm run typecheck
+npm run lint
+npm run test
+```
+
+**Manual QA (UI):**
+
+1. Start a workout, log at least one set, swipe to exercise 2, tap cancel → **Leave Workout** → confirm Home loads and tabs are browsable.
+2. On Home, confirm resume CTA appears (Today card or Paused Workout card depending on cycle match).
+3. Tap **Resume** → confirm exercise 2 is active, sets preserved, workout continues normally.
+4. Leave workout again → background/kill app → reopen → confirm **Resume Workout?** alert; test both Resume and Discard.
+5. Start workout, attempt hardware back / swipe back without Leave → confirm cancel sheet appears and session is **not** paused until Leave is chosen.
+6. Pause workout, tap a different split → confirm unfinished-workout conflict alert behaves correctly.
+
+### Final review
+# Pass 1 (pass1_codeQuality)
+
+## Verdict
+
+PASS
+
+## Findings
+
+- **Scope:** Diff touches only 3 ticket-relevant files (`workoutStore.ts`, `[splitId].tsx`, `workoutStore.test.ts`). No unrelated refactors, new deps, or schema changes.
+- **Minimal diff:** Small, targeted edits — ~15 lines of production logic plus one focused test. No full-file rewrites.
+- **Ticket alignment — exercise index restore:** `resumeWorkoutEntry` now prefers `session.currentExerciseIndex`, clamps to valid range (matching `loadActiveSession`), and syncs both `session` and `currentExerciseIndex` in store state. This fixes the desync where resume could land on exercise 0 despite a persisted index. New test `resumeWorkoutEntry restores exercise index from session` covers the bug directly.
+- **Ticket alignment — navigation guards:** `beforeRemove` / `BackHandler` effects skip when `session.pausedAt != null`, matching implementation notes (“guard for unpaused active sessions only”). Init still calls `resumeWorkoutEntry` before `setBootstrapState('ready')`, so guards re-attach after a normal resume.
+- **Regression guard:** Does not undo orchestrator pause/resume behavior (leave → tabs, Home resume, app-return prompt). This diff strengthens resume correctness; it does not remove `leaveWorkout`, `pausedAt`, or resume entry wiring from prior commits.
+- **AGENTS.md patterns:** Zustand store change stays in `src/features/workout/store/` with persistence via `setActiveSession`; screen logic stays in `app/workout/`. Naming and structure match surrounding code.
+- **TypeScript / quality gates:** No `any` escapes. `npm run typecheck`, `lint`, and `test` all pass (56/56).
+- **Minor observation (non-blocking):** If a completed session with stale `pausedAt` were still in active storage and the screen bootstrapped to `ready` without clearing pause (`resumeWorkoutEntry` no-ops on `completedAt !== null`), guards would stay off. That is an unlikely stale-state edge case, not introduced by the index fix, and is acceptable for this pass.
+
+---
+
+# Pass 2 (pass2_tests)
+
+## Verdict
+PASS
+
+## Findings
+- Automated gates are green: `npm run typecheck`, `npm run lint`, and `npm run test` all exited 0; 56 tests passed.
+- Store pause/resume ACs have evidence: `leaveWorkout` persists `pausedAt` without clearing active storage, and `resumeWorkoutEntry` clears `pausedAt` while restoring/clamping `currentExerciseIndex`.
+- Home resume ACs have static evidence: matching-today sessions replace the Today CTA with `Resume {splitName}`, non-matching/rest-day paused sessions render `PausedWorkoutResumeCard`.
+- App-return prompt ACs have static evidence: root layout mounts `useResumeWorkoutPrompt`, helpers restrict prompts to paused incomplete sessions off workout routes, and cold-start foreground suppression is unit-tested.
+- Conflict handling remains present: starting a different split with an incomplete session still shows the existing `Unfinished Workout` Discard/Resume alert.
+- Pure route helpers and store state transitions have unit tests, including paused session detection, prompt suppression, rehydration, and exercise-index restoration.
+- Regression guard: no evidence the diff undoes the recent pause/resume behavior commits.
+- Manual/device-only checks such as tab browsing feel, hardware back behavior on device, and visual CTA/card placement are deferred to manual QA; static evidence supports the ACs.
+
+---
+
+# Pass 3 (pass3_security)
+
+## Verdict
+
+PASS
+
+## Findings
+
+- **No secrets in diff** — only store logic, navigation guard conditions, and test data. No API keys, tokens, `.env` references, or credential strings anywhere in the changed files.
+
+- **AsyncStorage data validated on read** — `getActiveSession()` in `sessions.ts` does a bare type-assert (`JSON.parse(raw) as WorkoutSession`) with no runtime schema check. This is a **pre-existing pattern** not introduced or worsened by this diff. The diff only reads the new optional `pausedAt?: number` field from the already-stored session object. The `!= null` loose-equality guards in `[splitId].tsx` lines 206 and 218 correctly catch both `null` and `undefined`, which covers the well-formed cases written by `leaveWorkout`. A corrupted string value for `pausedAt` would pass `!= null` (suppressing the navigation guard on what the code thinks is a paused session), but that threat model requires direct AsyncStorage manipulation and is outside scope for this diff.
+
+- **`currentExerciseIndex` from storage is bounded on read** — `resumeWorkoutEntry` clamps `index` to `[0, exercises.length - 1]` before writing back. `loadActiveSession` does the same. No out-of-bounds array access is possible from a stale or maliciously large stored index.
+
+- **`splitId` from URL params** — used only as an equality comparator against `session.splitId` (line 160 / 189 of `[splitId].tsx`) and for `router.replace`. Not concatenated into storage keys, SQL, or eval. No injection vector in the React Native context.
+
+- **`leaveWorkout` writes `pausedAt: Date.now()`** — value is internally generated, not user-sourced.
+
+- **No `eval`, `Function()`, dynamic `require`, or shell invocations** — none found in any changed file.
+
+- **No file-picker paths** — not applicable to this diff.
+
+- **Regression guard** — the diff does not undo any commit behaviour. Navigation guards are tightened (only active/unpaused sessions trigger `beforeRemove` / `BackHandler`), leave/resume flows are additive, and discard/finish paths are untouched.

@@ -203,7 +203,7 @@ export default function WorkoutScreen() {
   }, [splitId, loadData, loadActiveSession, startWorkout, abandonWorkout, resumeWorkoutEntry, router]);
 
   useEffect(() => {
-    if (bootstrapState !== 'ready' || !session) return;
+    if (bootstrapState !== 'ready' || !session || session.pausedAt != null) return;
 
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
       if (isLeavingIntentionallyRef.current) return;
@@ -215,7 +215,7 @@ export default function WorkoutScreen() {
   }, [navigation, bootstrapState, session]);
 
   useEffect(() => {
-    if (bootstrapState !== 'ready' || !session) return;
+    if (bootstrapState !== 'ready' || !session || session.pausedAt != null) return;
 
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
       if (isLeavingIntentionallyRef.current) return false;

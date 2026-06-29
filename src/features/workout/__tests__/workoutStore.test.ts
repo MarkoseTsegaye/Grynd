@@ -77,17 +77,27 @@ describe('useWorkoutStore pause/resume', () => {
   });
 
   it('resumeWorkoutEntry clears pausedAt for matching split', async () => {
-    const session = makeSession({ pausedAt: 42_000, currentExerciseIndex: 2 });
-    useWorkoutStore.setState({ session, currentExerciseIndex: 2 });
+    const session = makeSession({ pausedAt: 42_000, currentExerciseIndex: 1 });
+    useWorkoutStore.setState({ session, currentExerciseIndex: 1 });
 
     await useWorkoutStore.getState().resumeWorkoutEntry('split-1');
 
     const { pausedAt: _, ...cleared } = session;
     expect(mockSetActiveSession).toHaveBeenCalledWith({
       ...cleared,
-      currentExerciseIndex: 2,
+      currentExerciseIndex: 1,
     });
     expect(useWorkoutStore.getState().session?.pausedAt).toBeUndefined();
+  });
+
+  it('resumeWorkoutEntry restores exercise index from session', async () => {
+    const session = makeSession({ pausedAt: 42_000, currentExerciseIndex: 1 });
+    useWorkoutStore.setState({ session, currentExerciseIndex: 0 });
+
+    await useWorkoutStore.getState().resumeWorkoutEntry('split-1');
+
+    expect(useWorkoutStore.getState().currentExerciseIndex).toBe(1);
+    expect(useWorkoutStore.getState().session?.currentExerciseIndex).toBe(1);
   });
 
   it('resumeWorkoutEntry no-ops for non-matching split', async () => {
@@ -101,14 +111,14 @@ describe('useWorkoutStore pause/resume', () => {
   });
 
   it('resumeWorkoutEntry syncs legacy incomplete session without pausedAt', async () => {
-    const session = makeSession({ currentExerciseIndex: 2 });
-    useWorkoutStore.setState({ session, currentExerciseIndex: 2 });
+    const session = makeSession({ currentExerciseIndex: 1 });
+    useWorkoutStore.setState({ session, currentExerciseIndex: 1 });
 
     await useWorkoutStore.getState().resumeWorkoutEntry('split-1');
 
     expect(mockSetActiveSession).toHaveBeenCalledWith({
       ...session,
-      currentExerciseIndex: 2,
+      currentExerciseIndex: 1,
     });
     expect(useWorkoutStore.getState().session?.pausedAt).toBeUndefined();
   });
