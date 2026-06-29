@@ -5,7 +5,6 @@
 #
 # Example:
 # fix the + Set button dead tap on second open
-unable to see the name of when writing the substitute name
 user should be able to leave a workout (aka pause) to browse around in the menu, if an active workout is paused: leave a button in home where user can resume workout. similarly if a paused workout is left and the user leaves the app, upon return show the familiar return to workout.
 give users the ability to confirm a workout is finished, once they do the final swipe a confirm screen with the date (picker compoenent but polish it)
 automatically save workouts as if user is exporting. if i finish a workout then it should be written to that same file.
