@@ -2,13 +2,12 @@ import { useEffect, useRef, useCallback } from 'react';
 import { Alert, AppState, type AppStateStatus } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { useWorkoutStore } from '../store/workoutStore';
+import {
+  isWorkoutRoute,
+  shouldSuppressForegroundPrompt,
+} from '../lib/workoutRoute';
 
 const FOREGROUND_DEBOUNCE_MS = 300;
-const COLD_START_GUARD_MS = 2000;
-
-function isWorkoutRoute(pathname: string): boolean {
-  return pathname.startsWith('/workout/');
-}
 
 export function useResumeWorkoutPrompt() {
   const router = useRouter();
@@ -86,8 +85,7 @@ export function useResumeWorkoutPrompt() {
       debounceTimer = setTimeout(() => {
         debounceTimer = null;
 
-        const coldStartAt = coldStartPromptAtRef.current;
-        if (coldStartAt !== null && Date.now() - coldStartAt < COLD_START_GUARD_MS) {
+        if (shouldSuppressForegroundPrompt(coldStartPromptAtRef.current, Date.now())) {
           return;
         }
 
