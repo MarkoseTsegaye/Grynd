@@ -32,7 +32,7 @@ export function useWorkout(
   } = useWorkoutStore();
   const { weightUnit, defaultRestSeconds, loadPrefs, isLoaded: prefsLoaded, setWeightUnit } =
     usePrefsStore();
-  const { impact, light, success } = useHaptics();
+  const { impact, light } = useHaptics();
   const {
     start: startRestTimer,
     reset: resetRestTimer,
@@ -288,11 +288,10 @@ export function useWorkout(
     }
   }, [currentExerciseIndex, goToExercise, resetRestTimer]);
 
-  const handleFinish = useCallback(async () => {
+  const handleFinish = useCallback(async (completedAt?: number) => {
     resetRestTimer();
-    success();
-    await finishWorkout();
-  }, [finishWorkout, success, resetRestTimer]);
+    await finishWorkout(completedAt);
+  }, [finishWorkout, resetRestTimer]);
 
   const toggleWeightMode = useCallback(() => {
     setWeightMode((m) => (m === 'straight' ? 'plates' : 'straight'));

@@ -26,7 +26,7 @@ interface WorkoutState {
   deleteSet: (exerciseId: string, setIndex: number) => Promise<void>;
   goToExercise: (index: number) => void;
   substituteExercise: (index: number, substituteName: string) => Promise<void>;
-  finishWorkout: () => Promise<void>;
+  finishWorkout: (completedAt?: number) => Promise<void>;
   abandonWorkout: () => Promise<void>;
   leaveWorkout: () => Promise<void>;
 }
@@ -168,13 +168,13 @@ export const useWorkoutStore = create<WorkoutState>()(
         await setActiveSession(updated);
       },
 
-      finishWorkout: async () => {
+      finishWorkout: async (completedAt?: number) => {
         const { session } = get();
         if (!session) return;
 
         const completed = {
           ...session,
-          completedAt: Date.now(),
+          completedAt: completedAt ?? Date.now(),
           exercises: sortExercisesByPerformedOrder(session.exercises),
         };
         // BUG-01 fix: ensure write completes before navigation

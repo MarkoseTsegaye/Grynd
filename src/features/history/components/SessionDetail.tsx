@@ -27,7 +27,7 @@ export function SessionDetail({ session }: Props) {
       {/* Level 1 header */}
       <View className="flex-row items-center justify-between mb-6">
         <Text className={`text-text-secondary ${textRoles.caption}`}>
-          {formatShortDate(session.startedAt)}
+          {formatShortDate(session.completedAt ?? session.startedAt)}
         </Text>
         <Text className={`text-text-primary ${textRoles.cardTitleSmall}`} numberOfLines={1}>
           {session.splitName}

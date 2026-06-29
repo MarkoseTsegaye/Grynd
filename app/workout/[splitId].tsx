@@ -14,6 +14,7 @@ import * as Haptics from 'expo-haptics';
 import { BottomSheetModal, BottomSheetView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import { useWorkout, ExerciseScreen, LogSheet, ExerciseOverviewSheet, SubstituteExerciseSheet } from '../../src/features/workout';
+import { FinishWorkoutSheet } from '../../src/features/workout/components/FinishWorkoutSheet';
 import { useWorkoutStore } from '../../src/features/workout';
 import { useSplitsStore } from '../../src/features/splits';
 import { useHistoryStore } from '../../src/features/history';
@@ -44,6 +45,7 @@ export default function WorkoutScreen() {
   const logSheetRef = useRef<BottomSheetModal>(null);
   const overviewSheetRef = useRef<BottomSheetModal>(null);
   const substituteSheetRef = useRef<BottomSheetModal>(null);
+  const finishSheetRef = useRef<BottomSheetModal>(null);
 
   const {
     session, currentExercise, currentExerciseIndex, totalExercises, isLastExercise,
@@ -86,7 +88,9 @@ export default function WorkoutScreen() {
   // Cancel sheet
   const cancelSheetRef = useRef<BottomSheetModal>(null);
   const cancelSnapPoints = useMemo(() => ['38%'], []);
-  const sheetBlocksSwipe = logSheetVisible || overviewSheetVisible || substituteSheetVisible;
+  const [finishSheetVisible, setFinishSheetVisible] = useState(false);
+  const sheetBlocksSwipe =
+    logSheetVisible || overviewSheetVisible || substituteSheetVisible || finishSheetVisible;
   const renderBackdrop = useCallback(
     (props: BottomSheetBackdropProps) => (
       <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.7} />
@@ -255,17 +259,37 @@ export default function WorkoutScreen() {
     handleSwipePrev();
   }, [handleSwipePrev]);
 
-  const afterSwipeFinish = useCallback(async () => {
-    const sessionId = session?.id;
-    if (!sessionId) return;
-    try {
-      await handleFinish();
+  const presentFinishSheet = useCallback(() => {
+    finishSheetRef.current?.present();
+  }, []);
+
+  const afterSwipeFinish = useCallback(() => {
+    isAnimating.value = false;
+    translateX.value = 0;
+    presentFinishSheet();
+  }, [isAnimating, presentFinishSheet, translateX]);
+
+  const handleFinishSheetChange = useCallback((index: number) => {
+    setFinishSheetVisible(index >= 0);
+  }, []);
+
+  const handleCancelFinish = useCallback(() => {
+    // Sheet dismiss only — active session remains.
+  }, []);
+
+  const handleConfirmFinish = useCallback(
+    async (completedAt: number) => {
+      const sessionId = session?.id;
+      if (!sessionId) throw new Error('No active session');
+
+      await handleFinish(completedAt);
       await useHistoryStore.getState().loadSessions();
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      finishSheetRef.current?.dismiss();
       router.replace(`/history/${sessionId}`);
-    } catch {
-      // Stay on workout screen if persistence fails
-    }
-  }, [session?.id, handleFinish, router]);
+    },
+    [handleFinish, router, session?.id],
+  );
 
   const panGesture = useMemo(
     () =>
@@ -344,6 +368,7 @@ export default function WorkoutScreen() {
       logSheetVisible,
       overviewSheetVisible,
       substituteSheetVisible,
+      finishSheetVisible,
       sheetBlocksSwipe,
       translateX,
       triggerSwipeCommitHaptic,
@@ -422,7 +447,7 @@ export default function WorkoutScreen() {
         previousExercise={currentPreviousPerformance}
         onOpenLog={openLogSheet}
         onDeleteSet={handleDeleteSet}
-        onFinish={async () => { await handleFinish(); router.replace('/(tabs)/history'); }}
+        onFinish={presentFinishSheet}
         onCancel={handleCancelPress}
         onOpenOverview={openOverview}
         onSubstitute={handleSubstitutePress}
@@ -492,6 +517,16 @@ export default function WorkoutScreen() {
         onConfirm={handleConfirmSubstitute}
         onClose={() => {}}
       />
+
+      {session && (
+        <FinishWorkoutSheet
+          session={session}
+          sheetRef={finishSheetRef}
+          onConfirm={handleConfirmFinish}
+          onCancel={handleCancelFinish}
+          onChange={handleFinishSheetChange}
+        />
+      )}
 
       {/* Cancel workout confirmation sheet */}
       <BottomSheetModal

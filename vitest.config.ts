@@ -5,6 +5,7 @@ export default defineConfig({
     include: [
       'tools/orchestrator/src/__tests__/**/*.test.ts',
       'src/features/workout/__tests__/**/*.test.ts',
+      'src/shared/lib/__tests__/**/*.test.ts',
     ],
     environment: 'node',
   },

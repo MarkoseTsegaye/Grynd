@@ -45,6 +45,19 @@
 - **Directional UI (`ExerciseScreen`):** left = `chevron-left` (next) or `flag-checkered` (finish on last); right = `chevron-right` (back) or empty on first exercise.
 - **First-workout hint:** `gesture-swipe-left`, `hintTranslateX` animates negative, copy “Swipe left to next exercise”.
 - **Navigation haptics:** `light()` in `useWorkout` swipe handlers; manual finish button uses `success()`.
+- **Finish interception via sheet:** final swipe (`afterSwipeFinish`) and header **Finish** button both open `FinishWorkoutSheet` (`BottomSheetModal`) — neither calls `finishWorkout()` directly. `ACTIVE_SESSION` is preserved until user explicitly confirms.
+- **`afterSwipeFinish` resets animation state before presenting sheet** (clears `isAnimating` + `translateX`) so the sheet opens after the exit animation completes with no gesture conflicts.
+- **`finishSheetVisible` wired into `sheetBlocksSwipe`** — mirrors the cancel/log/overview pattern; prevents swipe gestures while the finish sheet is open.
+
+### Workout finish confirmation
+
+- **`finishWorkout(completedAt?: number)`** — store action accepts an optional timestamp; defaults to `Date.now()`. Callers that supply a value (e.g. the finish sheet) control the persisted `completedAt`.
+- **Unified confirm + navigate flow:** shared `handleConfirmFinish(completedAt)` in `app/workout/[splitId].tsx` calls `handleFinish(completedAt)` → `loadSessions()` → success haptic → dismiss sheet → `router.replace('/history/${sessionId}')`. Both swipe and button entries use this path — no divergent destinations.
+- **Success haptic deferred to confirm:** moved from `useWorkout.handleFinish` to `handleConfirmFinish` in the screen so it fires only after the session is actually persisted, not on every finish intent.
+- **Cancel / dismiss is a no-op:** `handleCancelFinish` does nothing beyond closing the sheet. The active session remains intact and the user can continue logging.
+- **Date validation and clamping (local calendar day):** `isFutureCalendarDay` blocks confirm in the UI (button disabled + `opacity-40`). `dateToCompletedAtMs` uses end-of-local-day for the selected date; if the chosen day is before `startedAt`'s calendar day, returns `startedAt` verbatim; otherwise `Math.max(endOfSelected, startedAt)` guards the intra-day edge (e.g. workout started at 23:55 on same calendar day). All comparisons use local time, not UTC.
+- **History date display:** `SessionCard` and `SessionDetail` both show `completedAt ?? startedAt`, preferring the user-confirmed date when present.
+- **`autoAdvanceCycle` timing unchanged:** still runs only inside `finishWorkout` after successful save, so only after an explicit Confirm — never on cancel or dismiss.
 
 ### Workout log sheet
 

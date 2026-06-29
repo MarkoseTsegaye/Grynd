@@ -124,4 +124,21 @@ describe('useWorkoutStore pause/resume', () => {
     expect(useWorkoutStore.getState().session).toBeNull();
     expect(useWorkoutStore.getState().currentExerciseIndex).toBe(0);
   });
+
+  it('finishWorkout persists custom completedAt', async () => {
+    const customCompletedAt = 9_999_999;
+    const session = makeSession();
+    useWorkoutStore.setState({ session, currentExerciseIndex: 0 });
+
+    await useWorkoutStore.getState().finishWorkout(customCompletedAt);
+
+    expect(mockSaveSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: session.id,
+        completedAt: customCompletedAt,
+      }),
+    );
+    expect(mockClearActiveSession).toHaveBeenCalled();
+    expect(useWorkoutStore.getState().session).toBeNull();
+  });
 });
