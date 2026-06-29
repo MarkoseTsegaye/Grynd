@@ -12,9 +12,9 @@ export function isIncompleteActiveSession(
   return session !== null && session.completedAt === null;
 }
 
-/** Explicit pause or legacy incomplete active session left in storage. */
+/** Incomplete session explicitly paused via Leave Workout. */
 export function hasPausedSession(session: WorkoutSession | null): boolean {
-  return isIncompleteActiveSession(session);
+  return isIncompleteActiveSession(session) && session.pausedAt != null;
 }
 
 export function shouldPromptResumeSession(

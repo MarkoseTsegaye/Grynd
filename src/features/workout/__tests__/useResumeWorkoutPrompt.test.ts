@@ -58,8 +58,8 @@ describe('hasPausedSession', () => {
     expect(hasPausedSession(makeSession({ pausedAt: 5000 }))).toBe(true);
   });
 
-  it('returns true for legacy incomplete sessions without pausedAt', () => {
-    expect(hasPausedSession(makeSession())).toBe(true);
+  it('returns false for legacy incomplete sessions without pausedAt', () => {
+    expect(hasPausedSession(makeSession())).toBe(false);
   });
 
   it('returns false for completed sessions', () => {
@@ -86,8 +86,8 @@ describe('shouldPromptResumeSession', () => {
     expect(shouldPromptResumeSession(makeSession({ completedAt: 9000 }), '/(tabs)')).toBe(false);
   });
 
-  it('prompts for legacy incomplete sessions off workout route', () => {
-    expect(shouldPromptResumeSession(makeSession(), '/')).toBe(true);
+  it('does not prompt for legacy incomplete sessions off workout route', () => {
+    expect(shouldPromptResumeSession(makeSession(), '/')).toBe(false);
   });
 });
 

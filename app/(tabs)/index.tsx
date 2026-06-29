@@ -4,7 +4,12 @@ import { useRouter } from 'expo-router';
 import { useSplitsList, SplitCard } from '../../src/features/splits';
 import { useSplitsStore } from '../../src/features/splits';
 import { useCycleStore } from '../../src/features/splits/store/cycleStore';
-import { useWorkoutStore, PausedWorkoutResumeCard, hasPausedSession } from '../../src/features/workout';
+import {
+  useWorkoutStore,
+  PausedWorkoutResumeCard,
+  hasPausedSession,
+  isIncompleteActiveSession,
+} from '../../src/features/workout';
 import { Icon } from '../../src/shared/components/Icon';
 import { getUpcomingDaysThroughNextRest } from '../../src/features/splits/lib/cyclePreview';
 import { textRoles } from '../../src/shared/theme/typography';
@@ -53,7 +58,10 @@ export default function HomeScreen() {
   };
 
   const startWorkoutForSplit = (targetSplitId: string) => {
-    if (showPausedResume && activeSession && activeSession.splitId !== targetSplitId) {
+    if (
+      isIncompleteActiveSession(activeSession) &&
+      activeSession.splitId !== targetSplitId
+    ) {
       Alert.alert(
         'Unfinished Workout',
         `You have an unfinished ${activeSession.splitName} workout.`,
