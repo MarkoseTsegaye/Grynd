@@ -8,5 +8,5 @@ export function parseVerdictFail(review: string): boolean {
 }
 
 export function allReviewsPass(reviews: string[]): boolean {
-  return reviews.length > 0 && reviews.every(parseVerdictPass);
+  return reviews.length > 0 && reviews.every((r) => r.trim().length > 0 && parseVerdictPass(r));
 }

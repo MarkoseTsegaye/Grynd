@@ -87,6 +87,11 @@ describe('allReviewsPass', () => {
     expect(allReviewsPass([pass, fail, pass])).toBe(false);
     expect(allReviewsPass([])).toBe(false);
   });
+
+  it('rejects empty reviews', () => {
+    const pass = '## Verdict\n\nPASS';
+    expect(allReviewsPass([pass, '', pass])).toBe(false);
+  });
 });
 
 describe('extractAffectedPaths', () => {

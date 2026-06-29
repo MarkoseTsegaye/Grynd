@@ -18,6 +18,7 @@ import { buildTicketManPrompt } from './agents/ticketman';
 import { buildImplementerPrompt } from './agents/implementer';
 import { buildCodeReviewPrompt, REVIEW_PASSES, type ReviewPass } from './agents/codeReview';
 import { buildDecisionLogPrompt } from './agents/decisionLog';
+import { PROTECTED_PATHS, isValidReview, summarizeReviewPasses } from './protected';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -100,6 +101,35 @@ async function runAgent(
   }
 }
 
+async function revertProtectedPaths(repoRoot: string): Promise<void> {
+  for (const relPath of PROTECTED_PATHS) {
+    const result = await execCapture('git', ['checkout', 'HEAD', '--', relPath], { cwd: repoRoot });
+    const out = (result.stdout + result.stderr).toLowerCase();
+    if (result.code !== 0 && !out.includes('did not match any file')) {
+      // eslint-disable-next-line no-console
+      console.warn(`Could not revert ${relPath} (exit ${result.code})`);
+    }
+  }
+}
+
+async function runReviewPass(
+  apiKey: string,
+  repoRoot: string,
+  pass: ReviewPass,
+  modelId: string,
+  prompt: string,
+  maxAttempts = 3,
+): Promise<string> {
+  let last = '';
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    last = await runAgent(apiKey, modelId, repoRoot, prompt, `Review-${pass}`);
+    if (isValidReview(last)) return last;
+    // eslint-disable-next-line no-console
+    console.warn(`Review ${pass}: empty/invalid response (attempt ${attempt}/${maxAttempts}), retrying...`);
+  }
+  return last;
+}
+
 function reviewModelForPass(
   pass: ReviewPass,
   overrides: { pass1_codeQuality: string; pass2_tests: string; pass3_security: string },
@@ -148,6 +178,7 @@ async function main() {
 
   // ── Implement → Gate → 3-pass Review loop ───────────────────────────────────
   let lastFailureContext: string | undefined;
+  let lastReviewSummary = '(no reviews ran)';
   const devModel = modelOverride ?? squad.models.dev;
 
   for (let iter = 1; iter <= maxIters; iter++) {
@@ -167,6 +198,7 @@ async function main() {
       'Implementer',
     );
     await writeTextFile(path.join(runDir, `implementer-${iter}.md`), implementerSummary + '\n');
+    await revertProtectedPaths(repoRoot);
 
     // eslint-disable-next-line no-console
     console.log(`Gates: typecheck + lint + test (iteration ${iter})...`);
@@ -192,12 +224,12 @@ async function main() {
       const reviewModel = modelOverride ?? reviewModelForPass(pass, squad.reviewModelOverrides);
       // eslint-disable-next-line no-console
       console.log(`Review ${pass} (${reviewModel})...`);
-      const review = await runAgent(
+      const review = await runReviewPass(
         apiKey,
-        reviewModel,
         repoRoot,
+        pass,
+        reviewModel,
         buildCodeReviewPrompt({ pass, ticketMd, gitDiff: diff, toolOutputs, recentCommits }),
-        `Review-${pass}`,
       );
       reviews.push(review);
       await writeTextFile(path.join(runDir, `review-${iter}-${pass}.md`), review + '\n');
@@ -206,6 +238,9 @@ async function main() {
     const combinedReview = reviews
       .map((r, i) => `# Pass ${i + 1} (${REVIEW_PASSES[i]})\n\n${r}`)
       .join('\n\n---\n\n');
+    lastReviewSummary = summarizeReviewPasses(
+      REVIEW_PASSES.map((pass, i) => ({ pass, review: reviews[i] ?? '' })),
+    );
 
     if (allReviewsPass(reviews)) {
       await writeTextFile(path.join(runDir, 'FINAL.md'), combinedReview + '\n');
@@ -260,7 +295,10 @@ async function main() {
     ].join('\n');
   }
 
-  throw new Error(`Failed after ${maxIters} iterations. See artifacts in ${path.relative(repoRoot, runDir)}.`);
+  throw new Error(
+    `Failed after ${maxIters} iterations. See artifacts in ${path.relative(repoRoot, runDir)}.\n` +
+      `Last review summary:\n${lastReviewSummary}`,
+  );
 }
 
 void main();

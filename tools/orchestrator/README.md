@@ -36,6 +36,8 @@ Add tasks to `queue.txt` (one per line), then:
 npm run orchestrate:drain
 ```
 
+Failed tasks are **re-queued at the front** automatically. Ctrl+C re-queues the in-flight task. Failures are also logged to `tools/orchestrator/failed.txt`.
+
 ### Environment
 
 | Variable | Required | Default |
