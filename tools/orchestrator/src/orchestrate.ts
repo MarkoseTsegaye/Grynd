@@ -1,8 +1,12 @@
 import path from 'node:path';
 import process from 'node:process';
+import { setMaxListeners } from 'node:events';
 import { readFile } from 'node:fs/promises';
+
+// Cursor SDK attaches AbortSignal listeners per run; suppress warnings in long orchestrations.
+setMaxListeners(0);
 import { Agent, CursorAgentError } from '@cursor/sdk';
-import { loadSquadConfig } from './config';
+import { loadSquadConfig, normalizeModelId } from './config';
 import { execCapture } from './exec';
 import { writeTextFile, ensureDir } from './fs';
 import { runQualityGates, formatGateOutputs } from './gates';
@@ -117,7 +121,7 @@ async function main() {
   const apiKey = requireEnv('CURSOR_API_KEY');
   const squad = await loadSquadConfig(repoRoot);
   const maxIters = Number(process.env.ORCH_MAX_ITERS ?? String(squad.defaults.maxIterations));
-  const modelOverride = process.env.ORCH_MODEL;
+  const modelOverride = process.env.ORCH_MODEL ? normalizeModelId(process.env.ORCH_MODEL) : undefined;
 
   const runDir = path.join(repoRoot, 'tickets', nowSlug());
   await ensureDir(runDir);

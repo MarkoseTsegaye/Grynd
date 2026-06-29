@@ -4,3 +4,4 @@
 # Example:
 # fix the + Set button dead tap on second open
 # add rest timer between set
+fix the new split button in the Splits screen, it is hovering above where it should be

@@ -1,6 +1,5 @@
 import React, { useState, useRef, useMemo, useCallback } from 'react';
 import { View, Text, TextInput, TouchableOpacity } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import DraggableFlatList, { ScaleDecorator } from 'react-native-draggable-flatlist';
 import { BottomSheetModal, BottomSheetView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
@@ -13,13 +12,11 @@ import { Icon } from '../../src/shared/components/Icon';
 import type { Split } from '../../src/features/splits/types';
 import { textRoles } from '../../src/shared/theme/typography';
 
-const TAB_BAR_HEIGHT = 49;
 const FLOATING_CTA_HEIGHT = 56;
 const FLOATING_CTA_GAP = 12;
 
 export default function SplitsScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { splits, isLoaded } = useSplitsList();
   const { getExercisesForSplit, reorderSplits, deleteSplit } = useSplitsStore();
   const { name, setName, canSubmit, isSubmitting, handleSubmit } = useCreateSplit(
@@ -62,7 +59,7 @@ export default function SplitsScreen() {
     setShowForm((v) => !v);
   }, []);
 
-  const ctaBottomOffset = insets.bottom + TAB_BAR_HEIGHT + FLOATING_CTA_GAP;
+  const ctaBottomOffset = FLOATING_CTA_GAP;
   const listBottomPadding = ctaBottomOffset + FLOATING_CTA_HEIGHT + 16;
 
   if (!isLoaded) {

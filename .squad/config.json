@@ -2,13 +2,13 @@
   "models": {
     "coordinator": "composer-2.5",
     "dev": "composer-2.5",
-    "lead": "claude-4.6-sonnet-medium-thinking",
-    "tester": "gpt-5.5-medium"
+    "lead": "claude-sonnet-4-6",
+    "tester": "gpt-5.5"
   },
   "reviewModelOverrides": {
     "pass1_codeQuality": "composer-2.5",
-    "pass2_tests": "gpt-5.5-medium",
-    "pass3_security": "claude-4.6-sonnet-medium-thinking"
+    "pass2_tests": "gpt-5.5",
+    "pass3_security": "claude-sonnet-4-6"
   },
   "gates": {
     "typecheck": "npm run typecheck",

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { validateTicketMarkdown, REQUIRED_TICKET_SECTIONS } from '../ticketTemplate';
 import { parseVerdictPass, parseVerdictFail, allReviewsPass } from '../verdict';
 import { extractAffectedPaths, extractTicketTitle, storySlugFromTitle } from '../ticketUtils';
-import { loadSquadConfig } from '../config';
+import { loadSquadConfig, normalizeModelId } from '../config';
 import path from 'node:path';
 
 const VALID_TICKET = `
@@ -113,11 +113,20 @@ describe('storySlugFromTitle', () => {
   });
 });
 
+describe('normalizeModelId', () => {
+  it('maps legacy slugs to valid SDK model ids', () => {
+    expect(normalizeModelId('gpt-5.5-medium')).toBe('gpt-5.5');
+    expect(normalizeModelId('claude-4.6-sonnet-medium-thinking')).toBe('claude-sonnet-4-6');
+    expect(normalizeModelId('composer-2.5')).toBe('composer-2.5');
+  });
+});
+
 describe('loadSquadConfig', () => {
   it('loads config from .squad/config.json', async () => {
     const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
     const config = await loadSquadConfig(repoRoot);
     expect(config.gates.test).toBe('npm run test');
-    expect(config.reviewModelOverrides.pass2_tests).toBeTruthy();
+    expect(config.reviewModelOverrides.pass2_tests).toBe('gpt-5.5');
+    expect(config.reviewModelOverrides.pass3_security).toBe('claude-sonnet-4-6');
   });
 });
