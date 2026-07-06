@@ -1,4 +1,5 @@
 {
+  "provider": "claude",
   "models": {
     "coordinator": "composer-2.5",
     "dev": "composer-2.5",
@@ -9,6 +10,19 @@
     "pass1_codeQuality": "composer-2.5",
     "pass2_tests": "gpt-5.5",
     "pass3_security": "claude-sonnet-4-6"
+  },
+  "claude": {
+    "models": {
+      "coordinator": "claude-haiku-4-5",
+      "dev": "claude-sonnet-5",
+      "lead": "claude-opus-4-8",
+      "tester": "claude-opus-4-8"
+    },
+    "reviewModelOverrides": {
+      "pass1_codeQuality": "claude-sonnet-5",
+      "pass2_tests": "claude-opus-4-8",
+      "pass3_security": "claude-opus-4-8"
+    }
   },
   "gates": {
     "typecheck": "npm run typecheck",
