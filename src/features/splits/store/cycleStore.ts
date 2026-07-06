@@ -71,8 +71,14 @@ export const useCycleStore = create<CycleState>()(
       removeDay: async (dayId) => {
         const { cycle } = get();
         if (!cycle) return;
+        const removedIndex = cycle.days.findIndex((d) => d.id === dayId);
+        if (removedIndex === -1) return;
         const days = cycle.days.filter((d) => d.id !== dayId);
-        const currentIndex = Math.min(cycle.currentIndex, Math.max(0, days.length - 1));
+        // Keep the pointer on the same logical "today" day: shift left when a
+        // day before the current position is removed, then clamp to bounds.
+        const shifted =
+          removedIndex < cycle.currentIndex ? cycle.currentIndex - 1 : cycle.currentIndex;
+        const currentIndex = Math.min(Math.max(0, shifted), Math.max(0, days.length - 1));
         const updated: WorkoutCycle = { ...cycle, days, currentIndex };
         set({ cycle: updated });
         await saveWorkoutCycle(updated);

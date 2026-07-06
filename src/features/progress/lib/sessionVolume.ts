@@ -26,13 +26,13 @@ export function getSessionVolume(session: WorkoutSession): number {
 
 export function buildVolumeSeries(sessions: WorkoutSession[]): VolumePoint[] {
   return sessions
-    .filter((session) => getSessionVolume(session) > 0)
-    .sort((a, b) => (a.completedAt ?? 0) - (b.completedAt ?? 0))
-    .map((session) => ({
-      date: session.completedAt ?? session.startedAt,
-      volume: getSessionVolume(session),
-      label: formatShortDate(session.completedAt ?? session.startedAt),
-    }));
+    .map((session) => ({ session, volume: getSessionVolume(session) }))
+    .filter(({ volume }) => volume > 0)
+    .sort((a, b) => (a.session.completedAt ?? 0) - (b.session.completedAt ?? 0))
+    .map(({ session, volume }) => {
+      const date = session.completedAt ?? session.startedAt;
+      return { date, volume, label: formatShortDate(date) };
+    });
 }
 
 export function getLatestVolumeTrend(series: VolumePoint[]): VolumeTrend | null {
