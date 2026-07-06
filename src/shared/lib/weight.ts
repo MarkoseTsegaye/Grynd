@@ -39,6 +39,15 @@ export function normalizeWeightKg(weightKg: number, unit: 'kg' | 'lbs'): number 
   return displayWeightToKg(weightKgToDisplay(weightKg, unit), unit);
 }
 
+export function formatPlatesPerSide(perSide: Record<number, number>): string {
+  return Object.entries(perSide)
+    .map(([weight, count]) => ({ weight: Number(weight), count }))
+    .filter((entry) => entry.count > 0)
+    .sort((a, b) => b.weight - a.weight)
+    .map(({ weight, count }) => `${weight} × ${count}`)
+    .join(', ');
+}
+
 export function computePlateWeightKg(plates: Record<number, number>, unit: 'kg' | 'lbs'): number {
   const platesSum = Object.entries(plates).reduce(
     (sum, [weight, count]) => sum + Number(weight) * count * 2,
@@ -52,4 +61,25 @@ export function computePlateWeightKg(plates: Record<number, number>, unit: 'kg' 
 
 export function formatWeight(weightKg: number, unit: 'kg' | 'lbs'): string {
   return String(weightKgToDisplay(weightKg, unit));
+}
+
+type SetWeightDisplayInput = {
+  weightKg: number;
+  plates?: { unit: 'kg' | 'lbs'; perSide: Record<number, number> };
+};
+
+export function formatSetWeightDisplay(
+  set: SetWeightDisplayInput,
+  weightUnit: 'kg' | 'lbs',
+): { weightText: string; unitLabel: string | null } {
+  if (set.plates && formatPlatesPerSide(set.plates.perSide) !== '') {
+    return {
+      weightText: formatPlatesPerSide(set.plates.perSide),
+      unitLabel: null,
+    };
+  }
+  return {
+    weightText: formatWeight(set.weightKg, weightUnit),
+    unitLabel: weightUnit,
+  };
 }

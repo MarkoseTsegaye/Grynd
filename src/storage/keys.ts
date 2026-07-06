@@ -6,5 +6,6 @@ export const STORAGE_KEYS = {
   WORKOUT_CYCLE: 'cycle:workout',
   WEIGHT_UNIT: 'prefs:weightUnit',
   AUTO_ADVANCE_CYCLE: 'prefs:autoAdvanceCycle',
+  DEFAULT_REST_SECONDS: 'prefs:defaultRestSeconds',
   HAS_SEEN_SWIPE_HINT: 'prefs:hasSeenSwipeHint',
 } as const;

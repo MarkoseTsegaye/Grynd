@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
+import { Alert } from 'react-native';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useWorkoutStore } from '../store/workoutStore';
 import { usePrefsStore } from '../../../shared/store/prefsStore';
 import { useHaptics } from '../../../shared/hooks/useHaptics';
+import { useRestTimer } from './useRestTimer';
 import { getPreviousPerformance } from '../../../storage/adapters/sessions';
 import {
   computePlateWeightKg,
@@ -15,14 +17,37 @@ import type { LoggedExercise } from '../types';
 
 type WeightMode = 'straight' | 'plates';
 
-export function useWorkout(logSheetRef: RefObject<BottomSheetModal | null>) {
-  const { session, currentExerciseIndex, logSet, deleteSet, goToExercise, finishWorkout } =
-    useWorkoutStore();
-  const { weightUnit, loadPrefs, isLoaded: prefsLoaded, setWeightUnit } = usePrefsStore();
-  const { impact, light, success } = useHaptics();
+export function useWorkout(
+  logSheetRef: RefObject<BottomSheetModal | null>,
+  substituteSheetRef: RefObject<BottomSheetModal | null>,
+) {
+  const {
+    session,
+    currentExerciseIndex,
+    logSet,
+    deleteSet,
+    goToExercise,
+    substituteExercise,
+    finishWorkout,
+  } = useWorkoutStore();
+  const { weightUnit, defaultRestSeconds, loadPrefs, isLoaded: prefsLoaded, setWeightUnit } =
+    usePrefsStore();
+  const { impact, light } = useHaptics();
+  const {
+    start: startRestTimer,
+    reset: resetRestTimer,
+    pause: pauseRestTimer,
+    resume: resumeRestTimer,
+    adjustSeconds: adjustRestSeconds,
+    dismissComplete: dismissRestComplete,
+    status: restTimerStatus,
+    remainingMs: restTimerRemainingMs,
+    isVisible: restTimerVisible,
+  } = useRestTimer(light);
 
   const [logSheetVisible, setLogSheetVisible] = useState(false);
   const [overviewSheetVisible, setOverviewSheetVisible] = useState(false);
+  const [substituteSheetVisible, setSubstituteSheetVisible] = useState(false);
   const [repInput, setRepInput] = useState('');
   const [weightInput, setWeightInput] = useState('');
   const [weightMode, setWeightMode] = useState<WeightMode>('straight');
@@ -111,17 +136,91 @@ export function useWorkout(logSheetRef: RefObject<BottomSheetModal | null>) {
     setOverviewSheetVisible(index >= 0);
   }, []);
 
+  const handleSubstituteSheetChange = useCallback((index: number) => {
+    setSubstituteSheetVisible(index >= 0);
+  }, []);
+
+  const dismissSubstituteSheet = useCallback(() => {
+    substituteSheetRef.current?.dismiss();
+  }, [substituteSheetRef]);
+
+  const applySubstitute = useCallback(
+    async (name: string) => {
+      const trimmed = name.trim();
+      if (!trimmed) return;
+
+      resetRestTimer();
+      await substituteExercise(currentExerciseIndex, trimmed);
+      impact();
+      dismissSubstituteSheet();
+    },
+    [
+      currentExerciseIndex,
+      dismissSubstituteSheet,
+      impact,
+      resetRestTimer,
+      substituteExercise,
+    ],
+  );
+
+  const handleConfirmSubstitute = useCallback(
+    (name: string) => {
+      const trimmed = name.trim();
+      if (!trimmed || !currentExercise) return;
+
+      if (currentExercise.sets.length > 0) {
+        Alert.alert(
+          'Replace exercise?',
+          'Substituting will clear the sets logged for this exercise.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Substitute',
+              style: 'destructive',
+              onPress: () => {
+                void applySubstitute(trimmed);
+              },
+            },
+          ],
+        );
+        return;
+      }
+
+      void applySubstitute(trimmed);
+    },
+    [applySubstitute, currentExercise],
+  );
+
+  const openSubstituteSheet = useCallback(() => {
+    if (presentRafRef.current !== null) {
+      cancelAnimationFrame(presentRafRef.current);
+    }
+    presentRafRef.current = requestAnimationFrame(() => {
+      presentRafRef.current = null;
+      substituteSheetRef.current?.present();
+    });
+  }, [substituteSheetRef]);
+
+  const handleSubstitutePress = useCallback(() => {
+    openSubstituteSheet();
+  }, [openSubstituteSheet]);
+
   const handleGoToExercise = useCallback(
     (index: number) => {
       if (index < 0 || index >= totalExercises) return;
+      resetRestTimer();
       goToExercise(index);
     },
-    [goToExercise, totalExercises],
+    [goToExercise, totalExercises, resetRestTimer],
   );
 
   const handleConfirmSet = useCallback(async () => {
     const reps = parseInt(repInput, 10);
-    if (!currentExercise || isNaN(reps) || reps <= 0 || computedWeightKg <= 0) return;
+    const hasValidWeight =
+      weightMode === 'plates'
+        ? Object.values(plates).some((count) => count > 0)
+        : computedWeightKg > 0;
+    if (!currentExercise || isNaN(reps) || reps <= 0 || !hasValidWeight) return;
 
     const rpeNum = rpeInput ? Math.min(10, Math.max(1, parseInt(rpeInput, 10))) : undefined;
     const effort =
@@ -131,38 +230,68 @@ export function useWorkout(logSheetRef: RefObject<BottomSheetModal | null>) {
     const trimmedNotes = notesInput.trim();
     const notes = trimmedNotes.length > 0 ? trimmedNotes : undefined;
 
+    const plateMeta =
+      weightMode === 'plates'
+        ? {
+            unit: weightUnit,
+            perSide: Object.fromEntries(
+              Object.entries(plates).filter(([, count]) => count > 0),
+            ),
+          }
+        : undefined;
+
     setIsLogging(true);
-    await logSet(currentExercise.exerciseId, reps, computedWeightKg, effort, notes);
+    await logSet(currentExercise.exerciseId, reps, computedWeightKg, effort, notes, plateMeta);
     impact();
     setIsLogging(false);
     dismissLogSheet();
-  }, [repInput, computedWeightKg, currentExercise, toFailure, rpeInput, notesInput, logSet, impact, dismissLogSheet]);
+
+    startRestTimer(defaultRestSeconds);
+  }, [
+    repInput,
+    computedWeightKg,
+    currentExercise,
+    toFailure,
+    rpeInput,
+    notesInput,
+    weightMode,
+    plates,
+    weightUnit,
+    logSet,
+    impact,
+    dismissLogSheet,
+    defaultRestSeconds,
+    startRestTimer,
+  ]);
 
   const handleDeleteSet = useCallback(
     async (setIndex: number) => {
       if (!currentExercise) return;
       light();
       await deleteSet(currentExercise.exerciseId, setIndex);
+      resetRestTimer();
     },
-    [currentExercise, deleteSet, light],
+    [currentExercise, deleteSet, light, resetRestTimer],
   );
 
   const handleSwipeNext = useCallback(() => {
     if (currentExerciseIndex < totalExercises - 1) {
+      resetRestTimer();
       goToExercise(currentExerciseIndex + 1);
     }
-  }, [currentExerciseIndex, totalExercises, goToExercise]);
+  }, [currentExerciseIndex, totalExercises, goToExercise, resetRestTimer]);
 
   const handleSwipePrev = useCallback(() => {
     if (currentExerciseIndex > 0) {
+      resetRestTimer();
       goToExercise(currentExerciseIndex - 1);
     }
-  }, [currentExerciseIndex, goToExercise]);
+  }, [currentExerciseIndex, goToExercise, resetRestTimer]);
 
-  const handleFinish = useCallback(async () => {
-    success();
-    await finishWorkout();
-  }, [finishWorkout, success]);
+  const handleFinish = useCallback(async (completedAt?: number) => {
+    resetRestTimer();
+    await finishWorkout(completedAt);
+  }, [finishWorkout, resetRestTimer]);
 
   const toggleWeightMode = useCallback(() => {
     setWeightMode((m) => (m === 'straight' ? 'plates' : 'straight'));
@@ -193,6 +322,10 @@ export function useWorkout(logSheetRef: RefObject<BottomSheetModal | null>) {
     setPlates({});
   }, [weightUnit, setWeightUnit]);
 
+  const substitutionLabel = currentExercise?.substitutedForExerciseName
+    ? `Substitute for ${currentExercise.substitutedForExerciseName}`
+    : undefined;
+
   return {
     session,
     currentExercise,
@@ -201,6 +334,8 @@ export function useWorkout(logSheetRef: RefObject<BottomSheetModal | null>) {
     isLastExercise,
     logSheetVisible,
     overviewSheetVisible,
+    substituteSheetVisible,
+    substitutionLabel,
     repInput,
     setRepInput,
     weightInput,
@@ -225,6 +360,9 @@ export function useWorkout(logSheetRef: RefObject<BottomSheetModal | null>) {
     handleLogSheetDismiss,
     handleLogSheetChange,
     handleOverviewSheetChange,
+    handleSubstituteSheetChange,
+    handleSubstitutePress,
+    handleConfirmSubstitute,
     handleGoToExercise,
     handleConfirmSet,
     handleDeleteSet,
@@ -232,5 +370,13 @@ export function useWorkout(logSheetRef: RefObject<BottomSheetModal | null>) {
     handleSwipePrev,
     handleFinish,
     currentPreviousPerformance,
+    restTimerStatus,
+    restTimerRemainingMs,
+    restTimerVisible,
+    pauseRestTimer,
+    resumeRestTimer,
+    adjustRestSeconds,
+    dismissRestComplete,
+    resetRestTimer,
   };
 }

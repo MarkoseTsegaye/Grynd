@@ -4,12 +4,15 @@ import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCycleStore } from '../../src/features/splits/store/cycleStore';
 import { useSplitsStore } from '../../src/features/splits';
-import { usePrefsStore } from '../../src/shared/store/prefsStore';
+import {
+  usePrefsStore,
+  REST_DURATION_OPTIONS,
+} from '../../src/shared/store/prefsStore';
 import { Icon } from '../../src/shared/components/Icon';
 import { colors } from '../../src/shared/theme/colors';
 import { textRoles } from '../../src/shared/theme/typography';
-import type { Split } from '../../src/features/splits/types';
-import type { WorkoutCycle } from '../../src/features/splits/types';
+import type { Split, WorkoutCycle } from '../../src/features/splits/types';
+import { DataBackupSection } from '../../src/features/settings/components/DataBackupSection';
 
 function getCycleSummary(cycle: WorkoutCycle | null, splits: Split[]): string {
   const days = cycle?.days ?? [];
@@ -37,10 +40,12 @@ export default function SettingsScreen() {
   const {
     weightUnit,
     autoAdvanceCycle,
+    defaultRestSeconds,
     isLoaded: prefsLoaded,
     loadPrefs,
     setWeightUnit,
     setAutoAdvanceCycle,
+    setDefaultRestSeconds,
   } = usePrefsStore();
 
   useEffect(() => {
@@ -121,6 +126,36 @@ export default function SettingsScreen() {
           </View>
 
           <Text className={`text-text-secondary ${textRoles.sectionLabel} mb-3`}>
+            Workout
+          </Text>
+
+          <View className="bg-surface-1 rounded-lg px-4 py-4 mb-8">
+            <Text className={`text-text-primary ${textRoles.cardTitle}`}>Default rest between sets</Text>
+            <Text className={`text-text-secondary ${textRoles.bodySmall} mt-0.5 mb-3`}>
+              Countdown starts after the second set and each set after
+            </Text>
+            <View className="flex-row flex-wrap gap-2">
+              {REST_DURATION_OPTIONS.map((seconds) => (
+                <TouchableOpacity
+                  key={seconds}
+                  className={`px-3 py-1.5 rounded ${defaultRestSeconds === seconds ? 'bg-accent' : 'bg-surface-2'}`}
+                  onPress={() =>
+                    defaultRestSeconds !== seconds && setDefaultRestSeconds(seconds)
+                  }
+                  accessibilityLabel={`Default rest, ${seconds} seconds`}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    className={`font-sans ${textRoles.bodySmall} ${defaultRestSeconds === seconds ? 'text-surface-0' : 'text-text-secondary'}`}
+                  >
+                    {seconds}s
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <Text className={`text-text-secondary ${textRoles.sectionLabel} mb-3`}>
             Training Cycle
           </Text>
 
@@ -168,6 +203,8 @@ export default function SettingsScreen() {
               </Text>
             </View>
           </TouchableOpacity>
+
+          <DataBackupSection />
         </View>
       </ScrollView>
     </View>

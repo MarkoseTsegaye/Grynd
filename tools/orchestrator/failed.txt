@@ -1,0 +1,1 @@
+[2026-06-29T02:04:49.468Z] exit=1 keep the logsheet attached to the bottom  unless user is typing and keyboard pushes it up. also i'm unable to see the notes i write if i write more than like 2 lines so get a fix for that.

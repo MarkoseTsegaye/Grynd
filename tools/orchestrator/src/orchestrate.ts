@@ -1,13 +1,24 @@
 import path from 'node:path';
 import process from 'node:process';
+import { setMaxListeners } from 'node:events';
 import { readFile } from 'node:fs/promises';
+
+// Cursor SDK attaches AbortSignal listeners per run; suppress warnings in long orchestrations.
+setMaxListeners(0);
 import { Agent, CursorAgentError } from '@cursor/sdk';
+import { loadSquadConfig, normalizeModelId } from './config';
 import { execCapture } from './exec';
 import { writeTextFile, ensureDir } from './fs';
+import { runQualityGates, formatGateOutputs } from './gates';
 import { validateTicketMarkdown } from './ticketTemplate';
+import { extractAffectedPaths, extractTicketTitle } from './ticketUtils';
+import { allReviewsPass } from './verdict';
+import { appendTraceabilityEntry } from './traceability';
 import { buildTicketManPrompt } from './agents/ticketman';
 import { buildImplementerPrompt } from './agents/implementer';
-import { buildTesterReviewerPrompt } from './agents/testerReviewer';
+import { buildCodeReviewPrompt, REVIEW_PASSES, type ReviewPass } from './agents/codeReview';
+import { buildDecisionLogPrompt } from './agents/decisionLog';
+import { PROTECTED_PATHS, isValidReview, summarizeReviewPasses } from './protected';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -23,34 +34,11 @@ function requireEnv(name: string): string {
   return v;
 }
 
-async function runQualityGates(repoRoot: string): Promise<{
-  typecheck: { code: number; output: string };
-  lint: { code: number; output: string };
-}> {
-  const typecheck = await execCapture('npm', ['run', 'typecheck'], { cwd: repoRoot });
-  const lint = await execCapture('npm', ['run', 'lint'], { cwd: repoRoot });
-  return {
-    typecheck: { code: typecheck.code, output: (typecheck.stdout + '\n' + typecheck.stderr).trim() },
-    lint: { code: lint.code, output: (lint.stdout + '\n' + lint.stderr).trim() },
-  };
-}
-
 async function getGitDiff(repoRoot: string): Promise<string> {
   const diff = await execCapture('git', ['diff'], { cwd: repoRoot });
   return (diff.stdout + '\n' + diff.stderr).trim();
 }
 
-/** Extract file paths from the ticket's ## Affected files section. */
-function extractAffectedPaths(ticketMd: string): string[] {
-  const match = (ticketMd + '\n## ').match(/## Affected files\s*\n([\s\S]*?)\n## /m);
-  if (!match) return [];
-  return match[1]
-    .split('\n')
-    .map((l) => l.trim())
-    .filter((l) => l.includes('/') || l.endsWith('.ts') || l.endsWith('.tsx'));
-}
-
-/** Read each affected file (or note it doesn't exist yet). */
 async function readAffectedFiles(repoRoot: string, paths: string[]): Promise<string> {
   if (paths.length === 0) return '(no affected files listed in ticket)';
   const sections = await Promise.all(
@@ -66,32 +54,19 @@ async function readAffectedFiles(repoRoot: string, paths: string[]): Promise<str
   return sections.join('\n\n');
 }
 
-/**
- * Show what changed in the affected files since the last git commit.
- * This tells the Implementer what previous (uncommitted) runs already fixed
- * so it does not accidentally undo that work.
- */
 async function getUncommittedChangesForFiles(repoRoot: string, paths: string[]): Promise<string> {
   if (paths.length === 0) return '';
   const result = await execCapture('git', ['diff', 'HEAD', '--', ...paths], { cwd: repoRoot });
   return (result.stdout + result.stderr).trim();
 }
 
-/** Return the last N commit messages — lets agents know what was recently fixed. */
 async function getRecentCommits(repoRoot: string, n = 8): Promise<string> {
   const result = await execCapture('git', ['log', '--oneline', `-${n}`], { cwd: repoRoot });
   return (result.stdout + result.stderr).trim();
 }
 
-/**
- * Commit all working-tree changes after a successful run.
- * Creates a stable rollback point so the next run always has a clean HEAD.
- */
-async function commitChanges(repoRoot: string, ticketMd: string): Promise<void> {
-  const titleMatch = ticketMd.match(/^##\s+Title\s*\n(.+)$/m);
-  const title = titleMatch?.[1]?.trim() ?? 'orchestrator run';
+async function commitChanges(repoRoot: string, title: string): Promise<void> {
   const message = `[orchestrator] ${title}`;
-
   await execCapture('git', ['add', '-A'], { cwd: repoRoot });
   const commit = await execCapture('git', ['commit', '-m', message], { cwd: repoRoot });
   const out = (commit.stdout + commit.stderr).toLowerCase();
@@ -104,9 +79,62 @@ async function commitChanges(repoRoot: string, ticketMd: string): Promise<void> 
   }
 }
 
-function parseVerdictPass(review: string): boolean {
-  // Accept plain PASS or markdown-bold **PASS** / *PASS* on the line after ## Verdict.
-  return /^##\s*Verdict\s*\n+\s*\*{0,2}PASS\*{0,2}\s*$/im.test(review);
+async function runAgent(
+  apiKey: string,
+  modelId: string,
+  repoRoot: string,
+  prompt: string,
+  label: string,
+): Promise<string> {
+  try {
+    await using agent = await Agent.create({
+      apiKey,
+      model: { id: modelId },
+      local: { cwd: repoRoot },
+    });
+    const run = await agent.send(prompt);
+    const result = await run.wait();
+    return (result.result ?? '').trim();
+  } catch (err) {
+    if (err instanceof CursorAgentError) throw new Error(`${label} failed to start: ${err.message}`);
+    throw err;
+  }
+}
+
+async function revertProtectedPaths(repoRoot: string): Promise<void> {
+  for (const relPath of PROTECTED_PATHS) {
+    const result = await execCapture('git', ['checkout', 'HEAD', '--', relPath], { cwd: repoRoot });
+    const out = (result.stdout + result.stderr).toLowerCase();
+    if (result.code !== 0 && !out.includes('did not match any file')) {
+      // eslint-disable-next-line no-console
+      console.warn(`Could not revert ${relPath} (exit ${result.code})`);
+    }
+  }
+}
+
+async function runReviewPass(
+  apiKey: string,
+  repoRoot: string,
+  pass: ReviewPass,
+  modelId: string,
+  prompt: string,
+  maxAttempts = 3,
+): Promise<string> {
+  let last = '';
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    last = await runAgent(apiKey, modelId, repoRoot, prompt, `Review-${pass}`);
+    if (isValidReview(last)) return last;
+    // eslint-disable-next-line no-console
+    console.warn(`Review ${pass}: empty/invalid response (attempt ${attempt}/${maxAttempts}), retrying...`);
+  }
+  return last;
+}
+
+function reviewModelForPass(
+  pass: ReviewPass,
+  overrides: { pass1_codeQuality: string; pass2_tests: string; pass3_security: string },
+): string {
+  return overrides[pass];
 }
 
 // ── Main ─────────────────────────────────────────────────────────────────────
@@ -121,28 +149,19 @@ async function main() {
   }
 
   const apiKey = requireEnv('CURSOR_API_KEY');
-  const modelId = process.env.ORCH_MODEL ?? 'composer-2.5';
-  const maxIters = Number(process.env.ORCH_MAX_ITERS ?? '3');
+  const squad = await loadSquadConfig(repoRoot);
+  const maxIters = Number(process.env.ORCH_MAX_ITERS ?? String(squad.defaults.maxIterations));
+  const modelOverride = process.env.ORCH_MODEL ? normalizeModelId(process.env.ORCH_MODEL) : undefined;
 
   const runDir = path.join(repoRoot, 'tickets', nowSlug());
   await ensureDir(runDir);
   await writeTextFile(path.join(runDir, 'request.txt'), userRequest + '\n');
 
-  // ── TicketMan ───────────────────────────────────────────────────────────────
-  let ticketMd = '';
-  try {
-    await using ticketAgent = await Agent.create({
-      apiKey,
-      model: { id: modelId },
-      local: { cwd: repoRoot },
-    });
-    const ticketRun = await ticketAgent.send(buildTicketManPrompt(userRequest));
-    const ticketResult = await ticketRun.wait();
-    ticketMd = (ticketResult.result ?? '').trim();
-  } catch (err) {
-    if (err instanceof CursorAgentError) throw new Error(`TicketMan failed to start: ${err.message}`);
-    throw err;
-  }
+  // ── Coordinator / TicketMan ─────────────────────────────────────────────────
+  // eslint-disable-next-line no-console
+  console.log('Coordinator (TicketMan): drafting ticket...');
+  const coordinatorModel = modelOverride ?? squad.models.coordinator;
+  let ticketMd = await runAgent(apiKey, coordinatorModel, repoRoot, buildTicketManPrompt(userRequest), 'TicketMan');
 
   const ticketValidation = validateTicketMarkdown(ticketMd);
   if (!ticketValidation.ok) {
@@ -151,97 +170,135 @@ async function main() {
   }
   await writeTextFile(path.join(runDir, 'ticket.md'), ticketMd + '\n');
 
-  // Gather context used by every iteration.
+  const title = extractTicketTitle(ticketMd);
   const affectedPaths = extractAffectedPaths(ticketMd);
   const affectedFileContents = await readAffectedFiles(repoRoot, affectedPaths);
   const recentCommits = await getRecentCommits(repoRoot);
   const uncommittedChanges = await getUncommittedChangesForFiles(repoRoot, affectedPaths);
 
-  // ── Implement → Gate → Review loop ─────────────────────────────────────────
+  // ── Implement → Gate → 3-pass Review loop ───────────────────────────────────
   let lastFailureContext: string | undefined;
-  for (let iter = 1; iter <= maxIters; iter++) {
-    let implementerSummary = '';
-    try {
-      await using implAgent = await Agent.create({
-        apiKey,
-        model: { id: modelId },
-        local: { cwd: repoRoot },
-      });
-      const implRun = await implAgent.send(
-        buildImplementerPrompt({
-          ticketMd,
-          affectedFileContents,
-          recentCommits,
-          uncommittedChanges,
-          failureContext: lastFailureContext,
-        }),
-      );
-      const implResult = await implRun.wait();
-      implementerSummary = (implResult.result ?? '').trim();
-    } catch (err) {
-      if (err instanceof CursorAgentError) throw new Error(`Implementer failed to start: ${err.message}`);
-      throw err;
-    }
-    await writeTextFile(path.join(runDir, `implementer-${iter}.md`), implementerSummary + '\n');
+  let lastReviewSummary = '(no reviews ran)';
+  const devModel = modelOverride ?? squad.models.dev;
 
-    const gates = await runQualityGates(repoRoot);
+  for (let iter = 1; iter <= maxIters; iter++) {
+    // eslint-disable-next-line no-console
+    console.log(`Dev (Implementer): iteration ${iter}...`);
+    const implementerSummary = await runAgent(
+      apiKey,
+      devModel,
+      repoRoot,
+      buildImplementerPrompt({
+        ticketMd,
+        affectedFileContents,
+        recentCommits,
+        uncommittedChanges,
+        failureContext: lastFailureContext,
+      }),
+      'Implementer',
+    );
+    await writeTextFile(path.join(runDir, `implementer-${iter}.md`), implementerSummary + '\n');
+    await revertProtectedPaths(repoRoot);
+
+    // eslint-disable-next-line no-console
+    console.log(`Gates: typecheck + lint + test (iteration ${iter})...`);
+    const gateRun = await runQualityGates(repoRoot, squad.gates);
     const diff = await getGitDiff(repoRoot);
-    const toolOutputs = [
-      `# Iteration ${iter}`,
-      '',
-      '## npm run typecheck',
-      `exitCode=${gates.typecheck.code}`,
-      gates.typecheck.output || '(no output)',
-      '',
-      '## npm run lint',
-      `exitCode=${gates.lint.code}`,
-      gates.lint.output || '(no output)',
-    ].join('\n');
+    const toolOutputs = formatGateOutputs(gateRun.results, iter);
     await writeTextFile(path.join(runDir, `gates-${iter}.txt`), toolOutputs + '\n');
     await writeTextFile(path.join(runDir, `diff-${iter}.patch`), diff + '\n');
 
-    let review = '';
-    try {
-      await using testAgent = await Agent.create({
-        apiKey,
-        model: { id: modelId },
-        local: { cwd: repoRoot },
-      });
-      const testRun = await testAgent.send(
-        buildTesterReviewerPrompt({ ticketMd, gitDiff: diff, toolOutputs, recentCommits }),
-      );
-      const testResult = await testRun.wait();
-      review = (testResult.result ?? '').trim();
-    } catch (err) {
-      if (err instanceof CursorAgentError) throw new Error(`TesterReviewer failed to start: ${err.message}`);
-      throw err;
+    if (!gateRun.pass) {
+      lastFailureContext = [
+        `Iteration ${iter} failed — quality gates did not pass.`,
+        '',
+        '### Quality gates',
+        ...gateRun.results.map((r) => `- ${r.command} exitCode=${r.code}`),
+      ].join('\n');
+      continue;
     }
-    await writeTextFile(path.join(runDir, `review-${iter}.md`), review + '\n');
 
-    const gatesPass = gates.typecheck.code === 0 && gates.lint.code === 0;
+    // 3-pass review with different models
+    const reviews: string[] = [];
+    for (const pass of REVIEW_PASSES) {
+      const reviewModel = modelOverride ?? reviewModelForPass(pass, squad.reviewModelOverrides);
+      // eslint-disable-next-line no-console
+      console.log(`Review ${pass} (${reviewModel})...`);
+      const review = await runReviewPass(
+        apiKey,
+        repoRoot,
+        pass,
+        reviewModel,
+        buildCodeReviewPrompt({ pass, ticketMd, gitDiff: diff, toolOutputs, recentCommits }),
+      );
+      reviews.push(review);
+      await writeTextFile(path.join(runDir, `review-${iter}-${pass}.md`), review + '\n');
+    }
 
-    if (parseVerdictPass(review) && gatesPass) {
-      await writeTextFile(path.join(runDir, 'FINAL.md'), review + '\n');
-      // Commit so the next run has a stable HEAD to compare against.
-      await commitChanges(repoRoot, ticketMd);
+    const combinedReview = reviews
+      .map((r, i) => `# Pass ${i + 1} (${REVIEW_PASSES[i]})\n\n${r}`)
+      .join('\n\n---\n\n');
+    lastReviewSummary = summarizeReviewPasses(
+      REVIEW_PASSES.map((pass, i) => ({ pass, review: reviews[i] ?? '' })),
+    );
+
+    if (allReviewsPass(reviews)) {
+      await writeTextFile(path.join(runDir, 'FINAL.md'), combinedReview + '\n');
+
+      const storyPath = await appendTraceabilityEntry({
+        repoRoot,
+        title,
+        runDir,
+        ticketMd,
+        finalReview: combinedReview,
+      });
+      // eslint-disable-next-line no-console
+      console.log(`Traceability: ${path.relative(repoRoot, storyPath)}`);
+
+      // DecisionLog — update history.md
+      const historyPath = 'tools/orchestrator/history.md';
+      let existingHistory = '';
+      try {
+        existingHistory = await readFile(path.join(repoRoot, historyPath), 'utf-8');
+      } catch {
+        /* empty */
+      }
+
+      // eslint-disable-next-line no-console
+      console.log('DecisionLog: updating history...');
+      const decisionSummary = await runAgent(
+        apiKey,
+        squad.models.lead,
+        repoRoot,
+        buildDecisionLogPrompt({
+          ticketMd,
+          gitDiff: diff,
+          reviewerReport: combinedReview,
+          historyPath,
+          existingHistoryMd: existingHistory,
+        }),
+        'DecisionLog',
+      );
+      await writeTextFile(path.join(runDir, 'decision-log.md'), decisionSummary + '\n');
+
+      await commitChanges(repoRoot, title);
       // eslint-disable-next-line no-console
       console.log(`PASS ✅ Artifacts: ${path.relative(repoRoot, runDir)}`);
       return;
     }
 
     lastFailureContext = [
-      `Iteration ${iter} failed.`,
+      `Iteration ${iter} failed — one or more review passes returned FAIL.`,
       '',
-      '### Quality gates',
-      `- typecheck exitCode=${gates.typecheck.code}`,
-      `- lint exitCode=${gates.lint.code}`,
-      '',
-      '### Reviewer report',
-      review,
+      '### Review reports',
+      combinedReview,
     ].join('\n');
   }
 
-  throw new Error(`Failed after ${maxIters} iterations. See artifacts in ${path.relative(repoRoot, runDir)}.`);
+  throw new Error(
+    `Failed after ${maxIters} iterations. See artifacts in ${path.relative(repoRoot, runDir)}.\n` +
+      `Last review summary:\n${lastReviewSummary}`,
+  );
 }
 
 void main();

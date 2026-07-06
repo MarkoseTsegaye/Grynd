@@ -11,10 +11,11 @@ import type { BottomSheetBackdropProps, BottomSheetScrollViewMethods } from '@go
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NumericInput } from '../../../shared/components/NumericInput';
 import { Icon } from '../../../shared/components/Icon';
-import { formatWeight } from '../../../shared/lib/weight';
+import { formatPlatesPerSide } from '../../../shared/lib/weight';
 import { textRoles } from '../../../shared/theme/typography';
 
 const MAX_SET_NOTES_LENGTH = 200;
+const NOTES_MIN_HEIGHT = 48;
 
 type LogField = 'weight' | 'reps' | 'rpe' | 'notes';
 
@@ -73,17 +74,20 @@ export function LogSheet({
   const fieldOffsets = useRef<Record<LogField, number>>({ weight: 0, reps: 0, rpe: 0, notes: 0 });
   const effortSectionY = useRef(0);
   const confirmOffset = useRef(0);
-  const focusedFieldRef = useRef<LogField | null>(null);
+  const notesContentHeight = useRef(NOTES_MIN_HEIGHT);
+  const [notesInputHeight, setNotesInputHeight] = useState(NOTES_MIN_HEIGHT);
+  const [focusedField, setFocusedField] = useState<LogField | null>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [sheetOpen, setSheetOpen] = useState(false);
   const snapPoints = useMemo(() => ['82%'], []);
 
-  const bottomInset = keyboardHeight > 0 ? keyboardHeight : insets.bottom;
-
-  const contentPaddingBottom = useMemo(
-    () => Math.max(insets.bottom, 40),
-    [insets.bottom],
-  );
+  const contentPaddingBottom = useMemo(() => {
+    const base = Math.max(insets.bottom, 40);
+    if (keyboardHeight > 0 && focusedField !== null) {
+      return base + Math.max(24, keyboardHeight * 0.25);
+    }
+    return base;
+  }, [focusedField, insets.bottom, keyboardHeight]);
 
   const scrollRepsIntoView = useCallback(() => {
     requestAnimationFrame(() => {
@@ -104,9 +108,28 @@ export function LogSheet({
     });
   }, [keyboardHeight]);
 
+  const scrollNotesIntoView = useCallback(() => {
+    requestAnimationFrame(() => {
+      const fieldY = fieldOffsets.current.notes ?? 0;
+      const confirmY = confirmOffset.current;
+      const fieldScroll = Math.max(0, fieldY - 12);
+      const notesBottomY = fieldY + notesContentHeight.current;
+      const visibleEstimate = Math.max(200, keyboardHeight > 0 ? keyboardHeight * 0.5 : 240);
+      const notesScroll = Math.max(0, notesBottomY - visibleEstimate + 16);
+      const confirmScroll = confirmY > 0 ? Math.max(0, confirmY - visibleEstimate) : 0;
+      const targetY = Math.max(fieldScroll, notesScroll, confirmScroll);
+
+      scrollRef.current?.scrollTo({ y: targetY, animated: true });
+    });
+  }, [keyboardHeight]);
+
   const scrollFieldIntoView = useCallback((field: LogField) => {
     if (field === 'reps') {
       scrollRepsIntoView();
+      return;
+    }
+    if (field === 'notes') {
+      scrollNotesIntoView();
       return;
     }
 
@@ -114,24 +137,44 @@ export function LogSheet({
       const fieldY = fieldOffsets.current[field] ?? 0;
       scrollRef.current?.scrollTo({ y: Math.max(0, fieldY - 12), animated: true });
     });
-  }, [scrollRepsIntoView]);
+  }, [scrollNotesIntoView, scrollRepsIntoView]);
 
   const handleFieldFocus = useCallback(
     (field: LogField) => {
-      focusedFieldRef.current = field;
+      setFocusedField(field);
       scrollFieldIntoView(field);
     },
     [scrollFieldIntoView],
   );
 
   const handleFieldBlur = useCallback(() => {
-    focusedFieldRef.current = null;
+    setFocusedField(null);
   }, []);
 
   const handleKeyboardHide = useCallback(() => {
-    focusedFieldRef.current = null;
+    setFocusedField(null);
     setKeyboardHeight(0);
   }, []);
+
+  const resetSheetScrollState = useCallback(() => {
+    setFocusedField(null);
+    setKeyboardHeight(0);
+    setNotesInputHeight(NOTES_MIN_HEIGHT);
+    notesContentHeight.current = NOTES_MIN_HEIGHT;
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  }, []);
+
+  const handleNotesContentSizeChange = useCallback(
+    (height: number) => {
+      const nextHeight = Math.max(NOTES_MIN_HEIGHT, height);
+      notesContentHeight.current = nextHeight;
+      setNotesInputHeight(nextHeight);
+      if (focusedField === 'notes') {
+        scrollNotesIntoView();
+      }
+    },
+    [focusedField, scrollNotesIntoView],
+  );
 
   useEffect(() => {
     if (!sheetOpen) {
@@ -153,13 +196,22 @@ export function LogSheet({
   }, [sheetOpen, handleKeyboardHide]);
 
   useEffect(() => {
-    if (!sheetOpen || keyboardHeight === 0 || focusedFieldRef.current !== 'reps') {
+    if (!sheetOpen || keyboardHeight === 0 || focusedField !== 'reps') {
       return;
     }
 
     const timer = setTimeout(() => scrollRepsIntoView(), 100);
     return () => clearTimeout(timer);
-  }, [sheetOpen, keyboardHeight, scrollRepsIntoView]);
+  }, [sheetOpen, keyboardHeight, focusedField, scrollRepsIntoView]);
+
+  useEffect(() => {
+    if (!sheetOpen || keyboardHeight === 0 || focusedField !== 'notes') {
+      return;
+    }
+
+    const timer = setTimeout(() => scrollNotesIntoView(), 100);
+    return () => clearTimeout(timer);
+  }, [sheetOpen, keyboardHeight, focusedField, notesInput, scrollNotesIntoView]);
 
   const renderBackdrop = useCallback(
     (props: BottomSheetBackdropProps) => (
@@ -174,22 +226,24 @@ export function LogSheet({
       setSheetOpen(isOpen);
       onChange(index);
       if (!isOpen) {
-        handleKeyboardHide();
+        resetSheetScrollState();
       }
     },
-    [onChange, handleKeyboardHide],
+    [onChange, resetSheetScrollState],
   );
 
   const reps = parseInt(repInput, 10);
-  const weightValid = computedWeightKg > 0;
-  const canConfirm = !isLogging && !isNaN(reps) && reps > 0 && weightValid;
 
   const plateSummary = Object.entries(plates)
     .map(([w, c]) => ({ weight: Number(w), count: c }))
     .filter((p) => p.count > 0)
     .sort((a, b) => b.weight - a.weight);
 
-  const displayTotal = formatWeight(computedWeightKg, weightUnit);
+  const weightValid =
+    weightMode === 'plates' ? plateSummary.length > 0 : computedWeightKg > 0;
+  const canConfirm = !isLogging && !isNaN(reps) && reps > 0 && weightValid;
+
+  const platesDisplay = plateSummary.length > 0 ? formatPlatesPerSide(plates) : '0';
 
   return (
     <BottomSheetModal
@@ -198,10 +252,10 @@ export function LogSheet({
       enablePanDownToClose
       enableHandlePanningGesture={false}
       enableContentPanningGesture={false}
-      keyboardBehavior="extend"
+      keyboardBehavior="interactive"
       keyboardBlurBehavior="restore"
       android_keyboardInputMode="adjustResize"
-      bottomInset={bottomInset}
+      bottomInset={0}
       backdropComponent={renderBackdrop}
       onChange={handleSheetChange}
       onDismiss={onClose}
@@ -288,10 +342,10 @@ export function LogSheet({
               />
             ) : (
               <View className="bg-surface-2 rounded-lg px-4 py-4 items-center justify-center min-h-16">
-                <Text className={`text-text-primary ${textRoles.metricDisplayCompact}`} numberOfLines={1} adjustsFontSizeToFit>
-                  {displayTotal}
+                <Text className={`text-text-primary ${textRoles.metricDisplayCompact}`} numberOfLines={2} adjustsFontSizeToFit>
+                  {platesDisplay}
                 </Text>
-                <Text className={`text-text-secondary ${textRoles.caption} mt-0.5`}>{weightUnit} total</Text>
+                <Text className={`text-text-secondary ${textRoles.caption} mt-0.5`}>one side</Text>
               </View>
             )}
           </View>
@@ -366,7 +420,6 @@ export function LogSheet({
                     </View>
                   ))}
                 </View>
-                <Text className={`text-accent ${textRoles.metricLarge} mt-2`}>{displayTotal} {weightUnit}</Text>
               </View>
             )}
           </View>
@@ -426,13 +479,19 @@ export function LogSheet({
           >
             <Text className={`text-text-secondary ${textRoles.bodySmall} mb-1`}>Notes (optional)</Text>
             <BottomSheetTextInput
-              className="bg-surface-2 rounded-lg px-4 py-3 text-text-primary font-sans text-base min-h-12"
+              className="bg-surface-2 rounded-lg px-4 py-3 text-text-primary font-sans text-base"
+              style={{ minHeight: NOTES_MIN_HEIGHT, height: notesInputHeight }}
               value={notesInput}
               onChangeText={onChangeNotes}
               placeholder="e.g. used straps, paused mid-set"
               placeholderTextColor="#8A8580"
               multiline
+              scrollEnabled={false}
+              textAlignVertical="top"
               maxLength={MAX_SET_NOTES_LENGTH}
+              onContentSizeChange={(event) => {
+                handleNotesContentSizeChange(event.nativeEvent.contentSize.height);
+              }}
               onFocus={() => handleFieldFocus('notes')}
               onBlur={handleFieldBlur}
               accessibilityLabel="Set notes input"

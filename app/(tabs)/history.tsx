@@ -44,8 +44,17 @@ export default function HistoryScreen() {
   if (sessions.length === 0) {
     return (
       <View className="flex-1 bg-surface-0">
-        <View className="px-5 pt-14 pb-4">
+        <View className="px-5 pt-14 pb-4 flex-row items-center justify-between">
           <Text className={`text-text-primary ${textRoles.screenTitle}`}>History</Text>
+          <TouchableOpacity
+            onPress={() => router.push('/progress')}
+            accessibilityLabel="View progress chart"
+            accessibilityRole="button"
+            activeOpacity={0.7}
+            hitSlop={8}
+          >
+            <Icon name="chart-line" size={24} color="text-secondary" />
+          </TouchableOpacity>
         </View>
         <View className="flex-1 items-center justify-center px-8">
           <Icon name="clipboard-text-outline" size={48} color="text-disabled" />
@@ -59,8 +68,17 @@ export default function HistoryScreen() {
 
   return (
     <View className="flex-1 bg-surface-0">
-      <View className="px-5 pt-14 pb-4">
+      <View className="px-5 pt-14 pb-4 flex-row items-center justify-between">
         <Text className={`text-text-primary ${textRoles.screenTitle}`}>History</Text>
+        <TouchableOpacity
+          onPress={() => router.push('/progress')}
+          accessibilityLabel="View progress chart"
+          accessibilityRole="button"
+          activeOpacity={0.7}
+          hitSlop={8}
+        >
+          <Icon name="chart-line" size={24} color="text-secondary" />
+        </TouchableOpacity>
       </View>
       <FlatList
         data={sessions}

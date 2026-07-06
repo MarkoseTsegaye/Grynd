@@ -2,7 +2,7 @@ import React from 'react';
 import { TouchableOpacity, Text, View } from 'react-native';
 import { Icon } from '../../../shared/components/Icon';
 import { usePrefsStore } from '../../../shared/store/prefsStore';
-import { formatWeight } from '../../../shared/lib/weight';
+import { formatSetWeightDisplay } from '../../../shared/lib/weight';
 import { textRoles } from '../../../shared/theme/typography';
 import type { LoggedSet } from '../types';
 
@@ -34,20 +34,24 @@ function EffortBadge({ effort }: { effort: NonNullable<LoggedSet['effort']> }) {
 
 export function SetChip({ setNumber, set, onDelete }: Props) {
   const { weightUnit } = usePrefsStore();
-  const displayWeight = formatWeight(set.weightKg, weightUnit);
-  const unitLabel = weightUnit;
+  const { weightText, unitLabel } = formatSetWeightDisplay(set, weightUnit);
+  const weightAccessibility = unitLabel ? `${weightText} ${unitLabel}` : weightText;
 
   return (
     <TouchableOpacity
       className="bg-surface-2 rounded px-3 py-2 mr-2 mb-2 flex-row items-center gap-2"
       onPress={onDelete}
-      accessibilityLabel={`Set ${setNumber}, ${displayWeight} ${unitLabel} × ${set.reps} reps — tap to delete`}
+      accessibilityLabel={`Set ${setNumber}, ${weightAccessibility} × ${set.reps} reps — tap to delete`}
       activeOpacity={0.6}
     >
       <View className="flex-row items-center flex-wrap gap-1">
         <Text className={`text-text-secondary ${textRoles.metric}`}>Set {setNumber} — </Text>
-        <Text className={`text-text-primary ${textRoles.metricBold}`}>{displayWeight}</Text>
-        <Text className={`text-text-secondary ${textRoles.metric}`}> {unitLabel} × </Text>
+        <Text className={`text-text-primary ${textRoles.metricBold}`}>{weightText}</Text>
+        {unitLabel ? (
+          <Text className={`text-text-secondary ${textRoles.metric}`}> {unitLabel} × </Text>
+        ) : (
+          <Text className={`text-text-secondary ${textRoles.metric}`}> × </Text>
+        )}
         <Text className={`text-text-primary ${textRoles.metricBold}`}>{set.reps}</Text>
         <Text className={`text-text-secondary ${textRoles.metric}`}> reps</Text>
         {set.effort && <EffortBadge effort={set.effort} />}

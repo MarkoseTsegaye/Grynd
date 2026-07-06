@@ -1,17 +1,18 @@
 /**
  * drain.mjs — sequential orchestrator queue runner
  *
- * Reads tasks from queue.txt one line at a time, runs `npm run orchestrate`
- * on each, waits for it to finish, then moves to the next.
+ * Processes queue.txt top-to-bottom. On failure: logs to failed.txt and
+ * continues with the next task (no infinite retry loop).
+ * Ctrl+C re-queues only the in-flight task before exiting.
  *
  * Usage:
  *   npm run orchestrate:drain
  *
- * Add tasks to tools/orchestrator/queue.txt — one request per line.
- * Lines starting with # are treated as comments and skipped.
+ * Set ORCH_RETRY_FAILED=1 to append failed tasks to the END of the queue
+ * (one extra attempt later in the same drain run, not an immediate re-run).
  */
 
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, writeFile, appendFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
@@ -19,7 +20,19 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const QUEUE_FILE = path.join(__dirname, 'queue.txt');
+const FAILED_FILE = path.join(__dirname, 'failed.txt');
 const repoRoot = path.resolve(__dirname, '..', '..');
+const retryFailed = process.env.ORCH_RETRY_FAILED === '1';
+
+const DEFAULT_HEADER = [
+  '# One request per line. Lines starting with # are comments and are skipped.',
+  '# Add tasks below — drain.mjs processes them one at a time, committing after each PASS.',
+  '# Failed tasks are logged to failed.txt and skipped (not retried immediately).',
+  '# Set ORCH_RETRY_FAILED=1 to append failures to the end of the queue for one later retry.',
+  '#',
+  '# Example:',
+  '# fix the + Set button dead tap on second open',
+];
 
 function log(msg) {
   const ts = new Date().toLocaleTimeString();
@@ -35,14 +48,32 @@ async function readQueue() {
     .filter((l) => l.length > 0 && !l.startsWith('#'));
 }
 
-async function writeQueue(lines) {
-  // Preserve comment header lines at the top of the file.
-  const existing = existsSync(QUEUE_FILE)
-    ? (await readFile(QUEUE_FILE, 'utf-8')).split('\n')
-    : [];
+async function readHeader() {
+  if (!existsSync(QUEUE_FILE)) return DEFAULT_HEADER;
+  const existing = (await readFile(QUEUE_FILE, 'utf-8')).split('\n');
   const header = existing.filter((l) => l.startsWith('#'));
+  return header.length > 0 ? header : DEFAULT_HEADER;
+}
+
+async function writeQueue(lines) {
+  const header = await readHeader();
   const body = lines.map((l) => l.trim()).filter(Boolean);
-  await writeFile(QUEUE_FILE, [...header, ...body].join('\n') + '\n', 'utf-8');
+  await writeFile(QUEUE_FILE, [...header, ...body].join('\n') + (body.length ? '\n' : ''), 'utf-8');
+}
+
+async function prependTask(task) {
+  const rest = await readQueue();
+  await writeQueue([task, ...rest]);
+}
+
+async function appendTask(task) {
+  const rest = await readQueue();
+  await writeQueue([...rest, task]);
+}
+
+async function logFailure(task, code) {
+  const line = `[${new Date().toISOString()}] exit=${code} ${task}\n`;
+  await appendFile(FAILED_FILE, line, 'utf-8');
 }
 
 function runOrchestrate(request) {
@@ -69,24 +100,51 @@ async function main() {
 
   let processed = 0;
   let failed = 0;
+  let currentTask = null;
+
+  const handleInterrupt = async () => {
+    if (currentTask) {
+      await prependTask(currentTask);
+      log(`Interrupted — re-queued in-flight task: "${currentTask}"`);
+    }
+    process.exit(130);
+  };
+
+  process.on('SIGINT', () => {
+    void handleInterrupt();
+  });
 
   while (true) {
     const tasks = await readQueue();
 
     if (tasks.length === 0) {
       log(`Queue empty. Processed ${processed} task(s), ${failed} failed. Exiting.`);
+      if (failed > 0) {
+        log(`See tools/orchestrator/failed.txt for failed task(s). Re-add manually to retry.`);
+      }
       break;
     }
 
     const [next, ...rest] = tasks;
+    currentTask = next;
 
-    // Remove the task from the queue before running it so a crash doesn't re-run it.
     await writeQueue(rest);
-    log(`Queue: ${tasks.length} task(s) remaining after this one.`);
+    log(`${rest.length} task(s) left in queue after dequeuing this one.`);
 
     const code = await runOrchestrate(next);
     processed++;
-    if (code !== 0) failed++;
+    currentTask = null;
+
+    if (code !== 0) {
+      failed++;
+      await logFailure(next, code);
+      if (retryFailed) {
+        await appendTask(next);
+        log(`Appended failed task to end of queue (ORCH_RETRY_FAILED=1).`);
+      } else {
+        log(`Skipped failed task — logged to failed.txt. Moving to next.`);
+      }
+    }
   }
 
   process.exit(failed > 0 ? 1 : 0);

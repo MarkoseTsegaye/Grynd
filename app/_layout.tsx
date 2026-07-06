@@ -16,9 +16,12 @@ import {
 } from '@expo-google-fonts/jetbrains-mono';
 import { View } from 'react-native';
 import { usePrefsStore } from '../src/shared/store/prefsStore';
+import { useResumeWorkoutPrompt } from '../src/features/workout';
 import { DevBadge } from '../src/shared/components/DevBadge';
 
 export default function RootLayout() {
+  useResumeWorkoutPrompt();
+
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -47,6 +50,7 @@ export default function RootLayout() {
           <Stack.Screen name="splits/[splitId]" options={{ animation: 'slide_from_right', headerShown: true, headerStyle: { backgroundColor: '#141414' }, headerTintColor: '#F0EDE8', headerTitle: 'Manage Split' }} />
           <Stack.Screen name="history/[sessionId]" options={{ animation: 'slide_from_right', headerShown: true, headerStyle: { backgroundColor: '#141414' }, headerTintColor: '#F0EDE8', headerTitle: 'Session' }} />
           <Stack.Screen name="cycle" options={{ animation: 'slide_from_right', headerShown: true, headerStyle: { backgroundColor: '#141414' }, headerTintColor: '#F0EDE8', headerTitle: 'Training Cycle' }} />
+          <Stack.Screen name="progress" options={{ animation: 'slide_from_right', headerShown: true, headerStyle: { backgroundColor: '#141414' }, headerTintColor: '#F0EDE8', headerTitle: 'Progress' }} />
         </Stack>
         <DevBadge />
       </BottomSheetModalProvider>

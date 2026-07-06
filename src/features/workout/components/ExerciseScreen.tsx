@@ -1,12 +1,14 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { SetChip } from './SetChip';
+import { RestTimerBar } from './RestTimerBar';
 import type { LoggedExercise } from '../types';
+import type { RestTimerStatus } from '../hooks/useRestTimer';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Icon } from '../../../shared/components/Icon';
 import { formatShortDate } from '../../../shared/lib/date';
 import { usePrefsStore } from '../../../shared/store/prefsStore';
-import { formatWeight } from '../../../shared/lib/weight';
+import { formatSetWeightDisplay } from '../../../shared/lib/weight';
 import { textRoles } from '../../../shared/theme/typography';
 
 interface Props {
@@ -21,7 +23,17 @@ interface Props {
   onCancel: () => void;
   onOpenOverview?: () => void;
   overviewDisabled?: boolean;
+  onSubstitute?: () => void;
+  substitutionLabel?: string;
   renderSwipeable?: (body: React.ReactNode) => React.ReactNode;
+  restTimerStatus?: RestTimerStatus;
+  restTimerRemainingMs?: number;
+  restTimerVisible?: boolean;
+  onRestTimerStart?: () => void;
+  onRestTimerStop?: () => void;
+  onRestTimerAdjustMinus?: () => void;
+  onRestTimerAdjustPlus?: () => void;
+  onRestTimerDismissComplete?: () => void;
 }
 
 const MAX_DOTS = 8;
@@ -59,7 +71,11 @@ function DotProgress({ current, total }: { current: number; total: number }) {
 export function ExerciseScreen({
   exercise, exerciseIndex, totalExercises, isLastExercise, previousExercise,
   onOpenLog, onDeleteSet, onFinish, onCancel, onOpenOverview, overviewDisabled,
+  onSubstitute, substitutionLabel,
   renderSwipeable,
+  restTimerStatus, restTimerRemainingMs, restTimerVisible,
+  onRestTimerStart, onRestTimerStop, onRestTimerAdjustMinus, onRestTimerAdjustPlus,
+  onRestTimerDismissComplete,
 }: Props) {
   const isFirst = exerciseIndex === 0;
   const { weightUnit } = usePrefsStore();
@@ -77,9 +93,29 @@ export function ExerciseScreen({
         </View>
       </View>
 
-      <Text className={`text-text-primary ${textRoles.listTitle} mb-1`} numberOfLines={2}>
-        {exercise.exerciseName}
-      </Text>
+      <View className="flex-row items-start justify-between mb-1">
+        <View className="flex-1 mr-2">
+          <Text className={`text-text-primary ${textRoles.listTitle}`} numberOfLines={2}>
+            {exercise.exerciseName}
+          </Text>
+          {substitutionLabel && (
+            <Text className={`text-text-secondary ${textRoles.caption} mt-0.5`}>
+              {substitutionLabel}
+            </Text>
+          )}
+        </View>
+        {onSubstitute && (
+          <TouchableOpacity
+            onPress={onSubstitute}
+            accessibilityLabel="Substitute exercise"
+            accessibilityRole="button"
+            activeOpacity={0.7}
+            className="pt-0.5"
+          >
+            <Text className={`text-accent ${textRoles.caption}`}>Substitute</Text>
+          </TouchableOpacity>
+        )}
+      </View>
 
       <View className="flex-row items-center mt-1 mb-4">
         <Text className={`text-accent ${textRoles.metricLarge}`}>{exercise.sets.length}</Text>
@@ -100,16 +136,19 @@ export function ExerciseScreen({
             </Text>
           </View>
           {previousExercise.sets.slice(0, 5).map((set, i) => {
-            const w = formatWeight(set.weightKg, weightUnit);
-            const unit = weightUnit;
+            const { weightText, unitLabel } = formatSetWeightDisplay(set, weightUnit);
             const hasFail = set.effort?.toFailure;
             const hasRpe = set.effort?.rpe !== undefined;
             const hasNotes = !!set.notes;
             return (
               <View key={`prev-${i}`} className="flex-row items-center gap-1 mb-0.5 flex-wrap">
                 <Text className={`text-text-disabled ${textRoles.caption}`}>Set {i + 1}</Text>
-                <Text className={`text-text-primary ${textRoles.metric}`}> {w}</Text>
-                <Text className={`text-text-secondary ${textRoles.metric}`}> {unit} × </Text>
+                <Text className={`text-text-primary ${textRoles.metric}`}> {weightText}</Text>
+                {unitLabel ? (
+                  <Text className={`text-text-secondary ${textRoles.metric}`}> {unitLabel} × </Text>
+                ) : (
+                  <Text className={`text-text-secondary ${textRoles.metric}`}> × </Text>
+                )}
                 <Text className={`text-text-primary ${textRoles.metric}`}>{set.reps}</Text>
                 <Text className={`text-text-secondary ${textRoles.metric}`}> reps</Text>
                 {(hasFail || hasRpe) && (
@@ -206,6 +245,25 @@ export function ExerciseScreen({
       <View className="flex-1">
         {renderSwipeable ? renderSwipeable(body) : body}
       </View>
+
+      {restTimerVisible &&
+        restTimerStatus &&
+        restTimerRemainingMs !== undefined &&
+        onRestTimerStart &&
+        onRestTimerStop &&
+        onRestTimerAdjustMinus &&
+        onRestTimerAdjustPlus &&
+        onRestTimerDismissComplete && (
+          <RestTimerBar
+            status={restTimerStatus}
+            remainingMs={restTimerRemainingMs}
+            onStart={onRestTimerStart}
+            onStop={onRestTimerStop}
+            onAdjustMinus={onRestTimerAdjustMinus}
+            onAdjustPlus={onRestTimerAdjustPlus}
+            onDismissComplete={onRestTimerDismissComplete}
+          />
+        )}
 
       <TouchableOpacity
         className="bg-surface-1 border border-text-disabled rounded-lg py-5 flex-row items-center justify-center gap-2 mt-4"
