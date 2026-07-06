@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { formatShortDate } from '../../workout/../../shared/lib/date';
 import { usePrefsStore } from '../../../shared/store/prefsStore';
@@ -22,6 +22,16 @@ export function SessionDetail({ session }: Props) {
     if (!prefsLoaded) loadPrefs();
   }, [prefsLoaded, loadPrefs]);
 
+  // Resolve each exercise's prior-session sets once per session/history change
+  // instead of re-scanning all sessions on every render.
+  const priorSetsByExerciseId = useMemo(() => {
+    const map: Record<string, ReturnType<typeof getPriorExerciseSets>> = {};
+    for (const exercise of session.exercises) {
+      map[exercise.exerciseId] = getPriorExerciseSets(session, exercise.exerciseId, sessions);
+    }
+    return map;
+  }, [session, sessions]);
+
   return (
     <ScrollView className="flex-1 bg-surface-0 px-5 pt-4" showsVerticalScrollIndicator={false}>
       {/* Level 1 header */}
@@ -35,7 +45,7 @@ export function SessionDetail({ session }: Props) {
       </View>
 
       {session.exercises.map((exercise, exIdx) => {
-        const priorSets = getPriorExerciseSets(session, exercise.exerciseId, sessions);
+        const priorSets = priorSetsByExerciseId[exercise.exerciseId];
         return (
         <View key={exercise.exerciseId} className={`mb-3 ${exIdx > 0 ? 'border-t border-surface-2 pt-3' : ''}`}>
           {/* Level 2: exercise name */}
