@@ -99,7 +99,7 @@ export default function HomeScreen() {
   return (
     <View className="flex-1 bg-surface-0">
       <View className="px-5 pt-14 pb-4">
-        <Text className={`text-text-primary ${textRoles.screenTitle}`}>Workouts</Text>
+        <Text className={`text-text-primary ${textRoles.screenTitle}`}>Home</Text>
       </View>
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>

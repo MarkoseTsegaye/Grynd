@@ -272,7 +272,7 @@ export function ExerciseScreen({
         activeOpacity={0.7}
       >
         <Icon name="plus-circle-outline" size={20} color="accent" />
-        <Text className={`text-accent ${textRoles.actionLabel}`}>Set</Text>
+        <Text className={`text-accent ${textRoles.buttonLabel}`}>Set</Text>
       </TouchableOpacity>
     </SafeAreaView>
   );

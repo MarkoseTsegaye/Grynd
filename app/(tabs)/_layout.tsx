@@ -71,6 +71,12 @@ export default function TabsLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="picker"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }

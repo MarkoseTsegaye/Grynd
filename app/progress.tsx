@@ -36,7 +36,7 @@ export default function ProgressScreen() {
   return (
     <ScrollView className="flex-1 bg-surface-0" contentContainerStyle={{ padding: 20, paddingBottom: 32 }}>
       <ProgressSummary trend={trend} latestPoint={latestPoint} />
-      <Text className={`text-text-secondary ${textRoles.sectionLabelCompact} mb-3`}>
+      <Text className={`text-text-secondary ${textRoles.sectionLabel} mb-3`}>
         VOLUME OVER TIME
       </Text>
       <VolumeLineChart points={chartPoints} />

@@ -11,6 +11,7 @@ import { useCreateSplit } from '../../src/features/splits';
 import { Icon } from '../../src/shared/components/Icon';
 import type { Split } from '../../src/features/splits/types';
 import { textRoles } from '../../src/shared/theme/typography';
+import { colors } from '../../src/shared/theme/colors';
 
 const FLOATING_CTA_HEIGHT = 56;
 const FLOATING_CTA_GAP = 12;
@@ -106,7 +107,7 @@ export default function SplitsScreen() {
             accessibilityLabel="Split name input"
           />
           <TouchableOpacity
-            className={`bg-accent rounded-lg py-3 items-center ${!canSubmit ? 'opacity-40' : ''}`}
+            className={`bg-accent rounded-lg py-4 items-center ${!canSubmit ? 'opacity-40' : ''}`}
             onPress={async () => { await handleSubmit(); setShowForm(false); }}
             disabled={!canSubmit}
             accessibilityLabel="Save new split"
@@ -172,8 +173,8 @@ export default function SplitsScreen() {
         enablePanDownToClose
         backdropComponent={renderBackdrop}
         onDismiss={() => setPendingDeleteSplit(null)}
-        backgroundStyle={{ backgroundColor: '#141414' }}
-        handleIndicatorStyle={{ backgroundColor: '#3D3B38' }}
+        backgroundStyle={{ backgroundColor: colors['surface-1'] }}
+        handleIndicatorStyle={{ backgroundColor: colors['text-disabled'] }}
       >
         <BottomSheetView className="px-6 pb-8 pt-2">
           <Text className={`text-text-primary ${textRoles.modalTitle} mb-1`}>

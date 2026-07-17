@@ -112,7 +112,7 @@ export default function SettingsScreen() {
                 accessibilityLabel="Weight unit, kilograms"
                 activeOpacity={0.7}
               >
-                <Text className={`font-sans ${textRoles.bodySmall} ${weightUnit === 'kg' ? 'text-surface-0' : 'text-text-secondary'}`}>kg</Text>
+                <Text className={`${textRoles.toggleLabel} ${weightUnit === 'kg' ? 'text-surface-0' : 'text-text-secondary'}`}>kg</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 className={`px-3 py-1.5 rounded ${weightUnit === 'lbs' ? 'bg-accent' : 'bg-surface-2'}`}
@@ -120,7 +120,7 @@ export default function SettingsScreen() {
                 accessibilityLabel="Weight unit, pounds"
                 activeOpacity={0.7}
               >
-                <Text className={`font-sans ${textRoles.bodySmall} ${weightUnit === 'lbs' ? 'text-surface-0' : 'text-text-secondary'}`}>lbs</Text>
+                <Text className={`${textRoles.toggleLabel} ${weightUnit === 'lbs' ? 'text-surface-0' : 'text-text-secondary'}`}>lbs</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -146,7 +146,7 @@ export default function SettingsScreen() {
                   activeOpacity={0.7}
                 >
                   <Text
-                    className={`font-sans ${textRoles.bodySmall} ${defaultRestSeconds === seconds ? 'text-surface-0' : 'text-text-secondary'}`}
+                    className={`${textRoles.toggleLabel} ${defaultRestSeconds === seconds ? 'text-surface-0' : 'text-text-secondary'}`}
                   >
                     {seconds}s
                   </Text>
@@ -189,7 +189,7 @@ export default function SettingsScreen() {
           </View>
 
           <TouchableOpacity
-            className={`bg-surface-1 rounded-lg px-4 py-4 flex-row items-center ${!canReset ? 'opacity-40' : ''}`}
+            className={`bg-surface-1 rounded-lg px-4 py-4 mb-8 flex-row items-center ${!canReset ? 'opacity-40' : ''}`}
             onPress={handleReset}
             disabled={!canReset}
             accessibilityLabel="Reset to day 1"

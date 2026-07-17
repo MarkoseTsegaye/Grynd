@@ -9,6 +9,7 @@ import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../../../shared/components/Icon';
 import { textRoles } from '../../../shared/theme/typography';
+import { colors } from '../../../shared/theme/colors';
 import type { LoggedExercise } from '../types';
 
 interface Props {
@@ -86,7 +87,7 @@ export function ExerciseOverviewSheet({
           </Text>
           <View className="flex-1">
             <Text
-              className={`${textRoles.bodySmall} ${state === 'current' ? 'text-accent' : state === 'upcoming' ? 'text-text-disabled' : 'text-text-primary'}`}
+              className={`${textRoles.listItemTitle} ${state === 'current' ? 'text-accent' : state === 'upcoming' ? 'text-text-disabled' : 'text-text-primary'}`}
               numberOfLines={1}
             >
               {item.exerciseName}
@@ -120,13 +121,13 @@ export function ExerciseOverviewSheet({
       bottomInset={insets.bottom}
       onChange={onChange}
       backdropComponent={renderBackdrop}
-      backgroundStyle={{ backgroundColor: '#141414' }}
-      handleIndicatorStyle={{ backgroundColor: '#3D3B38' }}
+      backgroundStyle={{ backgroundColor: colors['surface-1'] }}
+      handleIndicatorStyle={{ backgroundColor: colors['text-disabled'] }}
     >
       <View accessibilityViewIsModal className="flex-1">
         <View className="px-5 pt-2 pb-3">
           <Text
-            className={`text-text-secondary ${textRoles.bodySmall}`}
+            className={`text-text-primary ${textRoles.modalTitle}`}
             accessibilityRole="header"
             accessibilityLabel="All exercises"
           >

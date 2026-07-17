@@ -18,6 +18,19 @@ import { View } from 'react-native';
 import { usePrefsStore } from '../src/shared/store/prefsStore';
 import { useResumeWorkoutPrompt } from '../src/features/workout';
 import { DevBadge } from '../src/shared/components/DevBadge';
+import { colors } from '../src/shared/theme/colors';
+import { typography } from '../src/shared/theme/typography';
+
+const stackHeaderOptions = {
+  headerShown: true,
+  headerStyle: { backgroundColor: colors['surface-1'] },
+  headerTintColor: colors['text-primary'],
+  headerTitleStyle: {
+    fontFamily: typography.fonts.sansBold,
+    fontSize: typography.sizes.base,
+  },
+  headerShadowVisible: false,
+} as const;
 
 export default function RootLayout() {
   useResumeWorkoutPrompt();
@@ -44,13 +57,46 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <BottomSheetModalProvider>
         <StatusBar style="light" />
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#0A0A0A' } }}>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: colors['surface-0'] },
+          }}
+        >
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="workout/[splitId]" options={{ animation: 'slide_from_bottom' }} />
-          <Stack.Screen name="splits/[splitId]" options={{ animation: 'slide_from_right', headerShown: true, headerStyle: { backgroundColor: '#141414' }, headerTintColor: '#F0EDE8', headerTitle: 'Manage Split' }} />
-          <Stack.Screen name="history/[sessionId]" options={{ animation: 'slide_from_right', headerShown: true, headerStyle: { backgroundColor: '#141414' }, headerTintColor: '#F0EDE8', headerTitle: 'Session' }} />
-          <Stack.Screen name="cycle" options={{ animation: 'slide_from_right', headerShown: true, headerStyle: { backgroundColor: '#141414' }, headerTintColor: '#F0EDE8', headerTitle: 'Training Cycle' }} />
-          <Stack.Screen name="progress" options={{ animation: 'slide_from_right', headerShown: true, headerStyle: { backgroundColor: '#141414' }, headerTintColor: '#F0EDE8', headerTitle: 'Progress' }} />
+          <Stack.Screen
+            name="splits/[splitId]"
+            options={{
+              animation: 'slide_from_right',
+              ...stackHeaderOptions,
+              headerTitle: 'Manage Split',
+            }}
+          />
+          <Stack.Screen
+            name="history/[sessionId]"
+            options={{
+              animation: 'slide_from_right',
+              ...stackHeaderOptions,
+              headerTitle: 'Session',
+            }}
+          />
+          <Stack.Screen
+            name="cycle"
+            options={{
+              animation: 'slide_from_right',
+              ...stackHeaderOptions,
+              headerTitle: 'Training Cycle',
+            }}
+          />
+          <Stack.Screen
+            name="progress"
+            options={{
+              animation: 'slide_from_right',
+              ...stackHeaderOptions,
+              headerTitle: 'Progress',
+            }}
+          />
         </Stack>
         <DevBadge />
       </BottomSheetModalProvider>

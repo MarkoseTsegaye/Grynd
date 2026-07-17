@@ -29,7 +29,7 @@ export function SessionDetail({ session }: Props) {
         <Text className={`text-text-secondary ${textRoles.caption}`}>
           {formatShortDate(session.completedAt ?? session.startedAt)}
         </Text>
-        <Text className={`text-text-primary ${textRoles.cardTitleSmall}`} numberOfLines={1}>
+        <Text className={`text-text-primary ${textRoles.cardTitle}`} numberOfLines={1}>
           {session.splitName}
         </Text>
       </View>
@@ -40,7 +40,7 @@ export function SessionDetail({ session }: Props) {
         <View key={exercise.exerciseId} className={`mb-3 ${exIdx > 0 ? 'border-t border-surface-2 pt-3' : ''}`}>
           {/* Level 2: exercise name */}
           <View className="flex-row items-center justify-between mb-1">
-            <Text className={`text-text-primary ${textRoles.bodySmall}`}>{exercise.exerciseName}</Text>
+            <Text className={`text-text-primary ${textRoles.listItemTitle}`}>{exercise.exerciseName}</Text>
             <Text className={`text-text-secondary ${textRoles.caption}`}>{exercise.sets.length} sets</Text>
           </View>
           {exercise.substitutedForExerciseName && (

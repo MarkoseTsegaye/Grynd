@@ -56,6 +56,8 @@ export const textRoles = {
   sectionLabel: 'font-sans text-xs uppercase tracking-widest',
   /** Compact section labels without uppercase transform (e.g. "TODAY"). */
   sectionLabelCompact: 'font-sans text-xs tracking-widest',
+  /** Uppercase form field labels (WEIGHT, REPS, workout date). */
+  fieldLabel: 'font-sans text-xs uppercase tracking-widest',
   /** Primary row/card headings. */
   cardTitle: 'font-sans-bold text-base',
   /** Medium-weight list row titles. */

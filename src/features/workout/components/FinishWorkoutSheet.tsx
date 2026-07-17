@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WorkoutDatePicker } from './WorkoutDatePicker';
 import { dateToCompletedAtMs, isFutureCalendarDay } from '../../../shared/lib/date';
 import { textRoles } from '../../../shared/theme/typography';
+import { colors } from '../../../shared/theme/colors';
 import type { WorkoutSession } from '../types';
 
 interface Props {
@@ -92,12 +93,12 @@ export function FinishWorkoutSheet({
       backdropComponent={renderBackdrop}
       onChange={handleSheetChange}
       onDismiss={handleDismiss}
-      backgroundStyle={{ backgroundColor: '#141414' }}
-      handleIndicatorStyle={{ backgroundColor: '#3D3B38' }}
+      backgroundStyle={{ backgroundColor: colors['surface-1'] }}
+      handleIndicatorStyle={{ backgroundColor: colors['text-disabled'] }}
     >
       <BottomSheetView className="px-6 pb-8 pt-2">
         <Text
-          className={`text-text-primary ${textRoles.cardTitleSmall} mb-1`}
+          className={`text-text-primary ${textRoles.modalTitle} mb-1`}
           accessibilityRole="header"
         >
           Finish Workout
@@ -115,7 +116,7 @@ export function FinishWorkoutSheet({
           </Text>
         </View>
 
-        <Text className={`text-text-secondary ${textRoles.caption} mb-2 px-1`}>WORKOUT DATE</Text>
+        <Text className={`text-text-secondary ${textRoles.fieldLabel} mb-2 px-1`}>WORKOUT DATE</Text>
         <WorkoutDatePicker value={selectedDate} onChange={setSelectedDate} />
 
         {isFutureDate && (

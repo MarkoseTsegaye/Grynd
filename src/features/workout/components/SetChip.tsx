@@ -46,13 +46,13 @@ export function SetChip({ setNumber, set, onDelete }: Props) {
     >
       <View className="flex-row items-center flex-wrap gap-1">
         <Text className={`text-text-secondary ${textRoles.metric}`}>Set {setNumber} — </Text>
-        <Text className={`text-text-primary ${textRoles.metricBold}`}>{weightText}</Text>
+        <Text className={`text-text-primary ${textRoles.metric}`}>{weightText}</Text>
         {unitLabel ? (
           <Text className={`text-text-secondary ${textRoles.metric}`}> {unitLabel} × </Text>
         ) : (
           <Text className={`text-text-secondary ${textRoles.metric}`}> × </Text>
         )}
-        <Text className={`text-text-primary ${textRoles.metricBold}`}>{set.reps}</Text>
+        <Text className={`text-text-primary ${textRoles.metric}`}>{set.reps}</Text>
         <Text className={`text-text-secondary ${textRoles.metric}`}> reps</Text>
         {set.effort && <EffortBadge effort={set.effort} />}
         {set.notes ? (

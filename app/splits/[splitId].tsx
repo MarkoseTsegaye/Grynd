@@ -43,7 +43,7 @@ export default function ManageSplitScreen() {
             className="px-4 py-4"
             activeOpacity={0.7}
           >
-            <Text className={`text-danger ${textRoles.cardTitle}`}>×</Text>
+            <Text className={`text-danger ${textRoles.body}`}>×</Text>
           </TouchableOpacity>
         </View>
       </ScaleDecorator>
@@ -53,7 +53,7 @@ export default function ManageSplitScreen() {
   return (
     <View className="flex-1 bg-surface-0">
       <View className="px-5 pt-4 pb-2">
-        <Text className={`text-text-primary ${textRoles.screenTitle} mb-1`} numberOfLines={2}>{split.name}</Text>
+        <Text className={`text-text-primary ${textRoles.listTitle} mb-1`} numberOfLines={2}>{split.name}</Text>
         <Text className={`text-text-secondary ${textRoles.caption} mb-6`}>
           {exercises.length} {exercises.length === 1 ? 'exercise' : 'exercises'}
         </Text>

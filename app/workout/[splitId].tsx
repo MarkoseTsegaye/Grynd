@@ -21,6 +21,7 @@ import { useSplitsStore } from '../../src/features/splits';
 import { useHistoryStore } from '../../src/features/history';
 import { Icon } from '../../src/shared/components/Icon';
 import { textRoles } from '../../src/shared/theme/typography';
+import { colors } from '../../src/shared/theme/colors';
 import { STORAGE_KEYS } from '../../src/storage/keys';
 import {
   SWIPE_THRESHOLD,
@@ -572,10 +573,16 @@ export default function WorkoutScreen() {
         snapPoints={cancelSnapPoints}
         enablePanDownToClose
         backdropComponent={renderBackdrop}
-        backgroundStyle={{ backgroundColor: '#141414' }}
-        handleIndicatorStyle={{ backgroundColor: '#3D3B38' }}
+        backgroundStyle={{ backgroundColor: colors['surface-1'] }}
+        handleIndicatorStyle={{ backgroundColor: colors['text-disabled'] }}
       >
         <BottomSheetView className="px-6 pb-8 pt-2">
+          <Text
+            className={`text-text-primary ${textRoles.modalTitle} mb-4`}
+            accessibilityRole="header"
+          >
+            End Workout
+          </Text>
           <TouchableOpacity
             className="flex-row items-center gap-3 py-4 border-b border-surface-2"
             onPress={handleDiscard}

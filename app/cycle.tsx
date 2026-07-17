@@ -11,6 +11,7 @@ import { Icon } from '../src/shared/components/Icon';
 import type { CycleDay } from '../src/features/splits/types';
 import type { Split } from '../src/features/splits/types';
 import { textRoles } from '../src/shared/theme/typography';
+import { colors } from '../src/shared/theme/colors';
 
 function HeaderDoneButton({ onPress }: { onPress: () => void }) {
   return (
@@ -91,7 +92,7 @@ export default function CycleScreen() {
             ) : (
               <>
                 <Icon name="sleep" size={20} color="text-secondary" />
-                <Text className={`text-text-secondary ${textRoles.body}`}>Rest</Text>
+                <Text className={`text-text-secondary ${textRoles.cardTitle}`}>Rest</Text>
               </>
             )}
           </View>
@@ -122,7 +123,7 @@ export default function CycleScreen() {
         activeOpacity={0.7}
       >
         <Icon name="dumbbell" size={20} color="text-secondary" />
-        <Text className={`text-text-primary ${textRoles.body}`}>{split.name}</Text>
+        <Text className={`text-text-primary ${textRoles.listItemTitle}`}>{split.name}</Text>
       </TouchableOpacity>
     );
   }
@@ -134,15 +135,14 @@ export default function CycleScreen() {
           headerRight: () => <HeaderDoneButton onPress={handleDone} />,
         }}
       />
-      <SafeAreaView className="flex-1 bg-surface-0">
-        <View className="px-5 pt-4 pb-4">
-          <Text className={`text-text-primary ${textRoles.screenTitle}`}>Training Cycle</Text>
-          {days.length > 0 && (
-            <Text className={`text-text-secondary ${textRoles.bodySmall} mt-1`}>
+      <SafeAreaView className="flex-1 bg-surface-0" edges={['bottom', 'left', 'right']}>
+        {days.length > 0 && (
+          <View className="px-5 pt-4 pb-2">
+            <Text className={`text-text-secondary ${textRoles.bodySmall}`}>
               {days.length} days · Repeats indefinitely
             </Text>
-          )}
-        </View>
+          </View>
+        )}
 
         {days.length === 0 ? (
           <View className="flex-1 items-center justify-center px-8">
@@ -191,13 +191,13 @@ export default function CycleScreen() {
         enablePanDownToClose
         bottomInset={insets.bottom}
         backdropComponent={renderBackdrop}
-        backgroundStyle={{ backgroundColor: '#141414' }}
-        handleIndicatorStyle={{ backgroundColor: '#3D3B38' }}
+        backgroundStyle={{ backgroundColor: colors['surface-1'] }}
+        handleIndicatorStyle={{ backgroundColor: colors['text-disabled'] }}
       >
         <View accessibilityViewIsModal>
           <View className="px-5 pt-2 pb-3">
             <Text
-              className={`text-text-secondary ${textRoles.bodySmall}`}
+              className={`text-text-primary ${textRoles.modalTitle}`}
               accessibilityRole="header"
               accessibilityLabel="Select a split"
             >

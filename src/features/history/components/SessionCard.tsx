@@ -52,7 +52,7 @@ export function SessionCard({ session, onPress }: Props) {
           className={`border-t border-surface-2 pt-2 ${exIdx < visibleExercises.length - 1 || extraCount > 0 ? 'mb-3' : 'mb-0'}`}
         >
           <View className="flex-row items-center justify-between mb-1">
-            <Text className={`text-text-primary ${textRoles.bodySmall}`}>{ex.exerciseName}</Text>
+            <Text className={`text-text-primary ${textRoles.listItemTitle}`}>{ex.exerciseName}</Text>
             <Text className={`text-text-secondary ${textRoles.caption}`}>{ex.sets.length} sets</Text>
           </View>
           {ex.sets.map((set, i) => {

@@ -25,7 +25,7 @@ export function ExerciseRow({ exercise, index, onRemove }: Props) {
         className="ml-3 px-2 py-1"
         activeOpacity={0.7}
       >
-        <Text className={`text-danger ${textRoles.cardTitle}`}>×</Text>
+        <Text className={`text-danger ${textRoles.body}`}>×</Text>
       </TouchableOpacity>
     </View>
   );

@@ -9,6 +9,7 @@ import {
 import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { textRoles } from '../../../shared/theme/typography';
+import { colors } from '../../../shared/theme/colors';
 
 interface Props {
   sheetRef: RefObject<BottomSheetModal | null>;
@@ -71,24 +72,24 @@ export function SubstituteExerciseSheet({
       backdropComponent={renderBackdrop}
       onChange={handleSheetChange}
       onDismiss={handleDismiss}
-      backgroundStyle={{ backgroundColor: '#141414' }}
-      handleIndicatorStyle={{ backgroundColor: '#3D3B38' }}
+      backgroundStyle={{ backgroundColor: colors['surface-1'] }}
+      handleIndicatorStyle={{ backgroundColor: colors['text-disabled'] }}
     >
       <BottomSheetView className="px-6 pb-8 pt-2">
         <Text
-          className={`text-text-secondary ${textRoles.bodySmall} mb-4`}
+          className={`text-text-primary ${textRoles.modalTitle} mb-4`}
           accessibilityRole="header"
         >
           Substitute exercise
         </Text>
 
-        <Text className={`text-text-secondary ${textRoles.caption} mb-1`}>EXERCISE NAME</Text>
+        <Text className={`text-text-secondary ${textRoles.fieldLabel} mb-1`}>EXERCISE NAME</Text>
         <BottomSheetTextInput
-          className="bg-surface-2 rounded-lg px-4 py-3 text-text-primary font-sans text-base mb-5"
+          className={`bg-surface-2 rounded-lg px-4 py-3 text-text-primary ${textRoles.body} mb-5`}
           value={nameInput}
           onChangeText={setNameInput}
           placeholder="e.g. Incline DB Press"
-          placeholderTextColor="#8A8580"
+          placeholderTextColor={colors['text-disabled']}
           autoFocus
           returnKeyType="done"
           onSubmitEditing={handleConfirm}

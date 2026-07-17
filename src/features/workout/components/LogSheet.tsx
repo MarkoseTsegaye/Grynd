@@ -13,6 +13,7 @@ import { NumericInput } from '../../../shared/components/NumericInput';
 import { Icon } from '../../../shared/components/Icon';
 import { formatPlatesPerSide } from '../../../shared/lib/weight';
 import { textRoles } from '../../../shared/theme/typography';
+import { colors } from '../../../shared/theme/colors';
 
 const MAX_SET_NOTES_LENGTH = 200;
 const NOTES_MIN_HEIGHT = 48;
@@ -259,8 +260,8 @@ export function LogSheet({
       backdropComponent={renderBackdrop}
       onChange={handleSheetChange}
       onDismiss={onClose}
-      backgroundStyle={{ backgroundColor: '#141414' }}
-      handleIndicatorStyle={{ backgroundColor: '#3D3B38' }}
+      backgroundStyle={{ backgroundColor: colors['surface-1'] }}
+      handleIndicatorStyle={{ backgroundColor: colors['text-disabled'] }}
     >
       <BottomSheetScrollView
         ref={scrollRef}
@@ -304,7 +305,7 @@ export function LogSheet({
           <View className="flex-row gap-4">
           <View className="flex-1">
             <View className="flex-row items-center justify-between mb-1">
-              <Text className={`text-text-secondary ${textRoles.bodySmall}`}>WEIGHT</Text>
+              <Text className={`text-text-secondary ${textRoles.fieldLabel}`}>WEIGHT</Text>
               {weightMode === 'straight' && (
                 <View className="flex-row gap-1">
                   <TouchableOpacity
@@ -313,7 +314,7 @@ export function LogSheet({
                     accessibilityLabel="Use kilograms"
                     activeOpacity={0.7}
                   >
-                    <Text className={`${textRoles.caption} ${weightUnit === 'kg' ? 'text-surface-0' : 'text-text-secondary'}`}>kg</Text>
+                    <Text className={`${textRoles.toggleLabel} ${weightUnit === 'kg' ? 'text-surface-0' : 'text-text-secondary'}`}>kg</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     className={`px-2 py-0.5 rounded ${weightUnit === 'lbs' ? 'bg-accent' : 'bg-surface-2'}`}
@@ -321,7 +322,7 @@ export function LogSheet({
                     accessibilityLabel="Use pounds"
                     activeOpacity={0.7}
                   >
-                    <Text className={`${textRoles.caption} ${weightUnit === 'lbs' ? 'text-surface-0' : 'text-text-secondary'}`}>lbs</Text>
+                    <Text className={`${textRoles.toggleLabel} ${weightUnit === 'lbs' ? 'text-surface-0' : 'text-text-secondary'}`}>lbs</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -350,7 +351,7 @@ export function LogSheet({
             )}
           </View>
           <View className="flex-1">
-            <Text className={`text-text-secondary ${textRoles.bodySmall} mb-1`}>REPS</Text>
+            <Text className={`text-text-secondary ${textRoles.fieldLabel} mb-1`}>REPS</Text>
             <NumericInput
               ref={repsRef}
               InputComponent={BottomSheetTextInput}
@@ -379,7 +380,7 @@ export function LogSheet({
                 accessibilityLabel="Use kg plates"
                 activeOpacity={0.7}
               >
-                <Text className={`font-sans ${textRoles.bodySmall} ${weightUnit === 'kg' ? 'text-surface-0' : 'text-text-secondary'}`}>kg</Text>
+                <Text className={`${textRoles.toggleLabel} ${weightUnit === 'kg' ? 'text-surface-0' : 'text-text-secondary'}`}>kg</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 className={`px-3 py-1 rounded ${weightUnit === 'lbs' ? 'bg-accent' : 'bg-surface-2'}`}
@@ -387,7 +388,7 @@ export function LogSheet({
                 accessibilityLabel="Use lbs plates"
                 activeOpacity={0.7}
               >
-                <Text className={`font-sans ${textRoles.bodySmall} ${weightUnit === 'lbs' ? 'text-surface-0' : 'text-text-secondary'}`}>lbs</Text>
+                <Text className={`${textRoles.toggleLabel} ${weightUnit === 'lbs' ? 'text-surface-0' : 'text-text-secondary'}`}>lbs</Text>
               </TouchableOpacity>
             </View>
             <View className="flex-row flex-wrap gap-2 mb-3">
@@ -433,7 +434,7 @@ export function LogSheet({
             fieldOffsets.current.rpe = event.nativeEvent.layout.y;
           }}
         >
-          <Text className={`text-text-secondary ${textRoles.bodySmall} mb-3`}>Effort (optional)</Text>
+          <Text className={`text-text-secondary ${textRoles.fieldLabel} mb-3`}>Effort (optional)</Text>
           <View className="flex-row items-center justify-between">
             <TouchableOpacity
               className="flex-row items-center gap-2"
@@ -477,14 +478,14 @@ export function LogSheet({
               fieldOffsets.current.notes = effortSectionY.current + event.nativeEvent.layout.y;
             }}
           >
-            <Text className={`text-text-secondary ${textRoles.bodySmall} mb-1`}>Notes (optional)</Text>
+            <Text className={`text-text-secondary ${textRoles.fieldLabel} mb-1`}>Notes (optional)</Text>
             <BottomSheetTextInput
-              className="bg-surface-2 rounded-lg px-4 py-3 text-text-primary font-sans text-base"
+              className={`bg-surface-2 rounded-lg px-4 py-3 text-text-primary ${textRoles.body}`}
               style={{ minHeight: NOTES_MIN_HEIGHT, height: notesInputHeight }}
               value={notesInput}
               onChangeText={onChangeNotes}
               placeholder="e.g. used straps, paused mid-set"
-              placeholderTextColor="#8A8580"
+              placeholderTextColor={colors['text-secondary']}
               multiline
               scrollEnabled={false}
               textAlignVertical="top"
