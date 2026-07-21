@@ -19,6 +19,12 @@ import { usePrefsStore } from '../src/shared/store/prefsStore';
 import { useResumeWorkoutPrompt } from '../src/features/workout';
 import { DevBadge } from '../src/shared/components/DevBadge';
 
+const stackHeader = {
+  headerShown: true,
+  headerStyle: { backgroundColor: '#141414' },
+  headerTintColor: '#F0EDE8',
+} as const;
+
 export default function RootLayout() {
   useResumeWorkoutPrompt();
 
@@ -47,10 +53,30 @@ export default function RootLayout() {
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#0A0A0A' } }}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="workout/[splitId]" options={{ animation: 'slide_from_bottom' }} />
-          <Stack.Screen name="splits/[splitId]" options={{ animation: 'slide_from_right', headerShown: true, headerStyle: { backgroundColor: '#141414' }, headerTintColor: '#F0EDE8', headerTitle: 'Manage Split' }} />
-          <Stack.Screen name="history/[sessionId]" options={{ animation: 'slide_from_right', headerShown: true, headerStyle: { backgroundColor: '#141414' }, headerTintColor: '#F0EDE8', headerTitle: 'Session' }} />
-          <Stack.Screen name="cycle" options={{ animation: 'slide_from_right', headerShown: true, headerStyle: { backgroundColor: '#141414' }, headerTintColor: '#F0EDE8', headerTitle: 'Training Cycle' }} />
-          <Stack.Screen name="progress" options={{ animation: 'slide_from_right', headerShown: true, headerStyle: { backgroundColor: '#141414' }, headerTintColor: '#F0EDE8', headerTitle: 'Progress' }} />
+          <Stack.Screen
+            name="splits/[splitId]"
+            options={{ animation: 'slide_from_right', ...stackHeader, headerTitle: 'Manage Split' }}
+          />
+          <Stack.Screen
+            name="history/[sessionId]"
+            options={{ animation: 'slide_from_right', ...stackHeader, headerTitle: 'Session' }}
+          />
+          <Stack.Screen
+            name="cycle"
+            options={{ animation: 'slide_from_right', ...stackHeader, headerTitle: 'Training Cycle' }}
+          />
+          <Stack.Screen
+            name="progress/volume"
+            options={{ animation: 'slide_from_right', ...stackHeader, headerTitle: 'Workout Volume' }}
+          />
+          <Stack.Screen
+            name="progress/split/[splitId]"
+            options={{ animation: 'slide_from_right', ...stackHeader, headerTitle: 'Exercises' }}
+          />
+          <Stack.Screen
+            name="progress/exercise/[exerciseId]"
+            options={{ animation: 'slide_from_right', ...stackHeader, headerTitle: 'Progress' }}
+          />
         </Stack>
         <DevBadge />
       </BottomSheetModalProvider>

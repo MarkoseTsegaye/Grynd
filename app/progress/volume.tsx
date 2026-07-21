@@ -4,11 +4,11 @@ import {
   useProgressChartData,
   ProgressSummary,
   VolumeLineChart,
-} from '../src/features/progress';
-import { Icon } from '../src/shared/components/Icon';
-import { textRoles } from '../src/shared/theme/typography';
+} from '../../src/features/progress';
+import { Icon } from '../../src/shared/components/Icon';
+import { textRoles } from '../../src/shared/theme/typography';
 
-export default function ProgressScreen() {
+export default function VolumeProgressScreen() {
   const chartData = useProgressChartData();
 
   if (chartData.status === 'loading') {
@@ -34,7 +34,10 @@ export default function ProgressScreen() {
   const chartPoints = chartData.status === 'ready' ? chartData.points : [chartData.point];
 
   return (
-    <ScrollView className="flex-1 bg-surface-0" contentContainerStyle={{ padding: 20, paddingBottom: 32 }}>
+    <ScrollView
+      className="flex-1 bg-surface-0"
+      contentContainerStyle={{ padding: 20, paddingBottom: 32 }}
+    >
       <ProgressSummary trend={trend} latestPoint={latestPoint} />
       <Text className={`text-text-secondary ${textRoles.sectionLabelCompact} mb-3`}>
         VOLUME OVER TIME
