@@ -17,7 +17,11 @@ export function getPriorExerciseSets(
     .sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0));
 
   for (const priorSession of candidates) {
-    const exercise = priorSession.exercises.find((e) => e.exerciseId === exerciseId);
+    const exercise = priorSession.exercises.find(
+      (e) =>
+        e.exerciseId === exerciseId ||
+        e.substitutedForExerciseId === exerciseId,
+    );
     if (exercise && exercise.sets.length > 0) return exercise.sets;
   }
 

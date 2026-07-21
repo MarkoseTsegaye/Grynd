@@ -79,19 +79,26 @@ export function useWorkout(
   const totalExercises = session?.exercises.length ?? 0;
   const isLastExercise = currentExerciseIndex === totalExercises - 1;
 
-  // Lazy-load previous performance for the current exercise
+  // Lazy-load previous performance for the current exercise (use planned id for substitutes)
   useEffect(() => {
     if (!currentExercise || !session) return;
-    const { exerciseId } = currentExercise;
-    if (fetchedIds.current.has(exerciseId)) return;
-    fetchedIds.current.add(exerciseId);
-    getPreviousPerformance(exerciseId, session.id).then((result) => {
-      setPreviousPerformances((prev) => ({ ...prev, [exerciseId]: result }));
+    const lookupId =
+      currentExercise.substitutedForExerciseId ?? currentExercise.exerciseId;
+    if (fetchedIds.current.has(lookupId)) return;
+    fetchedIds.current.add(lookupId);
+    getPreviousPerformance(lookupId, session.id).then((result) => {
+      setPreviousPerformances((prev) => ({ ...prev, [lookupId]: result }));
     });
-  }, [currentExercise?.exerciseId, session?.id]);
+  }, [
+    currentExercise?.exerciseId,
+    currentExercise?.substitutedForExerciseId,
+    session?.id,
+  ]);
 
   const currentPreviousPerformance = currentExercise
-    ? (previousPerformances[currentExercise.exerciseId] ?? null)
+    ? (previousPerformances[
+        currentExercise.substitutedForExerciseId ?? currentExercise.exerciseId
+      ] ?? null)
     : null;
 
   const plateList = weightUnit === 'lbs' ? LBS_PLATES : KG_PLATES;
@@ -240,13 +247,18 @@ export function useWorkout(
           }
         : undefined;
 
+    const shouldStartRest = currentExercise.sets.length >= 1;
     setIsLogging(true);
-    await logSet(currentExercise.exerciseId, reps, computedWeightKg, effort, notes, plateMeta);
-    impact();
-    setIsLogging(false);
-    dismissLogSheet();
-
-    startRestTimer(defaultRestSeconds);
+    try {
+      await logSet(currentExercise.exerciseId, reps, computedWeightKg, effort, notes, plateMeta);
+      impact();
+      dismissLogSheet();
+      if (shouldStartRest) {
+        startRestTimer(defaultRestSeconds);
+      }
+    } finally {
+      setIsLogging(false);
+    }
   }, [
     repInput,
     computedWeightKg,

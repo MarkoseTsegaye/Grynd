@@ -37,10 +37,18 @@ describe('isFutureCalendarDay', () => {
 });
 
 describe('dateToCompletedAtMs', () => {
-  it('uses end of the selected local day when allowed', () => {
+  it('uses end of the selected local day when selected is not today', () => {
     const startedAt = localDate(2026, 6, 28, 9).getTime();
     const selected = localDate(2026, 6, 28);
-    expect(dateToCompletedAtMs(selected, startedAt)).toBe(endOfLocalDay(selected));
+    const now = localDate(2026, 6, 29, 12).getTime();
+    expect(dateToCompletedAtMs(selected, startedAt, now)).toBe(endOfLocalDay(selected));
+  });
+
+  it('uses wall-clock now when selected day is today', () => {
+    const startedAt = localDate(2026, 6, 28, 9).getTime();
+    const selected = localDate(2026, 6, 28, 10);
+    const now = localDate(2026, 6, 28, 15).getTime();
+    expect(dateToCompletedAtMs(selected, startedAt, now)).toBe(now);
   });
 
   it('clamps to startedAt when the selected day is before the workout start day', () => {
@@ -49,15 +57,17 @@ describe('dateToCompletedAtMs', () => {
     expect(dateToCompletedAtMs(selected, startedAt)).toBe(startedAt);
   });
 
-  it('returns end of selected day when startedAt is earlier on the same day', () => {
+  it('returns end of selected day when startedAt is earlier on the same day and day is not today', () => {
     const startedAt = localDate(2026, 6, 28, 22).getTime();
     const selected = localDate(2026, 6, 28);
-    expect(dateToCompletedAtMs(selected, startedAt)).toBe(endOfLocalDay(selected));
+    const now = localDate(2026, 6, 29, 12).getTime();
+    expect(dateToCompletedAtMs(selected, startedAt, now)).toBe(endOfLocalDay(selected));
   });
 
   it('clamps to startedAt when startedAt is after end of selected day', () => {
     const selected = localDate(2026, 6, 28);
     const startedAt = endOfLocalDay(selected) + 500;
-    expect(dateToCompletedAtMs(selected, startedAt)).toBe(startedAt);
+    const now = localDate(2026, 6, 29, 12).getTime();
+    expect(dateToCompletedAtMs(selected, startedAt, now)).toBe(startedAt);
   });
 });
