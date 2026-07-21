@@ -47,8 +47,8 @@ export default function HistoryScreen() {
         <View className="px-5 pt-14 pb-4 flex-row items-center justify-between">
           <Text className={`text-text-primary ${textRoles.screenTitle}`}>History</Text>
           <TouchableOpacity
-            onPress={() => router.push('/progress')}
-            accessibilityLabel="View progress chart"
+            onPress={() => router.push('/progress/volume')}
+            accessibilityLabel="View workout volume chart"
             accessibilityRole="button"
             activeOpacity={0.7}
             hitSlop={8}
@@ -71,8 +71,8 @@ export default function HistoryScreen() {
       <View className="px-5 pt-14 pb-4 flex-row items-center justify-between">
         <Text className={`text-text-primary ${textRoles.screenTitle}`}>History</Text>
         <TouchableOpacity
-          onPress={() => router.push('/progress')}
-          accessibilityLabel="View progress chart"
+          onPress={() => router.push('/progress/volume')}
+          accessibilityLabel="View workout volume chart"
           accessibilityRole="button"
           activeOpacity={0.7}
           hitSlop={8}

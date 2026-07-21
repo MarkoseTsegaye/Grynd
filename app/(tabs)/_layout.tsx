@@ -44,6 +44,20 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="progress"
+        options={{
+          title: 'Progress',
+          tabBarLabel: 'Progress',
+          tabBarIcon: ({ focused }) => (
+            <MaterialCommunityIcons
+              name={focused ? 'chart-line' : 'chart-line-variant'}
+              size={24}
+              color={focused ? colors.accent : colors['text-secondary']}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="history"
         options={{
           title: 'History',
