@@ -132,7 +132,7 @@ export default function SettingsScreen() {
           <View className="bg-surface-1 rounded-lg px-4 py-4 mb-8">
             <Text className={`text-text-primary ${textRoles.cardTitle}`}>Default rest between sets</Text>
             <Text className={`text-text-secondary ${textRoles.bodySmall} mt-0.5 mb-3`}>
-              Countdown starts after the second set and each set after
+              Countdown starts after every logged set
             </Text>
             <View className="flex-row flex-wrap gap-2">
               {REST_DURATION_OPTIONS.map((seconds) => (
