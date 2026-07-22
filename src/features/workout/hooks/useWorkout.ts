@@ -8,14 +8,28 @@ import { useRestTimer } from './useRestTimer';
 import { getPreviousPerformance } from '../../../storage/adapters/sessions';
 import {
   computePlateWeightKg,
+  formatWeight,
   normalizeWeightKg,
   parseDisplayWeightToKg,
   LBS_PLATES,
   KG_PLATES,
 } from '../../../shared/lib/weight';
-import type { LoggedExercise } from '../types';
+import type { LoggedExercise, LoggedSet } from '../types';
 
 type WeightMode = 'straight' | 'plates';
+
+function presentSheet(
+  sheetRef: RefObject<BottomSheetModal | null>,
+  presentRafRef: { current: number | null },
+) {
+  if (presentRafRef.current !== null) {
+    cancelAnimationFrame(presentRafRef.current);
+  }
+  presentRafRef.current = requestAnimationFrame(() => {
+    presentRafRef.current = null;
+    sheetRef.current?.present();
+  });
+}
 
 export function useWorkout(
   logSheetRef: RefObject<BottomSheetModal | null>,
@@ -25,6 +39,7 @@ export function useWorkout(
     session,
     currentExerciseIndex,
     logSet,
+    updateSet,
     deleteSet,
     goToExercise,
     substituteExercise,
@@ -48,6 +63,7 @@ export function useWorkout(
   const [logSheetVisible, setLogSheetVisible] = useState(false);
   const [overviewSheetVisible, setOverviewSheetVisible] = useState(false);
   const [substituteSheetVisible, setSubstituteSheetVisible] = useState(false);
+  const [editingSetIndex, setEditingSetIndex] = useState<number | null>(null);
   const [repInput, setRepInput] = useState('');
   const [weightInput, setWeightInput] = useState('');
   const [weightMode, setWeightMode] = useState<WeightMode>('straight');
@@ -78,6 +94,7 @@ export function useWorkout(
   const currentExercise = session?.exercises[currentExerciseIndex] ?? null;
   const totalExercises = session?.exercises.length ?? 0;
   const isLastExercise = currentExerciseIndex === totalExercises - 1;
+  const isEditingSet = editingSetIndex !== null;
 
   // Lazy-load previous performance for the current exercise
   useEffect(() => {
@@ -107,18 +124,52 @@ export function useWorkout(
     setToFailure(false);
     setRpeInput('');
     setNotesInput('');
+    setWeightMode('straight');
+    setEditingSetIndex(null);
   }, []);
+
+  const populateFormFromSet = useCallback(
+    (set: LoggedSet) => {
+      setRepInput(String(set.reps));
+      setNotesInput(set.notes ?? '');
+      setToFailure(set.effort?.toFailure ?? false);
+      setRpeInput(set.effort?.rpe !== undefined ? String(set.effort.rpe) : '');
+
+      const hasPlates =
+        !!set.plates &&
+        Object.values(set.plates.perSide).some((count) => count > 0) &&
+        set.plates.unit === weightUnit;
+
+      if (hasPlates && set.plates) {
+        setWeightMode('plates');
+        setPlates({ ...set.plates.perSide });
+        setWeightInput('');
+      } else {
+        setWeightMode('straight');
+        setPlates({});
+        setWeightInput(formatWeight(set.weightKg, weightUnit));
+      }
+    },
+    [weightUnit],
+  );
 
   const openLogSheet = useCallback(() => {
     resetLogForm();
-    if (presentRafRef.current !== null) {
-      cancelAnimationFrame(presentRafRef.current);
-    }
-    presentRafRef.current = requestAnimationFrame(() => {
-      presentRafRef.current = null;
-      logSheetRef.current?.present();
-    });
+    presentSheet(logSheetRef, presentRafRef);
   }, [logSheetRef, resetLogForm]);
+
+  const openEditSet = useCallback(
+    (setIndex: number) => {
+      if (!currentExercise) return;
+      const set = currentExercise.sets[setIndex];
+      if (!set) return;
+
+      setEditingSetIndex(setIndex);
+      populateFormFromSet(set);
+      presentSheet(logSheetRef, presentRafRef);
+    },
+    [currentExercise, logSheetRef, populateFormFromSet],
+  );
 
   const dismissLogSheet = useCallback(() => {
     logSheetRef.current?.dismiss();
@@ -192,13 +243,7 @@ export function useWorkout(
   );
 
   const openSubstituteSheet = useCallback(() => {
-    if (presentRafRef.current !== null) {
-      cancelAnimationFrame(presentRafRef.current);
-    }
-    presentRafRef.current = requestAnimationFrame(() => {
-      presentRafRef.current = null;
-      substituteSheetRef.current?.present();
-    });
+    presentSheet(substituteSheetRef, presentRafRef);
   }, [substituteSheetRef]);
 
   const handleSubstitutePress = useCallback(() => {
@@ -240,13 +285,31 @@ export function useWorkout(
           }
         : undefined;
 
+    const editingIndex = editingSetIndex;
+    const shouldStartRest = editingIndex === null && currentExercise.sets.length >= 1;
     setIsLogging(true);
-    await logSet(currentExercise.exerciseId, reps, computedWeightKg, effort, notes, plateMeta);
-    impact();
-    setIsLogging(false);
-    dismissLogSheet();
-
-    startRestTimer(defaultRestSeconds);
+    try {
+      if (editingIndex !== null) {
+        await updateSet(
+          currentExercise.exerciseId,
+          editingIndex,
+          reps,
+          computedWeightKg,
+          effort,
+          notes,
+          plateMeta,
+        );
+      } else {
+        await logSet(currentExercise.exerciseId, reps, computedWeightKg, effort, notes, plateMeta);
+      }
+      impact();
+      dismissLogSheet();
+      if (shouldStartRest) {
+        startRestTimer(defaultRestSeconds);
+      }
+    } finally {
+      setIsLogging(false);
+    }
   }, [
     repInput,
     computedWeightKg,
@@ -257,7 +320,9 @@ export function useWorkout(
     weightMode,
     plates,
     weightUnit,
+    editingSetIndex,
     logSet,
+    updateSet,
     impact,
     dismissLogSheet,
     defaultRestSeconds,
@@ -268,10 +333,13 @@ export function useWorkout(
     async (setIndex: number) => {
       if (!currentExercise) return;
       light();
+      if (editingSetIndex === setIndex) {
+        dismissLogSheet();
+      }
       await deleteSet(currentExercise.exerciseId, setIndex);
       resetRestTimer();
     },
-    [currentExercise, deleteSet, light, resetRestTimer],
+    [currentExercise, deleteSet, dismissLogSheet, editingSetIndex, light, resetRestTimer],
   );
 
   const handleSwipeNext = useCallback(() => {
@@ -336,6 +404,8 @@ export function useWorkout(
     overviewSheetVisible,
     substituteSheetVisible,
     substitutionLabel,
+    isEditingSet,
+    editingSetIndex,
     repInput,
     setRepInput,
     weightInput,
@@ -357,6 +427,7 @@ export function useWorkout(
     setNotesInput,
     isLogging,
     openLogSheet,
+    openEditSet,
     handleLogSheetDismiss,
     handleLogSheetChange,
     handleOverviewSheetChange,

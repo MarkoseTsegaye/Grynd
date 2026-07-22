@@ -23,6 +23,15 @@ interface WorkoutState {
     notes?: string,
     plates?: LoggedSet['plates'],
   ) => Promise<void>;
+  updateSet: (
+    exerciseId: string,
+    setIndex: number,
+    reps: number,
+    weightKg: number,
+    effort?: { toFailure: boolean; rpe?: number },
+    notes?: string,
+    plates?: LoggedSet['plates'],
+  ) => Promise<void>;
   deleteSet: (exerciseId: string, setIndex: number) => Promise<void>;
   goToExercise: (index: number) => void;
   substituteExercise: (index: number, substituteName: string) => Promise<void>;
@@ -108,6 +117,33 @@ export const useWorkoutStore = create<WorkoutState>()(
               }
             : e,
         );
+        const updated = { ...session, exercises, currentExerciseIndex: get().currentExerciseIndex };
+        set({ session: updated });
+        await setActiveSession(updated);
+      },
+
+      updateSet: async (exerciseId, setIndex, reps, weightKg, effort, notes, plates) => {
+        const { session } = get();
+        if (!session) return;
+
+        const target = session.exercises.find((e) => e.exerciseId === exerciseId);
+        if (!target || setIndex < 0 || setIndex >= target.sets.length) return;
+
+        const exercises = session.exercises.map((e) => {
+          if (e.exerciseId !== exerciseId) return e;
+
+          const existing = e.sets[setIndex];
+          const nextSet: LoggedSet = {
+            reps,
+            weightKg,
+            loggedAt: existing.loggedAt,
+            ...(plates ? { plates } : {}),
+            ...(effort ? { effort } : {}),
+            ...(notes ? { notes } : {}),
+          };
+          const sets = e.sets.map((s, i) => (i === setIndex ? nextSet : s));
+          return { ...e, sets };
+        });
         const updated = { ...session, exercises, currentExerciseIndex: get().currentExerciseIndex };
         set({ session: updated });
         await setActiveSession(updated);
