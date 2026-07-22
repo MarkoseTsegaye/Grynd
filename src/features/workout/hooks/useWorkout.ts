@@ -52,6 +52,7 @@ export function useWorkout(
   const [weightInput, setWeightInput] = useState('');
   const [weightMode, setWeightMode] = useState<WeightMode>('straight');
   const [plates, setPlates] = useState<Record<number, number>>({});
+  const [setSide, setSetSide] = useState<'left' | 'right'>('left');
   const [toFailure, setToFailure] = useState(false);
   const [rpeInput, setRpeInput] = useState('');
   const [notesInput, setNotesInput] = useState('');
@@ -104,6 +105,7 @@ export function useWorkout(
     setRepInput('');
     setWeightInput('');
     setPlates({});
+    setSetSide('left');
     setToFailure(false);
     setRpeInput('');
     setNotesInput('');
@@ -111,6 +113,7 @@ export function useWorkout(
 
   const openLogSheet = useCallback(() => {
     resetLogForm();
+    setWeightMode(currentExercise?.plateLoaded ? 'plates' : 'straight');
     if (presentRafRef.current !== null) {
       cancelAnimationFrame(presentRafRef.current);
     }
@@ -118,7 +121,7 @@ export function useWorkout(
       presentRafRef.current = null;
       logSheetRef.current?.present();
     });
-  }, [logSheetRef, resetLogForm]);
+  }, [currentExercise?.plateLoaded, logSheetRef, resetLogForm]);
 
   const dismissLogSheet = useCallback(() => {
     logSheetRef.current?.dismiss();
@@ -241,7 +244,15 @@ export function useWorkout(
         : undefined;
 
     setIsLogging(true);
-    await logSet(currentExercise.exerciseId, reps, computedWeightKg, effort, notes, plateMeta);
+    await logSet(
+      currentExercise.exerciseId,
+      reps,
+      computedWeightKg,
+      effort,
+      notes,
+      plateMeta,
+      currentExercise.unilateral ? setSide : undefined,
+    );
     impact();
     setIsLogging(false);
     dismissLogSheet();
@@ -257,6 +268,7 @@ export function useWorkout(
     weightMode,
     plates,
     weightUnit,
+    setSide,
     logSet,
     impact,
     dismissLogSheet,
@@ -349,6 +361,9 @@ export function useWorkout(
     removePlate,
     plateList,
     computedWeightKg,
+    setSide,
+    setSetSide,
+    isUnilateral: !!currentExercise?.unilateral,
     toFailure,
     setToFailure,
     rpeInput,

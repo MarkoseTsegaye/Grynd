@@ -3,7 +3,29 @@ import { devtools } from 'zustand/middleware';
 import { getSplits, saveSplits, getExercises, saveExercises } from '../../../storage/adapters/splits';
 import { getWorkoutCycle, saveWorkoutCycle } from '../../../storage/adapters/cycle';
 import { generateId } from '../../../shared/lib/id';
-import type { Split, Exercise } from '../types';
+import type { Split, Exercise, ExerciseAttributes } from '../types';
+
+function applyExerciseAttributes(
+  exercise: Exercise,
+  attrs?: ExerciseAttributes,
+): Exercise {
+  if (!attrs) return exercise;
+  const next: Exercise = { ...exercise };
+
+  if (attrs.notes !== undefined) {
+    if (attrs.notes) next.notes = attrs.notes;
+    else delete next.notes;
+  }
+  if (attrs.unilateral !== undefined) {
+    if (attrs.unilateral) next.unilateral = true;
+    else delete next.unilateral;
+  }
+  if (attrs.plateLoaded !== undefined) {
+    if (attrs.plateLoaded) next.plateLoaded = true;
+    else delete next.plateLoaded;
+  }
+  return next;
+}
 
 interface SplitsState {
   splits: Split[];
@@ -15,7 +37,11 @@ interface SplitsState {
   renameSplit: (id: string, name: string) => Promise<void>;
   deleteSplit: (id: string) => Promise<void>;
   reorderSplits: (splits: Split[]) => Promise<void>;
-  createExercise: (name: string, notes?: string) => Promise<Exercise>;
+  createExercise: (name: string, attrs?: ExerciseAttributes) => Promise<Exercise>;
+  updateExercise: (
+    id: string,
+    patch: { name?: string } & ExerciseAttributes,
+  ) => Promise<void>;
   addExerciseToSplit: (splitId: string, exerciseId: string) => Promise<void>;
   removeExerciseFromSplit: (splitId: string, exerciseId: string) => Promise<void>;
   reorderExercises: (splitId: string, exerciseIds: string[]) => Promise<void>;
@@ -90,12 +116,28 @@ export const useSplitsStore = create<SplitsState>()(
     await saveSplits(splits);
   },
 
-  createExercise: async (name, notes) => {
-    const exercise: Exercise = { id: generateId(), name, ...(notes ? { notes } : {}) };
+  createExercise: async (name, attrs) => {
+    const trimmed = name.trim();
+    const exercise = applyExerciseAttributes(
+      { id: generateId(), name: trimmed },
+      attrs,
+    );
     const exercises = [...get().exercises, exercise];
     set({ exercises });
     await saveExercises(exercises);
     return exercise;
+  },
+
+  updateExercise: async (id, patch) => {
+    const { name, ...attrs } = patch;
+    const exercises = get().exercises.map((e) => {
+      if (e.id !== id) return e;
+      const withName =
+        name !== undefined ? { ...e, name: name.trim() || e.name } : e;
+      return applyExerciseAttributes(withName, attrs);
+    });
+    set({ exercises });
+    await saveExercises(exercises);
   },
 
   addExerciseToSplit: async (splitId, exerciseId) => {

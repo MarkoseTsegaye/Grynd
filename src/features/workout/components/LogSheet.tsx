@@ -47,6 +47,10 @@ interface Props {
   onChangeRpe: (val: string) => void;
   notesInput: string;
   onChangeNotes: (val: string) => void;
+  // Side (unilateral)
+  isUnilateral?: boolean;
+  setSide?: 'left' | 'right';
+  onChangeSide?: (side: 'left' | 'right') => void;
   // Control
   isLogging: boolean;
   onConfirm: () => void;
@@ -64,6 +68,9 @@ export function LogSheet({
   toFailure, onToggleFailure,
   rpeInput, onChangeRpe,
   notesInput, onChangeNotes,
+  isUnilateral = false,
+  setSide = 'left',
+  onChangeSide,
   isLogging, onConfirm, onClose,
 }: Props) {
   const insets = useSafeAreaInsets();
@@ -268,6 +275,39 @@ export function LogSheet({
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: contentPaddingBottom }}
       >
+        {isUnilateral && onChangeSide ? (
+          <View className="flex-row gap-2 mb-4">
+            <TouchableOpacity
+              className={`flex-1 py-2 rounded-lg items-center ${setSide === 'left' ? 'bg-accent' : 'bg-surface-2'}`}
+              onPress={() => onChangeSide('left')}
+              accessibilityRole="button"
+              accessibilityState={{ selected: setSide === 'left' }}
+              accessibilityLabel="Left side"
+              activeOpacity={0.7}
+            >
+              <Text
+                className={`${textRoles.toggleLabel} ${setSide === 'left' ? 'text-surface-0' : 'text-text-secondary'}`}
+              >
+                Left
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              className={`flex-1 py-2 rounded-lg items-center ${setSide === 'right' ? 'bg-accent' : 'bg-surface-2'}`}
+              onPress={() => onChangeSide('right')}
+              accessibilityRole="button"
+              accessibilityState={{ selected: setSide === 'right' }}
+              accessibilityLabel="Right side"
+              activeOpacity={0.7}
+            >
+              <Text
+                className={`${textRoles.toggleLabel} ${setSide === 'right' ? 'text-surface-0' : 'text-text-secondary'}`}
+              >
+                Right
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
         {/* Mode toggle */}
         <View className="flex-row gap-2 mb-5 mt-2">
           <TouchableOpacity

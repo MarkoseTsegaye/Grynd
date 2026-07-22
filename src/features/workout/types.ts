@@ -3,10 +3,13 @@ export interface PlateLoad {
   perSide: Record<number, number>;
 }
 
+export type SetSide = 'left' | 'right';
+
 export interface LoggedSet {
   reps: number;
   weightKg: number;
   plates?: PlateLoad;
+  side?: SetSide;
   effort?: {
     toFailure: boolean;
     rpe?: number;
@@ -22,6 +25,8 @@ export interface LoggedExercise {
   firstLoggedAt?: number;
   substitutedForExerciseId?: string;
   substitutedForExerciseName?: string;
+  unilateral?: boolean;
+  plateLoaded?: boolean;
 }
 
 export interface WorkoutSession {
