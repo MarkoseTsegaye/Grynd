@@ -37,17 +37,23 @@ export function SetChip({ setNumber, set, onPress, onDelete }: Props) {
   const { weightUnit } = usePrefsStore();
   const { weightText, unitLabel } = formatSetWeightDisplay(set, weightUnit);
   const weightAccessibility = unitLabel ? `${weightText} ${unitLabel}` : weightText;
+  const sideLabel = set.side === 'left' ? 'left' : set.side === 'right' ? 'right' : null;
 
   return (
     <View className="bg-surface-2 rounded px-3 py-2 mr-2 mb-2 flex-row items-center gap-2 self-start">
       <TouchableOpacity
         className="flex-row items-center flex-wrap gap-1"
         onPress={onPress}
-        accessibilityLabel={`Set ${setNumber}, ${weightAccessibility} × ${set.reps} reps — tap to edit`}
+        accessibilityLabel={`Set ${setNumber}${sideLabel ? `, ${sideLabel}` : ''}, ${weightAccessibility} × ${set.reps} reps — tap to edit`}
         accessibilityRole="button"
         activeOpacity={0.6}
       >
         <Text className={`text-text-secondary ${textRoles.metric}`}>Set {setNumber} — </Text>
+        {set.side ? (
+          <Text className={`text-accent ${textRoles.metricBold}`}>
+            {set.side === 'left' ? 'L' : 'R'}{' '}
+          </Text>
+        ) : null}
         <Text className={`text-text-primary ${textRoles.metricBold}`}>{weightText}</Text>
         {unitLabel ? (
           <Text className={`text-text-secondary ${textRoles.metric}`}> {unitLabel} × </Text>

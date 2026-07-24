@@ -58,6 +58,7 @@ export default function WorkoutScreen() {
     weightMode, toggleWeightMode,
     weightUnit, toggleUnit,
     plates, plateList, addPlate, removePlate, computedWeightKg,
+    setSide, setSetSide, isUnilateral,
     toFailure, setToFailure,
     rpeInput, setRpeInput,
     notesInput, setNotesInput,
@@ -554,6 +555,9 @@ export default function WorkoutScreen() {
         onChangeRpe={setRpeInput}
         notesInput={notesInput}
         onChangeNotes={setNotesInput}
+        isUnilateral={isUnilateral}
+        setSide={setSide}
+        onChangeSide={setSetSide}
         isLogging={isLogging}
         mode={isEditingSet ? 'edit' : 'create'}
         onConfirm={handleConfirmSet}

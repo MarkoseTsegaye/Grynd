@@ -31,6 +31,7 @@ interface WorkoutState {
     effort?: { toFailure: boolean; rpe?: number },
     notes?: string,
     plates?: LoggedSet['plates'],
+    side?: LoggedSet['side'],
   ) => Promise<void>;
   updateSet: (
     exerciseId: string,
@@ -40,6 +41,7 @@ interface WorkoutState {
     effort?: { toFailure: boolean; rpe?: number },
     notes?: string,
     plates?: LoggedSet['plates'],
+    side?: LoggedSet['side'],
   ) => Promise<void>;
   deleteSet: (exerciseId: string, setIndex: number) => Promise<void>;
   goToExercise: (index: number) => void;
@@ -88,6 +90,8 @@ export const useWorkoutStore = create<WorkoutState>()(
           exerciseId: e.id,
           exerciseName: e.name,
           sets: [],
+          ...(e.unilateral ? { unilateral: true } : {}),
+          ...(e.plateLoaded ? { plateLoaded: true } : {}),
         }));
         const session: WorkoutSession = {
           id: generateId(),
@@ -107,7 +111,7 @@ export const useWorkoutStore = create<WorkoutState>()(
         }
       },
 
-      logSet: async (exerciseId, reps, weightKg, effort, notes, plates) => {
+      logSet: async (exerciseId, reps, weightKg, effort, notes, plates, side) => {
         const { session } = get();
         if (!session) return;
 
@@ -115,6 +119,7 @@ export const useWorkoutStore = create<WorkoutState>()(
           reps,
           weightKg,
           ...(plates ? { plates } : {}),
+          ...(side ? { side } : {}),
           ...(effort ? { effort } : {}),
           ...(notes ? { notes } : {}),
           loggedAt: Date.now(),
@@ -133,7 +138,7 @@ export const useWorkoutStore = create<WorkoutState>()(
         await setActiveSession(updated);
       },
 
-      updateSet: async (exerciseId, setIndex, reps, weightKg, effort, notes, plates) => {
+      updateSet: async (exerciseId, setIndex, reps, weightKg, effort, notes, plates, side) => {
         const { session } = get();
         if (!session) return;
 
@@ -149,6 +154,7 @@ export const useWorkoutStore = create<WorkoutState>()(
             weightKg,
             loggedAt: existing.loggedAt,
             ...(plates ? { plates } : {}),
+            ...(side ? { side } : {}),
             ...(effort ? { effort } : {}),
             ...(notes ? { notes } : {}),
           };

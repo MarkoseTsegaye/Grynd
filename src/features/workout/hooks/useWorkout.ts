@@ -68,6 +68,7 @@ export function useWorkout(
   const [weightInput, setWeightInput] = useState('');
   const [weightMode, setWeightMode] = useState<WeightMode>('straight');
   const [plates, setPlates] = useState<Record<number, number>>({});
+  const [setSide, setSetSide] = useState<'left' | 'right'>('left');
   const [toFailure, setToFailure] = useState(false);
   const [rpeInput, setRpeInput] = useState('');
   const [notesInput, setNotesInput] = useState('');
@@ -128,6 +129,7 @@ export function useWorkout(
     setRepInput('');
     setWeightInput('');
     setPlates({});
+    setSetSide('left');
     setToFailure(false);
     setRpeInput('');
     setNotesInput('');
@@ -156,14 +158,16 @@ export function useWorkout(
         setPlates({});
         setWeightInput(formatWeight(set.weightKg, weightUnit));
       }
+      setSetSide(set.side === 'right' ? 'right' : 'left');
     },
     [weightUnit],
   );
 
   const openLogSheet = useCallback(() => {
     resetLogForm();
+    setWeightMode(currentExercise?.plateLoaded ? 'plates' : 'straight');
     presentSheet(logSheetRef, presentRafRef);
-  }, [logSheetRef, resetLogForm]);
+  }, [currentExercise?.plateLoaded, logSheetRef, resetLogForm]);
 
   const openEditSet = useCallback(
     (setIndex: number) => {
@@ -285,7 +289,8 @@ export function useWorkout(
         : undefined;
 
     const editingIndex = editingSetIndex;
-    const shouldStartRest = editingIndex === null && currentExercise.sets.length >= 1;
+    // Start rest after every newly logged set; skip when editing an existing set.
+    const shouldStartRest = editingIndex === null;
     setIsLogging(true);
     try {
       if (editingIndex !== null) {
@@ -297,9 +302,18 @@ export function useWorkout(
           effort,
           notes,
           plateMeta,
+          currentExercise.unilateral ? setSide : undefined,
         );
       } else {
-        await logSet(currentExercise.exerciseId, reps, computedWeightKg, effort, notes, plateMeta);
+        await logSet(
+          currentExercise.exerciseId,
+          reps,
+          computedWeightKg,
+          effort,
+          notes,
+          plateMeta,
+          currentExercise.unilateral ? setSide : undefined,
+        );
       }
       impact();
       dismissLogSheet();
@@ -319,6 +333,7 @@ export function useWorkout(
     weightMode,
     plates,
     weightUnit,
+    setSide,
     editingSetIndex,
     logSet,
     updateSet,
@@ -415,6 +430,9 @@ export function useWorkout(
     removePlate,
     plateList,
     computedWeightKg,
+    setSide,
+    setSetSide,
+    isUnilateral: !!currentExercise?.unilateral,
     toFailure,
     setToFailure,
     rpeInput,
