@@ -207,18 +207,11 @@ export function useWorkout(
       const trimmed = name.trim();
       if (!trimmed) return;
 
-      resetRestTimer();
       await substituteExercise(currentExerciseIndex, trimmed);
       impact();
       dismissSubstituteSheet();
     },
-    [
-      currentExerciseIndex,
-      dismissSubstituteSheet,
-      impact,
-      resetRestTimer,
-      substituteExercise,
-    ],
+    [currentExerciseIndex, dismissSubstituteSheet, impact, substituteExercise],
   );
 
   const handleConfirmSubstitute = useCallback(
@@ -260,10 +253,9 @@ export function useWorkout(
   const handleGoToExercise = useCallback(
     (index: number) => {
       if (index < 0 || index >= totalExercises) return;
-      resetRestTimer();
       goToExercise(index);
     },
-    [goToExercise, totalExercises, resetRestTimer],
+    [goToExercise, totalExercises],
   );
 
   const handleConfirmSet = useCallback(async () => {
@@ -344,24 +336,21 @@ export function useWorkout(
         dismissLogSheet();
       }
       await deleteSet(currentExercise.exerciseId, setIndex);
-      resetRestTimer();
     },
     [currentExercise, deleteSet, dismissLogSheet, editingSetIndex, light, resetRestTimer],
   );
 
   const handleSwipeNext = useCallback(() => {
     if (currentExerciseIndex < totalExercises - 1) {
-      resetRestTimer();
       goToExercise(currentExerciseIndex + 1);
     }
-  }, [currentExerciseIndex, totalExercises, goToExercise, resetRestTimer]);
+  }, [currentExerciseIndex, totalExercises, goToExercise]);
 
   const handleSwipePrev = useCallback(() => {
     if (currentExerciseIndex > 0) {
-      resetRestTimer();
       goToExercise(currentExerciseIndex - 1);
     }
-  }, [currentExerciseIndex, goToExercise, resetRestTimer]);
+  }, [currentExerciseIndex, goToExercise]);
 
   const handleFinish = useCallback(async (completedAt?: number) => {
     resetRestTimer();
