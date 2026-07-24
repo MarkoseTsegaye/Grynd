@@ -159,6 +159,11 @@ export default function WorkoutScreen() {
       const storeSession = useWorkoutStore.getState().session;
 
       if (storeSession && storeSession.splitId !== splitId) {
+        // Leave loading so a dismissed Android alert cannot stick the screen forever.
+        setBootstrapMessage(
+          `You have an unfinished ${storeSession.splitName} workout.`,
+        );
+        setBootstrapState('error');
         Alert.alert(
           'Unfinished Workout',
           `You have an unfinished ${storeSession.splitName} workout.`,
@@ -170,6 +175,8 @@ export default function WorkoutScreen() {
                 void (async () => {
                   await abandonWorkout();
                   if (cancelled) return;
+                  setBootstrapState('loading');
+                  setBootstrapMessage(null);
                   await startWorkoutForSplit();
                 })();
               },
@@ -183,6 +190,7 @@ export default function WorkoutScreen() {
               },
             },
           ],
+          { cancelable: false },
         );
         return;
       }
@@ -230,19 +238,29 @@ export default function WorkoutScreen() {
   // Show swipe hint on first workout ever
   useEffect(() => {
     if (!session) return;
-    AsyncStorage.getItem(STORAGE_KEYS.HAS_SEEN_SWIPE_HINT).then((val) => {
-      if (!val) {
-        setShowSwipeHint(true);
-        hintOpacity.value = withTiming(1, { duration: 300 });
-        hintTranslateX.value = withTiming(-50, { duration: 1000 });
-        const fadeTimer = setTimeout(() => {
-          hintOpacity.value = withTiming(0, { duration: 400 });
-          AsyncStorage.setItem(STORAGE_KEYS.HAS_SEEN_SWIPE_HINT, 'true');
-          setTimeout(() => setShowSwipeHint(false), 400);
-        }, 2000);
-        return () => clearTimeout(fadeTimer);
-      }
+    let cancelled = false;
+    let fadeTimer: ReturnType<typeof setTimeout> | null = null;
+    let hideTimer: ReturnType<typeof setTimeout> | null = null;
+
+    void AsyncStorage.getItem(STORAGE_KEYS.HAS_SEEN_SWIPE_HINT).then((val) => {
+      if (cancelled || val) return;
+      setShowSwipeHint(true);
+      hintOpacity.value = withTiming(1, { duration: 300 });
+      hintTranslateX.value = withTiming(-50, { duration: 1000 });
+      fadeTimer = setTimeout(() => {
+        hintOpacity.value = withTiming(0, { duration: 400 });
+        void AsyncStorage.setItem(STORAGE_KEYS.HAS_SEEN_SWIPE_HINT, 'true');
+        hideTimer = setTimeout(() => {
+          if (!cancelled) setShowSwipeHint(false);
+        }, 400);
+      }, 2000);
     });
+
+    return () => {
+      cancelled = true;
+      if (fadeTimer) clearTimeout(fadeTimer);
+      if (hideTimer) clearTimeout(hideTimer);
+    };
   }, [session?.id]);
 
   const hintStyle = useAnimatedStyle(() => ({
