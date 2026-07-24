@@ -153,6 +153,60 @@ describe('useWorkoutStore pause/resume', () => {
     });
   });
 
+  it('updateSet replaces fields and preserves loggedAt', async () => {
+    const session = makeSession({
+      exercises: [
+        {
+          exerciseId: 'ex-1',
+          exerciseName: 'Bench',
+          firstLoggedAt: 100,
+          sets: [
+            { reps: 5, weightKg: 60, loggedAt: 100, notes: 'old' },
+            { reps: 5, weightKg: 65, loggedAt: 200 },
+          ],
+        },
+        { exerciseId: 'ex-2', exerciseName: 'OHP', sets: [] },
+      ],
+    });
+    useWorkoutStore.setState({ session, currentExerciseIndex: 0 });
+
+    await useWorkoutStore.getState().updateSet('ex-1', 0, 8, 70, { toFailure: true }, 'new');
+
+    const updated = useWorkoutStore.getState().session?.exercises[0].sets[0];
+    expect(updated).toEqual({
+      reps: 8,
+      weightKg: 70,
+      loggedAt: 100,
+      effort: { toFailure: true },
+      notes: 'new',
+    });
+    expect(useWorkoutStore.getState().session?.exercises[0].sets).toHaveLength(2);
+    expect(mockSetActiveSession).toHaveBeenCalled();
+  });
+
+  it('updateSet no-ops for an out-of-range index', async () => {
+    const session = makeSession({
+      exercises: [
+        {
+          exerciseId: 'ex-1',
+          exerciseName: 'Bench',
+          sets: [{ reps: 5, weightKg: 60, loggedAt: 100 }],
+        },
+        { exerciseId: 'ex-2', exerciseName: 'OHP', sets: [] },
+      ],
+    });
+    useWorkoutStore.setState({ session, currentExerciseIndex: 0 });
+
+    await useWorkoutStore.getState().updateSet('ex-1', 3, 8, 70);
+
+    expect(useWorkoutStore.getState().session?.exercises[0].sets[0]).toEqual({
+      reps: 5,
+      weightKg: 60,
+      loggedAt: 100,
+    });
+    expect(mockSetActiveSession).not.toHaveBeenCalled();
+  });
+
   it('loadActiveSession restores stored exercise index', async () => {
     mockGetActiveSession.mockResolvedValue(makeSession({ currentExerciseIndex: 1 }));
 

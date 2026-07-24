@@ -62,7 +62,8 @@ export default function WorkoutScreen() {
     rpeInput, setRpeInput,
     notesInput, setNotesInput,
     isLogging,
-    openLogSheet, handleLogSheetDismiss, handleLogSheetChange, handleConfirmSet, handleDeleteSet,
+    isEditingSet,
+    openLogSheet, openEditSet, handleLogSheetDismiss, handleLogSheetChange, handleConfirmSet, handleDeleteSet,
     handleOverviewSheetChange, handleSubstituteSheetChange, handleSubstitutePress, handleConfirmSubstitute,
     handleGoToExercise,
     handleSwipeNext, handleSwipePrev, handleFinish,
@@ -502,6 +503,7 @@ export default function WorkoutScreen() {
         isLastExercise={isLastExercise}
         previousExercise={currentPreviousPerformance}
         onOpenLog={openLogSheet}
+        onEditSet={openEditSet}
         onDeleteSet={handleDeleteSet}
         onFinish={presentFinishSheet}
         onCancel={handleCancelPress}
@@ -553,6 +555,7 @@ export default function WorkoutScreen() {
         notesInput={notesInput}
         onChangeNotes={setNotesInput}
         isLogging={isLogging}
+        mode={isEditingSet ? 'edit' : 'create'}
         onConfirm={handleConfirmSet}
         onClose={handleLogSheetDismiss}
       />
