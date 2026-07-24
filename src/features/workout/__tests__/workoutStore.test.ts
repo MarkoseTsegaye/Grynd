@@ -6,6 +6,11 @@ const mockSetActiveSession = vi.fn<(session: WorkoutSession) => Promise<void>>()
 const mockClearActiveSession = vi.fn<() => Promise<void>>();
 const mockSaveSession = vi.fn<(session: WorkoutSession) => Promise<void>>();
 
+const storeMocks = vi.hoisted(() => ({
+  advanceCycle: vi.fn(),
+  autoAdvanceCycle: false,
+}));
+
 vi.mock('../../../storage/adapters/sessions', () => ({
   getActiveSession: () => mockGetActiveSession(),
   setActiveSession: (session: WorkoutSession) => mockSetActiveSession(session),
@@ -14,11 +19,11 @@ vi.mock('../../../storage/adapters/sessions', () => ({
 }));
 
 vi.mock('../../splits/store/cycleStore', () => ({
-  useCycleStore: { getState: () => ({ advanceCycle: vi.fn() }) },
+  useCycleStore: { getState: () => ({ advanceCycle: storeMocks.advanceCycle }) },
 }));
 
 vi.mock('../../../shared/store/prefsStore', () => ({
-  usePrefsStore: { getState: () => ({ autoAdvanceCycle: false }) },
+  usePrefsStore: { getState: () => ({ autoAdvanceCycle: storeMocks.autoAdvanceCycle }) },
 }));
 
 vi.mock('../../../shared/lib/id', () => ({
@@ -45,6 +50,9 @@ function makeSession(overrides: Partial<WorkoutSession> = {}): WorkoutSession {
 describe('useWorkoutStore pause/resume', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    storeMocks.autoAdvanceCycle = false;
+    storeMocks.advanceCycle.mockReset();
+    storeMocks.advanceCycle.mockResolvedValue(undefined);
     mockGetActiveSession.mockResolvedValue(null);
     mockSetActiveSession.mockResolvedValue(undefined);
     mockClearActiveSession.mockResolvedValue(undefined);
@@ -245,6 +253,73 @@ describe('useWorkoutStore pause/resume', () => {
 
     expect(useWorkoutStore.getState().session).toEqual(session);
     expect(useWorkoutStore.getState().currentExerciseIndex).toBe(1);
+  });
+
+  it('loadActiveSession keeps newer in-memory sets over a stale storage snapshot', async () => {
+    const stored = makeSession({
+      exercises: [
+        {
+          exerciseId: 'ex-1',
+          exerciseName: 'Bench',
+          sets: [{ reps: 5, weightKg: 60, loggedAt: 100 }],
+        },
+        { exerciseId: 'ex-2', exerciseName: 'OHP', sets: [] },
+      ],
+    });
+    const current = makeSession({
+      exercises: [
+        {
+          exerciseId: 'ex-1',
+          exerciseName: 'Bench',
+          sets: [
+            { reps: 5, weightKg: 60, loggedAt: 100 },
+            { reps: 5, weightKg: 65, loggedAt: 200 },
+          ],
+        },
+        { exerciseId: 'ex-2', exerciseName: 'OHP', sets: [] },
+      ],
+    });
+    mockGetActiveSession.mockResolvedValue(stored);
+    useWorkoutStore.setState({ session: current, currentExerciseIndex: 0 });
+
+    await useWorkoutStore.getState().loadActiveSession();
+
+    expect(useWorkoutStore.getState().session?.exercises[0].sets).toHaveLength(2);
+  });
+
+  it('finishWorkout clears memory even if cycle advance fails', async () => {
+    storeMocks.autoAdvanceCycle = true;
+    storeMocks.advanceCycle.mockRejectedValue(new Error('cycle failed'));
+    useWorkoutStore.setState({ session: makeSession(), currentExerciseIndex: 0 });
+
+    await useWorkoutStore.getState().finishWorkout();
+
+    expect(mockSaveSession).toHaveBeenCalled();
+    expect(mockClearActiveSession).toHaveBeenCalled();
+    expect(useWorkoutStore.getState().session).toBeNull();
+    expect(useWorkoutStore.getState().error).toContain('cycle failed');
+  });
+
+  it('deleteSet recomputes firstLoggedAt from remaining sets', async () => {
+    const session = makeSession({
+      exercises: [
+        {
+          exerciseId: 'ex-1',
+          exerciseName: 'Bench',
+          firstLoggedAt: 100,
+          sets: [
+            { reps: 5, weightKg: 60, loggedAt: 100 },
+            { reps: 5, weightKg: 65, loggedAt: 200 },
+          ],
+        },
+        { exerciseId: 'ex-2', exerciseName: 'OHP', sets: [] },
+      ],
+    });
+    useWorkoutStore.setState({ session, currentExerciseIndex: 0 });
+
+    await useWorkoutStore.getState().deleteSet('ex-1', 0);
+
+    expect(useWorkoutStore.getState().session?.exercises[0].firstLoggedAt).toBe(200);
   });
 
   it('abandonWorkout clears session and resets index', async () => {

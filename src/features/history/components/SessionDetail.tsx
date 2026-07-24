@@ -27,7 +27,8 @@ export function SessionDetail({ session }: Props) {
   const priorSetsByExerciseId = useMemo(() => {
     const map: Record<string, ReturnType<typeof getPriorExerciseSets>> = {};
     for (const exercise of session.exercises) {
-      map[exercise.exerciseId] = getPriorExerciseSets(session, exercise.exerciseId, sessions);
+      const lookupId = exercise.substitutedForExerciseId ?? exercise.exerciseId;
+      map[exercise.exerciseId] = getPriorExerciseSets(session, lookupId, sessions);
     }
     return map;
   }, [session, sessions]);

@@ -45,7 +45,11 @@ export function SessionCard({ session, onPress }: Props) {
 
       {/* Level 2 + 3: exercises */}
       {visibleExercises.map((ex, exIdx) => {
-        const priorSets = getPriorExerciseSets(session, ex.exerciseId, sessions);
+        const priorSets = getPriorExerciseSets(
+          session,
+          ex.substitutedForExerciseId ?? ex.exerciseId,
+          sessions,
+        );
         return (
         <View
           key={ex.exerciseId}

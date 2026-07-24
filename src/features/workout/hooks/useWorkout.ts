@@ -96,19 +96,26 @@ export function useWorkout(
   const isLastExercise = currentExerciseIndex === totalExercises - 1;
   const isEditingSet = editingSetIndex !== null;
 
-  // Lazy-load previous performance for the current exercise
+  // Lazy-load previous performance for the current exercise (use planned id for substitutes)
   useEffect(() => {
     if (!currentExercise || !session) return;
-    const { exerciseId } = currentExercise;
-    if (fetchedIds.current.has(exerciseId)) return;
-    fetchedIds.current.add(exerciseId);
-    getPreviousPerformance(exerciseId, session.id).then((result) => {
-      setPreviousPerformances((prev) => ({ ...prev, [exerciseId]: result }));
+    const lookupId =
+      currentExercise.substitutedForExerciseId ?? currentExercise.exerciseId;
+    if (fetchedIds.current.has(lookupId)) return;
+    fetchedIds.current.add(lookupId);
+    getPreviousPerformance(lookupId, session.id).then((result) => {
+      setPreviousPerformances((prev) => ({ ...prev, [lookupId]: result }));
     });
-  }, [currentExercise?.exerciseId, session?.id]);
+  }, [
+    currentExercise?.exerciseId,
+    currentExercise?.substitutedForExerciseId,
+    session?.id,
+  ]);
 
   const currentPreviousPerformance = currentExercise
-    ? (previousPerformances[currentExercise.exerciseId] ?? null)
+    ? (previousPerformances[
+        currentExercise.substitutedForExerciseId ?? currentExercise.exerciseId
+      ] ?? null)
     : null;
 
   const plateList = weightUnit === 'lbs' ? LBS_PLATES : KG_PLATES;
