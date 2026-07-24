@@ -8,14 +8,28 @@ import { useRestTimer } from './useRestTimer';
 import { getPreviousPerformance } from '../../../storage/adapters/sessions';
 import {
   computePlateWeightKg,
+  formatWeight,
   normalizeWeightKg,
   parseDisplayWeightToKg,
   LBS_PLATES,
   KG_PLATES,
 } from '../../../shared/lib/weight';
-import type { LoggedExercise } from '../types';
+import type { LoggedExercise, LoggedSet } from '../types';
 
 type WeightMode = 'straight' | 'plates';
+
+function presentSheet(
+  sheetRef: RefObject<BottomSheetModal | null>,
+  presentRafRef: { current: number | null },
+) {
+  if (presentRafRef.current !== null) {
+    cancelAnimationFrame(presentRafRef.current);
+  }
+  presentRafRef.current = requestAnimationFrame(() => {
+    presentRafRef.current = null;
+    sheetRef.current?.present();
+  });
+}
 
 export function useWorkout(
   logSheetRef: RefObject<BottomSheetModal | null>,
@@ -25,6 +39,7 @@ export function useWorkout(
     session,
     currentExerciseIndex,
     logSet,
+    updateSet,
     deleteSet,
     goToExercise,
     substituteExercise,
@@ -48,6 +63,7 @@ export function useWorkout(
   const [logSheetVisible, setLogSheetVisible] = useState(false);
   const [overviewSheetVisible, setOverviewSheetVisible] = useState(false);
   const [substituteSheetVisible, setSubstituteSheetVisible] = useState(false);
+  const [editingSetIndex, setEditingSetIndex] = useState<number | null>(null);
   const [repInput, setRepInput] = useState('');
   const [weightInput, setWeightInput] = useState('');
   const [weightMode, setWeightMode] = useState<WeightMode>('straight');
@@ -79,20 +95,28 @@ export function useWorkout(
   const currentExercise = session?.exercises[currentExerciseIndex] ?? null;
   const totalExercises = session?.exercises.length ?? 0;
   const isLastExercise = currentExerciseIndex === totalExercises - 1;
+  const isEditingSet = editingSetIndex !== null;
 
-  // Lazy-load previous performance for the current exercise
+  // Lazy-load previous performance for the current exercise (use planned id for substitutes)
   useEffect(() => {
     if (!currentExercise || !session) return;
-    const { exerciseId } = currentExercise;
-    if (fetchedIds.current.has(exerciseId)) return;
-    fetchedIds.current.add(exerciseId);
-    getPreviousPerformance(exerciseId, session.id).then((result) => {
-      setPreviousPerformances((prev) => ({ ...prev, [exerciseId]: result }));
+    const lookupId =
+      currentExercise.substitutedForExerciseId ?? currentExercise.exerciseId;
+    if (fetchedIds.current.has(lookupId)) return;
+    fetchedIds.current.add(lookupId);
+    getPreviousPerformance(lookupId, session.id).then((result) => {
+      setPreviousPerformances((prev) => ({ ...prev, [lookupId]: result }));
     });
-  }, [currentExercise?.exerciseId, session?.id]);
+  }, [
+    currentExercise?.exerciseId,
+    currentExercise?.substitutedForExerciseId,
+    session?.id,
+  ]);
 
   const currentPreviousPerformance = currentExercise
-    ? (previousPerformances[currentExercise.exerciseId] ?? null)
+    ? (previousPerformances[
+        currentExercise.substitutedForExerciseId ?? currentExercise.exerciseId
+      ] ?? null)
     : null;
 
   const plateList = weightUnit === 'lbs' ? LBS_PLATES : KG_PLATES;
@@ -109,19 +133,54 @@ export function useWorkout(
     setToFailure(false);
     setRpeInput('');
     setNotesInput('');
+    setWeightMode('straight');
+    setEditingSetIndex(null);
   }, []);
+
+  const populateFormFromSet = useCallback(
+    (set: LoggedSet) => {
+      setRepInput(String(set.reps));
+      setNotesInput(set.notes ?? '');
+      setToFailure(set.effort?.toFailure ?? false);
+      setRpeInput(set.effort?.rpe !== undefined ? String(set.effort.rpe) : '');
+
+      const hasPlates =
+        !!set.plates &&
+        Object.values(set.plates.perSide).some((count) => count > 0) &&
+        set.plates.unit === weightUnit;
+
+      if (hasPlates && set.plates) {
+        setWeightMode('plates');
+        setPlates({ ...set.plates.perSide });
+        setWeightInput('');
+      } else {
+        setWeightMode('straight');
+        setPlates({});
+        setWeightInput(formatWeight(set.weightKg, weightUnit));
+      }
+      setSetSide(set.side === 'right' ? 'right' : 'left');
+    },
+    [weightUnit],
+  );
 
   const openLogSheet = useCallback(() => {
     resetLogForm();
     setWeightMode(currentExercise?.plateLoaded ? 'plates' : 'straight');
-    if (presentRafRef.current !== null) {
-      cancelAnimationFrame(presentRafRef.current);
-    }
-    presentRafRef.current = requestAnimationFrame(() => {
-      presentRafRef.current = null;
-      logSheetRef.current?.present();
-    });
+    presentSheet(logSheetRef, presentRafRef);
   }, [currentExercise?.plateLoaded, logSheetRef, resetLogForm]);
+
+  const openEditSet = useCallback(
+    (setIndex: number) => {
+      if (!currentExercise) return;
+      const set = currentExercise.sets[setIndex];
+      if (!set) return;
+
+      setEditingSetIndex(setIndex);
+      populateFormFromSet(set);
+      presentSheet(logSheetRef, presentRafRef);
+    },
+    [currentExercise, logSheetRef, populateFormFromSet],
+  );
 
   const dismissLogSheet = useCallback(() => {
     logSheetRef.current?.dismiss();
@@ -152,18 +211,11 @@ export function useWorkout(
       const trimmed = name.trim();
       if (!trimmed) return;
 
-      resetRestTimer();
       await substituteExercise(currentExerciseIndex, trimmed);
       impact();
       dismissSubstituteSheet();
     },
-    [
-      currentExerciseIndex,
-      dismissSubstituteSheet,
-      impact,
-      resetRestTimer,
-      substituteExercise,
-    ],
+    [currentExerciseIndex, dismissSubstituteSheet, impact, substituteExercise],
   );
 
   const handleConfirmSubstitute = useCallback(
@@ -195,13 +247,7 @@ export function useWorkout(
   );
 
   const openSubstituteSheet = useCallback(() => {
-    if (presentRafRef.current !== null) {
-      cancelAnimationFrame(presentRafRef.current);
-    }
-    presentRafRef.current = requestAnimationFrame(() => {
-      presentRafRef.current = null;
-      substituteSheetRef.current?.present();
-    });
+    presentSheet(substituteSheetRef, presentRafRef);
   }, [substituteSheetRef]);
 
   const handleSubstitutePress = useCallback(() => {
@@ -211,10 +257,9 @@ export function useWorkout(
   const handleGoToExercise = useCallback(
     (index: number) => {
       if (index < 0 || index >= totalExercises) return;
-      resetRestTimer();
       goToExercise(index);
     },
-    [goToExercise, totalExercises, resetRestTimer],
+    [goToExercise, totalExercises],
   );
 
   const handleConfirmSet = useCallback(async () => {
@@ -243,21 +288,41 @@ export function useWorkout(
           }
         : undefined;
 
+    const editingIndex = editingSetIndex;
+    // Start rest after every newly logged set; skip when editing an existing set.
+    const shouldStartRest = editingIndex === null;
     setIsLogging(true);
-    await logSet(
-      currentExercise.exerciseId,
-      reps,
-      computedWeightKg,
-      effort,
-      notes,
-      plateMeta,
-      currentExercise.unilateral ? setSide : undefined,
-    );
-    impact();
-    setIsLogging(false);
-    dismissLogSheet();
-
-    startRestTimer(defaultRestSeconds);
+    try {
+      if (editingIndex !== null) {
+        await updateSet(
+          currentExercise.exerciseId,
+          editingIndex,
+          reps,
+          computedWeightKg,
+          effort,
+          notes,
+          plateMeta,
+          currentExercise.unilateral ? setSide : undefined,
+        );
+      } else {
+        await logSet(
+          currentExercise.exerciseId,
+          reps,
+          computedWeightKg,
+          effort,
+          notes,
+          plateMeta,
+          currentExercise.unilateral ? setSide : undefined,
+        );
+      }
+      impact();
+      dismissLogSheet();
+      if (shouldStartRest) {
+        startRestTimer(defaultRestSeconds);
+      }
+    } finally {
+      setIsLogging(false);
+    }
   }, [
     repInput,
     computedWeightKg,
@@ -269,7 +334,9 @@ export function useWorkout(
     plates,
     weightUnit,
     setSide,
+    editingSetIndex,
     logSet,
+    updateSet,
     impact,
     dismissLogSheet,
     defaultRestSeconds,
@@ -280,25 +347,25 @@ export function useWorkout(
     async (setIndex: number) => {
       if (!currentExercise) return;
       light();
+      if (editingSetIndex === setIndex) {
+        dismissLogSheet();
+      }
       await deleteSet(currentExercise.exerciseId, setIndex);
-      resetRestTimer();
     },
-    [currentExercise, deleteSet, light, resetRestTimer],
+    [currentExercise, deleteSet, dismissLogSheet, editingSetIndex, light, resetRestTimer],
   );
 
   const handleSwipeNext = useCallback(() => {
     if (currentExerciseIndex < totalExercises - 1) {
-      resetRestTimer();
       goToExercise(currentExerciseIndex + 1);
     }
-  }, [currentExerciseIndex, totalExercises, goToExercise, resetRestTimer]);
+  }, [currentExerciseIndex, totalExercises, goToExercise]);
 
   const handleSwipePrev = useCallback(() => {
     if (currentExerciseIndex > 0) {
-      resetRestTimer();
       goToExercise(currentExerciseIndex - 1);
     }
-  }, [currentExerciseIndex, goToExercise, resetRestTimer]);
+  }, [currentExerciseIndex, goToExercise]);
 
   const handleFinish = useCallback(async (completedAt?: number) => {
     resetRestTimer();
@@ -348,6 +415,8 @@ export function useWorkout(
     overviewSheetVisible,
     substituteSheetVisible,
     substitutionLabel,
+    isEditingSet,
+    editingSetIndex,
     repInput,
     setRepInput,
     weightInput,
@@ -372,6 +441,7 @@ export function useWorkout(
     setNotesInput,
     isLogging,
     openLogSheet,
+    openEditSet,
     handleLogSheetDismiss,
     handleLogSheetChange,
     handleOverviewSheetChange,

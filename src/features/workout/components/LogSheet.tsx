@@ -53,6 +53,7 @@ interface Props {
   onChangeSide?: (side: 'left' | 'right') => void;
   // Control
   isLogging: boolean;
+  mode?: 'create' | 'edit';
   onConfirm: () => void;
   onClose: () => void;
 }
@@ -71,7 +72,9 @@ export function LogSheet({
   isUnilateral = false,
   setSide = 'left',
   onChangeSide,
-  isLogging, onConfirm, onClose,
+  isLogging,
+  mode = 'create',
+  onConfirm, onClose,
 }: Props) {
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<BottomSheetScrollViewMethods>(null);
@@ -251,6 +254,9 @@ export function LogSheet({
   const canConfirm = !isLogging && !isNaN(reps) && reps > 0 && weightValid;
 
   const platesDisplay = plateSummary.length > 0 ? formatPlatesPerSide(plates) : '0';
+  const isEditing = mode === 'edit';
+  const confirmLabel = isEditing ? 'Save Set' : 'Log Set';
+  const confirmAccessibility = isEditing ? 'Save set' : 'Log set';
 
   return (
     <BottomSheetModal
@@ -275,8 +281,17 @@ export function LogSheet({
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: contentPaddingBottom }}
       >
+        {isEditing ? (
+          <Text
+            className={`text-text-primary ${textRoles.modalTitle} mb-4 mt-2`}
+            accessibilityRole="header"
+          >
+            Edit Set
+          </Text>
+        ) : null}
+
         {isUnilateral && onChangeSide ? (
-          <View className="flex-row gap-2 mb-4">
+          <View className={`flex-row gap-2 mb-4 ${isEditing ? '' : 'mt-2'}`}>
             <TouchableOpacity
               className={`flex-1 py-2 rounded-lg items-center ${setSide === 'left' ? 'bg-accent' : 'bg-surface-2'}`}
               onPress={() => onChangeSide('left')}
@@ -309,7 +324,11 @@ export function LogSheet({
         ) : null}
 
         {/* Mode toggle */}
-        <View className="flex-row gap-2 mb-5 mt-2">
+        <View
+          className={`flex-row gap-2 mb-5 ${
+            isEditing || (isUnilateral && onChangeSide) ? '' : 'mt-2'
+          }`}
+        >
           <TouchableOpacity
             className={`flex-1 py-2 rounded-lg items-center ${weightMode === 'straight' ? 'bg-accent' : 'bg-surface-2'}`}
             onPress={() => weightMode !== 'straight' && onToggleWeightMode()}
@@ -549,10 +568,10 @@ export function LogSheet({
             className={`bg-accent rounded-lg py-4 items-center ${!canConfirm ? 'opacity-40' : ''}`}
             onPress={onConfirm}
             disabled={!canConfirm}
-            accessibilityLabel="Log set"
+            accessibilityLabel={confirmAccessibility}
             activeOpacity={0.7}
           >
-            <Text className={`text-surface-0 ${textRoles.buttonLabel}`}>Log Set</Text>
+            <Text className={`text-surface-0 ${textRoles.buttonLabel}`}>{confirmLabel}</Text>
           </TouchableOpacity>
         </View>
       </BottomSheetScrollView>

@@ -109,7 +109,7 @@ export function useDataBackup() {
                 } catch {
                   Alert.alert(
                     'Import failed',
-                    'Could not restore backup. Your existing data was not changed.',
+                    'Could not fully restore the backup. Some data may have been partially updated — try importing again.',
                   );
                 } finally {
                   setIsImporting(false);

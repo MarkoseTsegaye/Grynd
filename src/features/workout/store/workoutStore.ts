@@ -8,6 +8,15 @@ import { sortExercisesByPerformedOrder } from '../lib/sortExercisesByPerformedOr
 import type { WorkoutSession, LoggedExercise, LoggedSet } from '../types';
 import type { Split, Exercise } from '../../splits/types';
 
+function countLoggedSets(session: WorkoutSession): number {
+  return session.exercises.reduce((sum, e) => sum + e.sets.length, 0);
+}
+
+function earliestLoggedAt(sets: LoggedSet[]): number | undefined {
+  if (sets.length === 0) return undefined;
+  return Math.min(...sets.map((s) => s.loggedAt));
+}
+
 interface WorkoutState {
   session: WorkoutSession | null;
   currentExerciseIndex: number;
@@ -17,6 +26,16 @@ interface WorkoutState {
   startWorkout: (split: Split, exercises: Exercise[]) => Promise<void>;
   logSet: (
     exerciseId: string,
+    reps: number,
+    weightKg: number,
+    effort?: { toFailure: boolean; rpe?: number },
+    notes?: string,
+    plates?: LoggedSet['plates'],
+    side?: LoggedSet['side'],
+  ) => Promise<void>;
+  updateSet: (
+    exerciseId: string,
+    setIndex: number,
     reps: number,
     weightKg: number,
     effort?: { toFailure: boolean; rpe?: number },
@@ -45,7 +64,9 @@ export const useWorkoutStore = create<WorkoutState>()(
         try {
           const stored = await getActiveSession();
           const current = get().session;
-          if (current && !stored) {
+          // Keep in-memory session when storage is empty (write still in flight)
+          // or when memory has the same id with at least as many sets (stale read).
+          if (current && (!stored || (stored.id === current.id && countLoggedSets(current) >= countLoggedSets(stored)))) {
             set({ isLoaded: true, error: null });
             return;
           }
@@ -117,6 +138,34 @@ export const useWorkoutStore = create<WorkoutState>()(
         await setActiveSession(updated);
       },
 
+      updateSet: async (exerciseId, setIndex, reps, weightKg, effort, notes, plates, side) => {
+        const { session } = get();
+        if (!session) return;
+
+        const target = session.exercises.find((e) => e.exerciseId === exerciseId);
+        if (!target || setIndex < 0 || setIndex >= target.sets.length) return;
+
+        const exercises = session.exercises.map((e) => {
+          if (e.exerciseId !== exerciseId) return e;
+
+          const existing = e.sets[setIndex];
+          const nextSet: LoggedSet = {
+            reps,
+            weightKg,
+            loggedAt: existing.loggedAt,
+            ...(plates ? { plates } : {}),
+            ...(side ? { side } : {}),
+            ...(effort ? { effort } : {}),
+            ...(notes ? { notes } : {}),
+          };
+          const sets = e.sets.map((s, i) => (i === setIndex ? nextSet : s));
+          return { ...e, sets };
+        });
+        const updated = { ...session, exercises, currentExerciseIndex: get().currentExerciseIndex };
+        set({ session: updated });
+        await setActiveSession(updated);
+      },
+
       deleteSet: async (exerciseId, setIndex) => {
         const { session } = get();
         if (!session) return;
@@ -129,7 +178,8 @@ export const useWorkoutStore = create<WorkoutState>()(
             const { firstLoggedAt: _, ...rest } = e;
             return { ...rest, sets };
           }
-          return { ...e, sets };
+          const firstLoggedAt = earliestLoggedAt(sets);
+          return { ...e, sets, ...(firstLoggedAt !== undefined ? { firstLoggedAt } : {}) };
         });
         const updated = { ...session, exercises, currentExerciseIndex: get().currentExerciseIndex };
         set({ session: updated });
@@ -182,13 +232,18 @@ export const useWorkoutStore = create<WorkoutState>()(
           completedAt: completedAt ?? Date.now(),
           exercises: sortExercisesByPerformedOrder(session.exercises),
         };
-        // BUG-01 fix: ensure write completes before navigation
+        // Persist history and clear active before clearing memory so a failed
+        // cycle advance cannot leave a ghost in-progress session.
         await saveSession(completed);
         await clearActiveSession();
-        if (usePrefsStore.getState().autoAdvanceCycle) {
-          await useCycleStore.getState().advanceCycle();
-        }
         set({ session: null, currentExerciseIndex: 0 });
+        try {
+          if (usePrefsStore.getState().autoAdvanceCycle) {
+            await useCycleStore.getState().advanceCycle();
+          }
+        } catch (err) {
+          set({ error: String(err) });
+        }
       },
 
       abandonWorkout: async () => {

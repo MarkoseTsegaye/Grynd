@@ -13,7 +13,7 @@ import { textRoles } from '../../src/shared/theme/typography';
 
 export default function ManageSplitScreen() {
   const { splitId } = useLocalSearchParams<{ splitId: string }>();
-  const { reorderExercises } = useSplitsStore();
+  const { reorderExercises, isLoaded } = useSplitsStore();
   const editSheetRef = useRef<BottomSheetModal>(null);
   const {
     split,
@@ -40,6 +40,14 @@ export default function ManageSplitScreen() {
     },
     [setEditingExercise],
   );
+
+  if (!isLoaded) {
+    return (
+      <View className="flex-1 bg-surface-0 items-center justify-center">
+        <Text className={`text-text-secondary ${textRoles.body}`}>Loading...</Text>
+      </View>
+    );
+  }
 
   if (!split) {
     return (
