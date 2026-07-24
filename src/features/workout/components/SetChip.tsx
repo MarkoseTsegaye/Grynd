@@ -9,6 +9,7 @@ import type { LoggedSet } from '../types';
 interface Props {
   setNumber: number;
   set: LoggedSet;
+  onPress: () => void;
   onDelete: () => void;
 }
 
@@ -32,19 +33,20 @@ function EffortBadge({ effort }: { effort: NonNullable<LoggedSet['effort']> }) {
   );
 }
 
-export function SetChip({ setNumber, set, onDelete }: Props) {
+export function SetChip({ setNumber, set, onPress, onDelete }: Props) {
   const { weightUnit } = usePrefsStore();
   const { weightText, unitLabel } = formatSetWeightDisplay(set, weightUnit);
   const weightAccessibility = unitLabel ? `${weightText} ${unitLabel}` : weightText;
 
   return (
-    <TouchableOpacity
-      className="bg-surface-2 rounded px-3 py-2 mr-2 mb-2 flex-row items-center gap-2"
-      onPress={onDelete}
-      accessibilityLabel={`Set ${setNumber}, ${weightAccessibility} × ${set.reps} reps — tap to delete`}
-      activeOpacity={0.6}
-    >
-      <View className="flex-row items-center flex-wrap gap-1">
+    <View className="bg-surface-2 rounded px-3 py-2 mr-2 mb-2 flex-row items-center gap-2 self-start">
+      <TouchableOpacity
+        className="flex-row items-center flex-wrap gap-1"
+        onPress={onPress}
+        accessibilityLabel={`Set ${setNumber}, ${weightAccessibility} × ${set.reps} reps — tap to edit`}
+        accessibilityRole="button"
+        activeOpacity={0.6}
+      >
         <Text className={`text-text-secondary ${textRoles.metric}`}>Set {setNumber} — </Text>
         <Text className={`text-text-primary ${textRoles.metricBold}`}>{weightText}</Text>
         {unitLabel ? (
@@ -62,8 +64,16 @@ export function SetChip({ setNumber, set, onDelete }: Props) {
             </Text>
           </View>
         ) : null}
-      </View>
-      <Icon name="close-circle" size={16} color="danger" />
-    </TouchableOpacity>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={onDelete}
+        accessibilityLabel={`Delete set ${setNumber}`}
+        accessibilityRole="button"
+        hitSlop={8}
+        activeOpacity={0.6}
+      >
+        <Icon name="close-circle" size={16} color="danger" />
+      </TouchableOpacity>
+    </View>
   );
 }

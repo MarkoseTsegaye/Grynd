@@ -46,12 +46,21 @@ function endOfLocalDay(date: Date | number): number {
 
 /**
  * Converts a picker calendar day to completedAt ms.
- * Uses end-of-day in local timezone; clamps to startedAt when the selected
- * day is before the workout start day or end-of-day would precede startedAt.
+ * Uses wall-clock time for "today" so two finishes on the same day stay ordered;
+ * otherwise end-of-day in local timezone. Clamps to startedAt when the selected
+ * day is before the workout start day or the computed time would precede startedAt.
  */
-export function dateToCompletedAtMs(selected: Date, startedAt: number): number {
+export function dateToCompletedAtMs(
+  selected: Date,
+  startedAt: number,
+  now: number = Date.now(),
+): number {
   if (isBeforeCalendarDay(selected, startedAt)) {
     return startedAt;
+  }
+  // Same calendar day as now → unique wall-clock completedAt (avoids end-of-day collisions).
+  if (compareCalendarDays(selected, now) === 0) {
+    return Math.max(now, startedAt);
   }
   const endOfSelected = endOfLocalDay(selected);
   return Math.max(endOfSelected, startedAt);

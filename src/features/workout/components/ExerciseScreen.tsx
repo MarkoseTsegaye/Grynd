@@ -18,6 +18,7 @@ interface Props {
   isLastExercise: boolean;
   previousExercise: LoggedExercise | null;
   onOpenLog: () => void;
+  onEditSet: (index: number) => void;
   onDeleteSet: (index: number) => void;
   onFinish: () => void;
   onCancel: () => void;
@@ -70,7 +71,7 @@ function DotProgress({ current, total }: { current: number; total: number }) {
 
 export function ExerciseScreen({
   exercise, exerciseIndex, totalExercises, isLastExercise, previousExercise,
-  onOpenLog, onDeleteSet, onFinish, onCancel, onOpenOverview, overviewDisabled,
+  onOpenLog, onEditSet, onDeleteSet, onFinish, onCancel, onOpenOverview, overviewDisabled,
   onSubstitute, substitutionLabel,
   renderSwipeable,
   restTimerStatus, restTimerRemainingMs, restTimerVisible,
@@ -183,6 +184,7 @@ export function ExerciseScreen({
               key={`${set.loggedAt}-${i}`}
               setNumber={i + 1}
               set={set}
+              onPress={() => onEditSet(i)}
               onDelete={() => onDeleteSet(i)}
             />
           ))}

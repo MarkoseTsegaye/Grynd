@@ -114,8 +114,12 @@ export async function getPreviousPerformance(
       .sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0));
 
     for (const session of completed) {
-      const exercise = session.exercises.find((e) => e.exerciseId === exerciseId);
-      if (exercise) return exercise;
+      const exercise = session.exercises.find(
+        (e) =>
+          e.exerciseId === exerciseId ||
+          e.substitutedForExerciseId === exerciseId,
+      );
+      if (exercise && exercise.sets.length > 0) return exercise;
     }
     return null;
   } catch {
