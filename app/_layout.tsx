@@ -52,7 +52,14 @@ export default function RootLayout() {
         <StatusBar style="light" />
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#0A0A0A' } }}>
           <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="workout/[splitId]" options={{ animation: 'slide_from_bottom' }} />
+          <Stack.Screen
+            name="workout/[splitId]"
+            options={{
+              animation: 'slide_from_bottom',
+              gestureEnabled: false,
+              headerBackButtonMenuEnabled: false,
+            }}
+          />
           <Stack.Screen
             name="splits/[splitId]"
             options={{ animation: 'slide_from_right', ...stackHeader, headerTitle: 'Manage Split' }}

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity, Alert, Dimensions, AppState, BackHandler } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useNavigation } from '@react-navigation/native';
+import { usePreventRemove } from '@react-navigation/native';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
@@ -38,12 +38,12 @@ type BootstrapState = 'loading' | 'ready' | 'error' | 'empty';
 export default function WorkoutScreen() {
   const { splitId } = useLocalSearchParams<{ splitId: string }>();
   const router = useRouter();
-  const navigation = useNavigation();
   const { startWorkout, abandonWorkout, leaveWorkout, loadActiveSession, resumeWorkoutEntry } =
     useWorkoutStore();
   const { loadData } = useSplitsStore();
   const [bootstrapState, setBootstrapState] = useState<BootstrapState>('loading');
   const [bootstrapMessage, setBootstrapMessage] = useState<string | null>(null);
+  const [allowLeave, setAllowLeave] = useState(false);
 
   const logSheetRef = useRef<BottomSheetModal>(null);
   const overviewSheetRef = useRef<BottomSheetModal>(null);
@@ -92,7 +92,7 @@ export default function WorkoutScreen() {
 
   // Cancel sheet
   const cancelSheetRef = useRef<BottomSheetModal>(null);
-  const isLeavingIntentionallyRef = useRef(false);
+  const pendingLeaveRef = useRef<(() => void) | null>(null);
   const cancelSnapPoints = useMemo(() => ['38%'], []);
   const [finishSheetVisible, setFinishSheetVisible] = useState(false);
   const sheetBlocksSwipe =
@@ -104,6 +104,26 @@ export default function WorkoutScreen() {
     [],
   );
 
+  const shouldPreventLeave =
+    !allowLeave && bootstrapState === 'ready' && !!session && session.pausedAt == null;
+
+  usePreventRemove(shouldPreventLeave, () => {
+    cancelSheetRef.current?.present();
+  });
+
+  const beginIntentionalLeave = useCallback((navigate: () => void) => {
+    pendingLeaveRef.current = navigate;
+    setAllowLeave(true);
+  }, []);
+
+  useEffect(() => {
+    if (!allowLeave) return;
+    const pending = pendingLeaveRef.current;
+    if (!pending) return;
+    pendingLeaveRef.current = null;
+    pending();
+  }, [allowLeave]);
+
   // Swipe hint
   const [showSwipeHint, setShowSwipeHint] = useState(false);
   const hintOpacity = useSharedValue(0);
@@ -111,7 +131,7 @@ export default function WorkoutScreen() {
 
   useEffect(() => {
     let cancelled = false;
-    isLeavingIntentionallyRef.current = false;
+    setAllowLeave(false);
 
     const startWorkoutForSplit = async () => {
       const { getSplitById, getExercisesForSplit } = useSplitsStore.getState();
@@ -214,28 +234,15 @@ export default function WorkoutScreen() {
   }, [splitId, loadData, loadActiveSession, startWorkout, abandonWorkout, resumeWorkoutEntry, router]);
 
   useEffect(() => {
-    if (bootstrapState !== 'ready' || !session || session.pausedAt != null) return;
-
-    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
-      if (isLeavingIntentionallyRef.current) return;
-      e.preventDefault();
-      cancelSheetRef.current?.present();
-    });
-
-    return unsubscribe;
-  }, [navigation, bootstrapState, session]);
-
-  useEffect(() => {
-    if (bootstrapState !== 'ready' || !session || session.pausedAt != null) return;
+    if (!shouldPreventLeave) return;
 
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (isLeavingIntentionallyRef.current) return false;
       cancelSheetRef.current?.present();
       return true;
     });
 
     return () => subscription.remove();
-  }, [bootstrapState, session]);
+  }, [shouldPreventLeave]);
 
   // Show swipe hint on first workout ever
   useEffect(() => {
@@ -336,10 +343,11 @@ export default function WorkoutScreen() {
       await useHistoryStore.getState().loadSessions();
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       finishSheetRef.current?.dismiss();
-      isLeavingIntentionallyRef.current = true;
-      router.replace(`/history/${sessionId}`);
+      beginIntentionalLeave(() => {
+        router.replace(`/history/${sessionId}`);
+      });
     },
-    [handleFinish, router, session?.id],
+    [beginIntentionalLeave, handleFinish, router, session?.id],
   );
 
   const panGesture = useMemo(
@@ -447,10 +455,13 @@ export default function WorkoutScreen() {
     cancelSheetRef.current?.dismiss();
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     resetRestTimer();
-    isLeavingIntentionallyRef.current = true;
-    await abandonWorkout();
-    router.replace('/(tabs)');
-  }, [abandonWorkout, router, resetRestTimer]);
+    beginIntentionalLeave(() => {
+      void (async () => {
+        await abandonWorkout();
+        router.replace('/(tabs)');
+      })();
+    });
+  }, [abandonWorkout, beginIntentionalLeave, router, resetRestTimer]);
 
   const handleLeaveWorkout = useCallback(async () => {
     cancelSheetRef.current?.dismiss();
@@ -460,10 +471,13 @@ export default function WorkoutScreen() {
     finishSheetRef.current?.dismiss();
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     resetRestTimer();
-    isLeavingIntentionallyRef.current = true;
-    await leaveWorkout();
-    router.replace('/(tabs)');
-  }, [leaveWorkout, router, resetRestTimer]);
+    beginIntentionalLeave(() => {
+      void (async () => {
+        await leaveWorkout();
+        router.replace('/(tabs)');
+      })();
+    });
+  }, [beginIntentionalLeave, leaveWorkout, router, resetRestTimer]);
 
   const handleKeepGoing = useCallback(() => {
     cancelSheetRef.current?.dismiss();
