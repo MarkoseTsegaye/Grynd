@@ -76,9 +76,125 @@ function webPickJsonFile(): Promise<File | null> {
   });
 }
 
+/**
+ * iOS Safari — and every iOS browser, including installed PWAs — silently
+ * suppresses window.alert / window.confirm / window.prompt for the lifetime of
+ * a page that has ever called history.pushState. Expo Router calls pushState
+ * on every navigation, so these dialogs never appear on our web build.
+ * confirm() returns false without asking; alert() does nothing at all.
+ *
+ * We render a small DOM overlay instead so the dialogs are real elements the
+ * browser can't hide. Kept in plain DOM (not React) so the hook stays
+ * self-contained and callers don't need modal state or extra JSX.
+ */
+type WebDialogButton = {
+  label: string;
+  variant: 'default' | 'destructive';
+  value: boolean;
+};
+
+function showWebDialog(
+  title: string,
+  message: string | undefined,
+  buttons: WebDialogButton[],
+): Promise<boolean> {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', title);
+    Object.assign(overlay.style, {
+      position: 'fixed',
+      inset: '0',
+      background: 'rgba(0,0,0,0.7)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '24px',
+      zIndex: '99999',
+      fontFamily:
+        'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    });
+
+    const card = document.createElement('div');
+    Object.assign(card.style, {
+      background: '#141414',
+      color: '#F0EDE8',
+      borderRadius: '14px',
+      padding: '20px',
+      maxWidth: '360px',
+      width: '100%',
+      boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+    });
+
+    const titleEl = document.createElement('div');
+    titleEl.textContent = title;
+    Object.assign(titleEl.style, {
+      fontSize: '17px',
+      fontWeight: '700',
+      marginBottom: message ? '8px' : '20px',
+    });
+    card.appendChild(titleEl);
+
+    if (message) {
+      const messageEl = document.createElement('div');
+      messageEl.textContent = message;
+      Object.assign(messageEl.style, {
+        fontSize: '14px',
+        color: '#8A8580',
+        lineHeight: '1.4',
+        marginBottom: '20px',
+      });
+      card.appendChild(messageEl);
+    }
+
+    const row = document.createElement('div');
+    Object.assign(row.style, {
+      display: 'flex',
+      gap: '8px',
+      justifyContent: 'flex-end',
+    });
+
+    let settled = false;
+    const close = (value: boolean) => {
+      if (settled) return;
+      settled = true;
+      overlay.remove();
+      resolve(value);
+    };
+
+    buttons.forEach((btn) => {
+      const el = document.createElement('button');
+      el.type = 'button';
+      el.textContent = btn.label;
+      Object.assign(el.style, {
+        padding: '10px 16px',
+        borderRadius: '8px',
+        border: 'none',
+        fontSize: '15px',
+        fontWeight: '600',
+        cursor: 'pointer',
+        background: btn.variant === 'destructive' ? '#FF4C4C' : '#1F1F1F',
+        color: btn.variant === 'destructive' ? '#0A0A0A' : '#F0EDE8',
+      });
+      el.addEventListener('click', () => close(btn.value));
+      row.appendChild(el);
+    });
+    card.appendChild(row);
+
+    overlay.addEventListener('click', (e) => {
+      // Backdrop tap dismisses like Cancel.
+      if (e.target === overlay) close(false);
+    });
+
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+  });
+}
+
 function notify(title: string, message?: string): void {
   if (isWeb) {
-    window.alert(message ? `${title}\n\n${message}` : title);
+    void showWebDialog(title, message, [{ label: 'OK', variant: 'default', value: true }]);
   } else {
     Alert.alert(title, message);
   }
@@ -86,7 +202,10 @@ function notify(title: string, message?: string): void {
 
 function confirmDestructive(title: string, message: string): Promise<boolean> {
   if (isWeb) {
-    return Promise.resolve(window.confirm(`${title}\n\n${message}`));
+    return showWebDialog(title, message, [
+      { label: 'Cancel', variant: 'default', value: false },
+      { label: 'Import', variant: 'destructive', value: true },
+    ]);
   }
   return new Promise((resolve) => {
     Alert.alert(title, message, [
