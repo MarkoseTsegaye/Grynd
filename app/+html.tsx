@@ -28,10 +28,27 @@ export default function Root({ children }: PropsWithChildren) {
         {/* Paint the html/body dark so the env(safe-area-inset-*) regions
             around the viewport (visible now that we opted into
             viewport-fit=cover) blend into the tab bar / status bar area
-            instead of exposing the browser's default white. */}
+            instead of exposing the browser's default white.
+            The pseudo-element paints only the bottom safe-area strip with the
+            tab bar's surface-1 color so the ~34 px iOS home-indicator gap
+            visually blends into the tab bar (which react-navigation on web
+            positions above that safe area with its own offset). The top
+            safe area keeps the surface-0 body color so the screen header
+            still reads as content, not tab bar. */}
         <style
           dangerouslySetInnerHTML={{
-            __html: 'html,body{background-color:#0A0A0A;}',
+            __html: [
+              'html,body{background-color:#0A0A0A;}',
+              'body::after{',
+              'content:"";',
+              'position:fixed;',
+              'left:0;right:0;bottom:0;',
+              'height:env(safe-area-inset-bottom);',
+              'background-color:#141414;',
+              'pointer-events:none;',
+              'z-index:0;',
+              '}',
+            ].join(''),
           }}
         />
       </head>

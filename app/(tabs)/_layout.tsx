@@ -1,20 +1,16 @@
 import React from 'react';
-import { Platform } from 'react-native';
 import { Tabs } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { colors } from '../../src/shared/theme/colors';
 import { typography } from '../../src/shared/theme/typography';
 
 export default function TabsLayout() {
-  const insets = useSafeAreaInsets();
-  // On web we need enough bottom padding to clear the iOS home indicator, but
-  // Apple's env(safe-area-inset-bottom) reserves ~34 px which is much larger
-  // than the indicator actually needs and leaves a visibly tall tab bar. Cap
-  // it at 10 px — enough clearance so labels don't touch the indicator, small
-  // enough that the tab bar feels compact and edge-to-edge. Native tab bars
-  // already handle their own insets, so no override on native.
-  const bottomInset = Platform.OS === 'web' ? Math.min(insets.bottom, 10) : 0;
+  // Web tab bar keeps its natural compact size — labels render fully at the
+  // default height. The safe-area strip below the tab bar (visible on iOS
+  // PWAs since we opted into viewport-fit=cover) is painted surface-1 by the
+  // body::after pseudo-element in +html.tsx, so the tab bar visually blends
+  // into the home-indicator area without needing to grow. On native,
+  // react-navigation handles its own safe-area insets.
 
   return (
     <Tabs
@@ -23,9 +19,6 @@ export default function TabsLayout() {
         tabBarStyle: {
           backgroundColor: colors['surface-1'],
           borderTopColor: colors['surface-2'],
-          ...(Platform.OS === 'web'
-            ? { height: 49 + bottomInset, paddingBottom: bottomInset }
-            : null),
         },
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors['text-secondary'],
