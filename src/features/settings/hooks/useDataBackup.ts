@@ -40,23 +40,35 @@ function webPickJsonFile(): Promise<File | null> {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'application/json,.json';
-    input.style.display = 'none';
+    // iOS Safari refuses to open the picker for inputs with `display: none`
+    // (or any input outside the layout tree). Position it off-screen instead
+    // so the layout engine still considers it interactable.
+    input.style.position = 'fixed';
+    input.style.left = '-9999px';
+    input.style.top = '0';
+    input.style.opacity = '0';
+    input.style.pointerEvents = 'none';
     let settled = false;
+    const cleanup = () => {
+      window.removeEventListener('focus', onFocus);
+      input.remove();
+    };
     input.addEventListener('change', () => {
       settled = true;
-      resolve(input.files?.[0] ?? null);
-      input.remove();
+      const file = input.files?.[0] ?? null;
+      cleanup();
+      resolve(file);
     });
-    // Cancel isn't a real event; fall back so the promise doesn't leak if the
-    // user closes the picker. The `focus` handler fires when the dialog closes.
+    // Cancel isn't a real DOM event on file inputs; fall back on the window
+    // regaining focus after the picker closes so the promise never leaks.
     const onFocus = () => {
-      window.removeEventListener('focus', onFocus);
+      // Give `change` a beat to fire first on the happy path.
       setTimeout(() => {
         if (!settled) {
+          cleanup();
           resolve(null);
-          input.remove();
         }
-      }, 300);
+      }, 500);
     };
     window.addEventListener('focus', onFocus);
     document.body.appendChild(input);

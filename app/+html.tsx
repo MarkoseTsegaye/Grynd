@@ -25,6 +25,15 @@ export default function Root({ children }: PropsWithChildren) {
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="theme-color" content="#0A0A0A" />
         <ScrollViewStyleReset />
+        {/* Paint the html/body dark so the env(safe-area-inset-*) regions
+            around the viewport (visible now that we opted into
+            viewport-fit=cover) blend into the tab bar / status bar area
+            instead of exposing the browser's default white. */}
+        <style
+          dangerouslySetInnerHTML={{
+            __html: 'html,body{background-color:#0A0A0A;}',
+          }}
+        />
       </head>
       <body>{children}</body>
     </html>
