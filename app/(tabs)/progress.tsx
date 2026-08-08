@@ -25,7 +25,7 @@ export default function ProgressTabScreen() {
     <View className="flex-1 bg-surface-0">
       <View
         className="px-5 pb-4"
-        style={{ paddingTop: Platform.OS === 'web' ? insets.top + 16 : 56 }}
+        style={{ paddingTop: Platform.OS === 'web' ? Math.max(insets.top + 8, 56) : 56 }}
       >
         <Text className={`text-text-primary ${textRoles.screenTitle}`}>Progress</Text>
       </View>

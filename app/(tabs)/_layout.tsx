@@ -8,9 +8,12 @@ import { typography } from '../../src/shared/theme/typography';
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
-  // Native tab bars already inset for the home indicator; web needs it explicitly
-  // so the label row doesn't get clipped by env(safe-area-inset-bottom).
-  const bottomInset = Platform.OS === 'web' ? insets.bottom : 0;
+  // Native tab bars already inset for the home indicator. On web we add both
+  // the env(safe-area-inset-bottom) value AND a small minimum so the label row
+  // clears the iOS "peekaboo" home indicator even when the browser doesn't
+  // report a real inset (e.g. Safari in tab mode without viewport-fit=cover
+  // being honored on that page).
+  const bottomInset = Platform.OS === 'web' ? Math.max(insets.bottom, 12) : 0;
 
   return (
     <Tabs
