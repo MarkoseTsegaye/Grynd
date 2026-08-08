@@ -35,6 +35,24 @@ function webDownloadJson(filename: string, contents: string): void {
   URL.revokeObjectURL(url);
 }
 
+/**
+ * Read a File as text via FileReader instead of Blob.text(). Blob.text() is
+ * modern (Safari 14+) and has been observed to hang indefinitely inside iOS
+ * PWAs without resolving or rejecting — freezing the whole import flow with
+ * no error to catch. FileReader is older, universally supported, and reports
+ * failure through onerror.
+ */
+function webReadFileAsText(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener('load', () => resolve(String(reader.result ?? '')));
+    reader.addEventListener('error', () =>
+      reject(reader.error ?? new Error('FileReader failed')),
+    );
+    reader.readAsText(file);
+  });
+}
+
 function webPickJsonFile(): Promise<File | null> {
   return new Promise((resolve) => {
     const input = document.createElement('input');
@@ -278,7 +296,7 @@ export function useDataBackup() {
       if (isWeb) {
         const file = await webPickJsonFile();
         if (!file) return;
-        raw = await file.text();
+        raw = await webReadFileAsText(file);
       } else {
         const result = await DocumentPicker.getDocumentAsync({
           type: 'application/json',
@@ -321,8 +339,11 @@ export function useDataBackup() {
       } finally {
         setIsImporting(false);
       }
-    } catch {
-      notify('Import failed', 'Could not read the selected file.');
+    } catch (err) {
+      // Surface the actual error message so a silent hang or unexpected
+      // failure produces a visible dialog instead of nothing.
+      const detail = err instanceof Error ? err.message : String(err);
+      notify('Import failed', detail || 'Could not read the selected file.');
     }
   }, [isExporting, isImporting, reloadStores]);
 
