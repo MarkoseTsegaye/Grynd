@@ -8,12 +8,13 @@ import { typography } from '../../src/shared/theme/typography';
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
-  // Native tab bars already inset for the home indicator. On web we add both
-  // the env(safe-area-inset-bottom) value AND a small minimum so the label row
-  // clears the iOS "peekaboo" home indicator even when the browser doesn't
-  // report a real inset (e.g. Safari in tab mode without viewport-fit=cover
-  // being honored on that page).
-  const bottomInset = Platform.OS === 'web' ? Math.max(insets.bottom, 12) : 0;
+  // On web we need enough bottom padding to clear the iOS home indicator, but
+  // Apple's env(safe-area-inset-bottom) reserves ~34 px which is much larger
+  // than the indicator actually needs and leaves a visibly tall tab bar. Cap
+  // it at 10 px — enough clearance so labels don't touch the indicator, small
+  // enough that the tab bar feels compact and edge-to-edge. Native tab bars
+  // already handle their own insets, so no override on native.
+  const bottomInset = Platform.OS === 'web' ? Math.min(insets.bottom, 10) : 0;
 
   return (
     <Tabs
@@ -22,8 +23,8 @@ export default function TabsLayout() {
         tabBarStyle: {
           backgroundColor: colors['surface-1'],
           borderTopColor: colors['surface-2'],
-          ...(bottomInset > 0
-            ? { height: 56 + bottomInset, paddingBottom: bottomInset }
+          ...(Platform.OS === 'web'
+            ? { height: 49 + bottomInset, paddingBottom: bottomInset }
             : null),
         },
         tabBarActiveTintColor: colors.accent,
