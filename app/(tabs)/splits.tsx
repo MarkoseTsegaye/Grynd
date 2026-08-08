@@ -1,5 +1,6 @@
 import React, { useState, useRef, useMemo, useCallback } from 'react';
-import { View, Text, TextInput, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import DraggableFlatList, { ScaleDecorator } from 'react-native-draggable-flatlist';
 import { BottomSheetModal, BottomSheetView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
@@ -17,6 +18,7 @@ const FLOATING_CTA_GAP = 12;
 
 export default function SplitsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { splits, isLoaded } = useSplitsList();
   const { getExercisesForSplit, reorderSplits, deleteSplit } = useSplitsStore();
   const { name, setName, canSubmit, isSubmitting, handleSubmit } = useCreateSplit(
@@ -88,7 +90,10 @@ export default function SplitsScreen() {
 
   return (
     <View className="flex-1 bg-surface-0">
-      <View className="px-5 pt-14 pb-4">
+      <View
+        className="px-5 pb-4"
+        style={{ paddingTop: Platform.OS === 'web' ? insets.top + 16 : 56 }}
+      >
         <Text className={`text-text-primary ${textRoles.screenTitle}`}>Splits</Text>
       </View>
 

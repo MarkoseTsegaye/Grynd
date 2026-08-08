@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { View, Text, TouchableOpacity, FlatList } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useSplitsList } from '../../src/features/splits';
 import { useSplitsStore } from '../../src/features/splits';
@@ -8,6 +9,7 @@ import { textRoles } from '../../src/shared/theme/typography';
 
 export default function ProgressTabScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { splits, isLoaded } = useSplitsList();
   const { getExercisesForSplit, loadData } = useSplitsStore();
 
@@ -21,7 +23,10 @@ export default function ProgressTabScreen() {
 
   return (
     <View className="flex-1 bg-surface-0">
-      <View className="px-5 pt-14 pb-4">
+      <View
+        className="px-5 pb-4"
+        style={{ paddingTop: Platform.OS === 'web' ? insets.top + 16 : 56 }}
+      >
         <Text className={`text-text-primary ${textRoles.screenTitle}`}>Progress</Text>
       </View>
 

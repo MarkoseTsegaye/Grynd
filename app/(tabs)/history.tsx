@@ -1,6 +1,7 @@
 import React, { useRef, useCallback } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, Platform } from 'react-native';
 import { FlatList } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Swipeable } from 'react-native-gesture-handler';
 import * as Haptics from 'expo-haptics';
@@ -10,6 +11,7 @@ import { textRoles } from '../../src/shared/theme/typography';
 
 export default function HistoryScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { sessions, isLoaded, deleteSession } = useHistory();
   const currentOpenRef = useRef<Swipeable | null>(null);
 
@@ -44,7 +46,10 @@ export default function HistoryScreen() {
   if (sessions.length === 0) {
     return (
       <View className="flex-1 bg-surface-0">
-        <View className="px-5 pt-14 pb-4 flex-row items-center justify-between">
+        <View
+          className="px-5 pb-4 flex-row items-center justify-between"
+          style={{ paddingTop: Platform.OS === 'web' ? insets.top + 16 : 56 }}
+        >
           <Text className={`text-text-primary ${textRoles.screenTitle}`}>History</Text>
           <TouchableOpacity
             onPress={() => router.push('/progress/volume')}
@@ -68,7 +73,10 @@ export default function HistoryScreen() {
 
   return (
     <View className="flex-1 bg-surface-0">
-      <View className="px-5 pt-14 pb-4 flex-row items-center justify-between">
+      <View
+        className="px-5 pb-4 flex-row items-center justify-between"
+        style={{ paddingTop: Platform.OS === 'web' ? insets.top + 16 : 56 }}
+      >
         <Text className={`text-text-primary ${textRoles.screenTitle}`}>History</Text>
         <TouchableOpacity
           onPress={() => router.push('/progress/volume')}

@@ -1,5 +1,6 @@
 import React, { useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, Switch, Alert, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, Switch, Alert, ScrollView, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCycleStore } from '../../src/features/splits/store/cycleStore';
@@ -35,6 +36,7 @@ function getCycleSummary(cycle: WorkoutCycle | null, splits: Split[]): string {
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { cycle, isLoaded: cycleLoaded, loadCycle, resetCyclePosition } = useCycleStore();
   const { splits, isLoaded: splitsLoaded, loadData } = useSplitsStore();
   const {
@@ -88,7 +90,10 @@ export default function SettingsScreen() {
 
   return (
     <View className="flex-1 bg-surface-0">
-      <View className="px-5 pt-14 pb-4">
+      <View
+        className="px-5 pb-4"
+        style={{ paddingTop: Platform.OS === 'web' ? insets.top + 16 : 56 }}
+      >
         <Text className={`text-text-primary ${textRoles.screenTitle}`}>Settings</Text>
       </View>
 
