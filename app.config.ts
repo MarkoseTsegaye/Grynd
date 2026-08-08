@@ -23,6 +23,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     softwareKeyboardLayoutMode: 'resize',
   },
   scheme: 'workout-logger',
+  web: {
+    bundler: 'metro',
+    output: 'static',
+    favicon: './assets/favicon.png',
+  },
   extra: {
     appEnv: process.env.APP_ENV ?? 'development',
   },
