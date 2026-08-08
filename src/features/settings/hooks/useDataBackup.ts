@@ -41,14 +41,29 @@ function webDownloadJson(filename: string, contents: string): void {
  * PWAs without resolving or rejecting — freezing the whole import flow with
  * no error to catch. FileReader is older, universally supported, and reports
  * failure through onerror.
+ *
+ * A 10-second timeout guards against a hang so an unexpected freeze surfaces
+ * as a visible error rather than another silent stall.
  */
 function webReadFileAsText(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.addEventListener('load', () => resolve(String(reader.result ?? '')));
-    reader.addEventListener('error', () =>
-      reject(reader.error ?? new Error('FileReader failed')),
-    );
+    const timeoutId = window.setTimeout(() => {
+      try {
+        reader.abort();
+      } catch {
+        /* empty */
+      }
+      reject(new Error('Timed out reading file after 10 seconds.'));
+    }, 10_000);
+    reader.addEventListener('load', () => {
+      window.clearTimeout(timeoutId);
+      resolve(String(reader.result ?? ''));
+    });
+    reader.addEventListener('error', () => {
+      window.clearTimeout(timeoutId);
+      reject(reader.error ?? new Error('FileReader failed'));
+    });
     reader.readAsText(file);
   });
 }
@@ -67,25 +82,25 @@ function webPickJsonFile(): Promise<File | null> {
     input.style.opacity = '0';
     input.style.pointerEvents = 'none';
     let settled = false;
-    const cleanup = () => {
+    const settle = (file: File | null) => {
+      if (settled) return;
+      settled = true;
       window.removeEventListener('focus', onFocus);
       input.remove();
+      resolve(file);
     };
     input.addEventListener('change', () => {
-      settled = true;
-      const file = input.files?.[0] ?? null;
-      cleanup();
-      resolve(file);
+      settle(input.files?.[0] ?? null);
     });
-    // Cancel isn't a real DOM event on file inputs; fall back on the window
-    // regaining focus after the picker closes so the promise never leaks.
+    // The `change` event is not reliably fired for file inputs inside iOS
+    // standalone PWAs — the picker opens, the user selects a file, the picker
+    // closes, and the handler simply never runs. When window focus returns,
+    // peek at input.files anyway: on iOS PWA the File object is still attached
+    // to the input even when the event fires. Only fall back to `null` (real
+    // cancel) if input.files is genuinely empty after focus returns.
     const onFocus = () => {
-      // Give `change` a beat to fire first on the happy path.
-      setTimeout(() => {
-        if (!settled) {
-          cleanup();
-          resolve(null);
-        }
+      window.setTimeout(() => {
+        settle(input.files?.[0] ?? null);
       }, 500);
     };
     window.addEventListener('focus', onFocus);
