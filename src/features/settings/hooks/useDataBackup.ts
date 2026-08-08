@@ -68,47 +68,6 @@ function webReadFileAsText(file: File): Promise<string> {
   });
 }
 
-function webPickJsonFile(): Promise<File | null> {
-  return new Promise((resolve) => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'application/json,.json';
-    // iOS Safari refuses to open the picker for inputs with `display: none`
-    // (or any input outside the layout tree). Position it off-screen instead
-    // so the layout engine still considers it interactable.
-    input.style.position = 'fixed';
-    input.style.left = '-9999px';
-    input.style.top = '0';
-    input.style.opacity = '0';
-    input.style.pointerEvents = 'none';
-    let settled = false;
-    const settle = (file: File | null) => {
-      if (settled) return;
-      settled = true;
-      window.removeEventListener('focus', onFocus);
-      input.remove();
-      resolve(file);
-    };
-    input.addEventListener('change', () => {
-      settle(input.files?.[0] ?? null);
-    });
-    // The `change` event is not reliably fired for file inputs inside iOS
-    // standalone PWAs — the picker opens, the user selects a file, the picker
-    // closes, and the handler simply never runs. When window focus returns,
-    // peek at input.files anyway: on iOS PWA the File object is still attached
-    // to the input even when the event fires. Only fall back to `null` (real
-    // cancel) if input.files is genuinely empty after focus returns.
-    const onFocus = () => {
-      window.setTimeout(() => {
-        settle(input.files?.[0] ?? null);
-      }, 500);
-    };
-    window.addEventListener('focus', onFocus);
-    document.body.appendChild(input);
-    input.click();
-  });
-}
-
 /**
  * iOS Safari — and every iOS browser, including installed PWAs — silently
  * suppresses window.alert / window.confirm / window.prompt for the lifetime of
@@ -302,25 +261,8 @@ export function useDataBackup() {
     }
   }, [isExporting, isImporting]);
 
-  const handleImport = useCallback(async () => {
-    if (isExporting || isImporting) return;
-
-    try {
-      let raw: string;
-
-      if (isWeb) {
-        const file = await webPickJsonFile();
-        if (!file) return;
-        raw = await webReadFileAsText(file);
-      } else {
-        const result = await DocumentPicker.getDocumentAsync({
-          type: 'application/json',
-          copyToCacheDirectory: true,
-        });
-        if (result.canceled || !result.assets?.[0]) return;
-        raw = await readAsStringAsync(result.assets[0].uri);
-      }
-
+  const runImport = useCallback(
+    async (raw: string) => {
       let parsed: unknown;
       try {
         parsed = JSON.parse(raw);
@@ -354,18 +296,56 @@ export function useDataBackup() {
       } finally {
         setIsImporting(false);
       }
+    },
+    [reloadStores],
+  );
+
+  /**
+   * Native path — uses DocumentPicker + expo-file-system. Wired to the
+   * TouchableOpacity on iOS/Android.
+   */
+  const handleImport = useCallback(async () => {
+    if (isExporting || isImporting || isWeb) return;
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'application/json',
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled || !result.assets?.[0]) return;
+      const raw = await readAsStringAsync(result.assets[0].uri);
+      await runImport(raw);
     } catch (err) {
-      // Surface the actual error message so a silent hang or unexpected
-      // failure produces a visible dialog instead of nothing.
       const detail = err instanceof Error ? err.message : String(err);
       notify('Import failed', detail || 'Could not read the selected file.');
     }
-  }, [isExporting, isImporting, reloadStores]);
+  }, [isExporting, isImporting, runImport]);
+
+  /**
+   * Web path — called from a REAL <input type="file"> onChange handler in
+   * DataBackupSection. Using a real form control (not a hidden input triggered
+   * by JS click) is the only reliable way to receive files inside iOS
+   * standalone PWAs, where change events on programmatic file inputs are
+   * unreliable or missing entirely.
+   */
+  const handleWebFile = useCallback(
+    async (file: File) => {
+      if (isExporting || isImporting) return;
+      try {
+        const raw = await webReadFileAsText(file);
+        await runImport(raw);
+      } catch (err) {
+        const detail = err instanceof Error ? err.message : String(err);
+        notify('Import failed', detail || 'Could not read the selected file.');
+      }
+    },
+    [isExporting, isImporting, runImport],
+  );
 
   return {
     isExporting,
     isImporting,
     handleExport,
     handleImport,
+    handleWebFile,
   };
 }
