@@ -286,6 +286,27 @@ export function LogSheet({
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: contentPaddingBottom }}
       >
+        {/* Web only: explicit close button. The sheet has
+            enableHandlePanningGesture / enableContentPanningGesture disabled
+            (so accidental drags don't dismiss a half-filled set), and at 95%
+            snap the backdrop is nearly untappable — leaving no way to
+            dismiss on desktop or web PWA. Native still uses the pan gesture
+            on the handle. */}
+        {Platform.OS === 'web' ? (
+          <View className="flex-row justify-end pt-1 -mr-1">
+            <TouchableOpacity
+              onPress={() => sheetRef.current?.dismiss()}
+              accessibilityLabel="Close log sheet"
+              accessibilityRole="button"
+              activeOpacity={0.7}
+              hitSlop={12}
+              className="p-2"
+            >
+              <Icon name="close" size={24} color="text-secondary" />
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
         {isEditing ? (
           <Text
             className={`text-text-primary ${textRoles.modalTitle} mb-4 mt-2`}
@@ -392,6 +413,7 @@ export function LogSheet({
             </View>
             {weightMode === 'straight' ? (
               <NumericInput
+                key="weight-input"
                 ref={weightRef}
                 InputComponent={BottomSheetTextInput}
                 value={weightInput}
@@ -405,7 +427,10 @@ export function LogSheet({
                 accessibilityLabel="Weight input"
               />
             ) : (
-              <View className="bg-surface-2 rounded-lg px-4 py-4 items-center justify-center min-h-16">
+              <View
+                key="plates-display"
+                className="bg-surface-2 rounded-lg px-4 py-4 items-center justify-center min-h-16"
+              >
                 <Text className={`text-text-primary ${textRoles.metricDisplayCompact}`} numberOfLines={2} adjustsFontSizeToFit>
                   {platesDisplay}
                 </Text>

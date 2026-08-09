@@ -109,6 +109,16 @@ export const NumericInput = React.forwardRef<TextInput, NumericInputProps>(
                   fontSize: config.fontSize,
                   color: colors['text-primary'],
                   fontFamily: typography.fonts.monoBold,
+                  // NativeWind's `flex-1` on className can drop when passed
+                  // through the BottomSheetTextInput → gesture-handler →
+                  // react-native-web wrapper chain, leaving the underlying
+                  // <input> at its default browser width. That makes the
+                  // WEIGHT input sit narrow inside its column and the
+                  // adjacent REPS column's tap target overlaps into it.
+                  // Force fill-width explicitly on web.
+                  flex: 1,
+                  minWidth: 0,
+                  width: '100%',
                 }
               : {}),
           }}
