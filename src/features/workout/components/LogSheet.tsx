@@ -89,7 +89,11 @@ export function LogSheet({
   const [focusedField, setFocusedField] = useState<LogField | null>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const snapPoints = useMemo(() => ['82%'], []);
+  // Web PWAs don't dim the app behind a bottom sheet the way native iOS does,
+  // so an 82% sheet leaves the workout screen visibly poking out above with
+  // no visual separation. Push the snap point higher on web so the sheet
+  // dominates cleanly. Native keeps 82% so the exercise context stays glanceable.
+  const snapPoints = useMemo(() => [Platform.OS === 'web' ? '95%' : '82%'], []);
 
   const contentPaddingBottom = useMemo(() => {
     const base = Math.max(insets.bottom, 40);
@@ -279,7 +283,7 @@ export function LogSheet({
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: contentPaddingBottom }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: contentPaddingBottom }}
       >
         {isEditing ? (
           <Text
