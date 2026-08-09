@@ -1,10 +1,10 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { SetChip } from './SetChip';
 import { RestTimerBar } from './RestTimerBar';
 import type { LoggedExercise } from '../types';
 import type { RestTimerStatus } from '../hooks/useRestTimer';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../../../shared/components/Icon';
 import { formatShortDate } from '../../../shared/lib/date';
 import { usePrefsStore } from '../../../shared/store/prefsStore';
@@ -80,6 +80,18 @@ export function ExerciseScreen({
 }: Props) {
   const isFirst = exerciseIndex === 0;
   const { weightUnit } = usePrefsStore();
+  const insets = useSafeAreaInsets();
+  // On web, SafeAreaView adds insets.top plus the pt-4 constant, which after
+  // viewport-fit=cover became ~63 px on iOS PWA — too much vertical space
+  // above the header. Bypass SafeAreaView's automatic top padding on web and
+  // set it explicitly. Also pass horizontal padding through inline style
+  // rather than relying on className: SafeAreaView.web rebuilds its own
+  // paddingStyle from `style` and the className-derived styles can get lost
+  // in that merge — being explicit here is bulletproof.
+  const webContainerStyle =
+    Platform.OS === 'web'
+      ? { paddingTop: insets.top + 4, paddingLeft: 20, paddingRight: 20 }
+      : undefined;
 
   const body = (
     <>
@@ -194,7 +206,11 @@ export function ExerciseScreen({
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-surface-0 px-5 pt-4 pb-8">
+    <SafeAreaView
+      edges={Platform.OS === 'web' ? ['bottom'] : undefined}
+      className="flex-1 bg-surface-0 px-5 pt-4 pb-8"
+      style={webContainerStyle}
+    >
       {/* Header row: cancel + progress + finish */}
       <View className="flex-row items-center justify-between mb-4">
         <TouchableOpacity

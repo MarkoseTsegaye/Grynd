@@ -12,7 +12,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NumericInput } from '../../../shared/components/NumericInput';
 import { Icon } from '../../../shared/components/Icon';
 import { formatPlatesPerSide } from '../../../shared/lib/weight';
-import { textRoles } from '../../../shared/theme/typography';
+import { colors } from '../../../shared/theme/colors';
+import { textRoles, typography } from '../../../shared/theme/typography';
 
 const MAX_SET_NOTES_LENGTH = 200;
 const NOTES_MIN_HEIGHT = 48;
@@ -89,7 +90,11 @@ export function LogSheet({
   const [focusedField, setFocusedField] = useState<LogField | null>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const snapPoints = useMemo(() => ['82%'], []);
+  // Web PWAs don't dim the app behind a bottom sheet the way native iOS does,
+  // so an 82% sheet leaves the workout screen visibly poking out above with
+  // no visual separation. Push the snap point higher on web so the sheet
+  // dominates cleanly. Native keeps 82% so the exercise context stays glanceable.
+  const snapPoints = useMemo(() => [Platform.OS === 'web' ? '95%' : '82%'], []);
 
   const contentPaddingBottom = useMemo(() => {
     const base = Math.max(insets.bottom, 40);
@@ -279,8 +284,29 @@ export function LogSheet({
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: contentPaddingBottom }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: contentPaddingBottom }}
       >
+        {/* Web only: explicit close button. The sheet has
+            enableHandlePanningGesture / enableContentPanningGesture disabled
+            (so accidental drags don't dismiss a half-filled set), and at 95%
+            snap the backdrop is nearly untappable — leaving no way to
+            dismiss on desktop or web PWA. Native still uses the pan gesture
+            on the handle. */}
+        {Platform.OS === 'web' ? (
+          <View className="flex-row justify-end pt-1 -mr-1">
+            <TouchableOpacity
+              onPress={() => sheetRef.current?.dismiss()}
+              accessibilityLabel="Close log sheet"
+              accessibilityRole="button"
+              activeOpacity={0.7}
+              hitSlop={12}
+              className="p-2"
+            >
+              <Icon name="close" size={24} color="text-secondary" />
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
         {isEditing ? (
           <Text
             className={`text-text-primary ${textRoles.modalTitle} mb-4 mt-2`}
@@ -387,6 +413,7 @@ export function LogSheet({
             </View>
             {weightMode === 'straight' ? (
               <NumericInput
+                key="weight-input"
                 ref={weightRef}
                 InputComponent={BottomSheetTextInput}
                 value={weightInput}
@@ -400,7 +427,10 @@ export function LogSheet({
                 accessibilityLabel="Weight input"
               />
             ) : (
-              <View className="bg-surface-2 rounded-lg px-4 py-4 items-center justify-center min-h-16">
+              <View
+                key="plates-display"
+                className="bg-surface-2 rounded-lg px-4 py-4 items-center justify-center min-h-16"
+              >
                 <Text className={`text-text-primary ${textRoles.metricDisplayCompact}`} numberOfLines={2} adjustsFontSizeToFit>
                   {platesDisplay}
                 </Text>
@@ -539,7 +569,20 @@ export function LogSheet({
             <Text className={`text-text-secondary ${textRoles.bodySmall} mb-1`}>Notes (optional)</Text>
             <BottomSheetTextInput
               className="bg-surface-2 rounded-lg px-4 py-3 text-text-primary font-sans text-base"
-              style={{ minHeight: NOTES_MIN_HEIGHT, height: notesInputHeight }}
+              style={{
+                minHeight: NOTES_MIN_HEIGHT,
+                height: notesInputHeight,
+                // Same issue as NumericInput: on web, className styles don't
+                // reliably reach the underlying <input>, so typed notes render
+                // as tiny default text. Force the display styles inline.
+                ...(Platform.OS === 'web'
+                  ? {
+                      fontSize: typography.sizes.base,
+                      color: colors['text-primary'],
+                      fontFamily: typography.fonts.sans,
+                    }
+                  : {}),
+              }}
               value={notesInput}
               onChangeText={onChangeNotes}
               placeholder="e.g. used straps, paused mid-set"

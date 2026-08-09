@@ -3,10 +3,10 @@ import process from 'node:process';
 import { setMaxListeners } from 'node:events';
 import { readFile } from 'node:fs/promises';
 
-// Cursor SDK attaches AbortSignal listeners per run; suppress warnings in long orchestrations.
+// Agent SDKs attach AbortSignal listeners per run; suppress warnings in long orchestrations.
 setMaxListeners(0);
-import { Agent, CursorAgentError } from '@cursor/sdk';
-import { loadSquadConfig, normalizeModelId } from './config';
+import { loadSquadConfig, normalizeModelId, resolveModels } from './config';
+import { createProvider, resolveProviderName, type AgentProvider } from './providers';
 import { execCapture } from './exec';
 import { writeTextFile, ensureDir } from './fs';
 import { runQualityGates, formatGateOutputs } from './gates';
@@ -26,12 +26,6 @@ function nowSlug(): string {
   const d = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
-}
-
-function requireEnv(name: string): string {
-  const v = process.env[name];
-  if (!v) throw new Error(`Missing required environment variable: ${name}`);
-  return v;
 }
 
 async function getGitDiff(repoRoot: string): Promise<string> {
@@ -80,25 +74,13 @@ async function commitChanges(repoRoot: string, title: string): Promise<void> {
 }
 
 async function runAgent(
-  apiKey: string,
+  provider: AgentProvider,
   modelId: string,
   repoRoot: string,
   prompt: string,
   label: string,
 ): Promise<string> {
-  try {
-    await using agent = await Agent.create({
-      apiKey,
-      model: { id: modelId },
-      local: { cwd: repoRoot },
-    });
-    const run = await agent.send(prompt);
-    const result = await run.wait();
-    return (result.result ?? '').trim();
-  } catch (err) {
-    if (err instanceof CursorAgentError) throw new Error(`${label} failed to start: ${err.message}`);
-    throw err;
-  }
+  return provider.run({ modelId, repoRoot, prompt, label });
 }
 
 async function revertProtectedPaths(repoRoot: string): Promise<void> {
@@ -113,7 +95,7 @@ async function revertProtectedPaths(repoRoot: string): Promise<void> {
 }
 
 async function runReviewPass(
-  apiKey: string,
+  provider: AgentProvider,
   repoRoot: string,
   pass: ReviewPass,
   modelId: string,
@@ -122,7 +104,7 @@ async function runReviewPass(
 ): Promise<string> {
   let last = '';
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    last = await runAgent(apiKey, modelId, repoRoot, prompt, `Review-${pass}`);
+    last = await runAgent(provider, modelId, repoRoot, prompt, `Review-${pass}`);
     if (isValidReview(last)) return last;
     // eslint-disable-next-line no-console
     console.warn(`Review ${pass}: empty/invalid response (attempt ${attempt}/${maxAttempts}), retrying...`);
@@ -148,10 +130,15 @@ async function main() {
     process.exit(1);
   }
 
-  const apiKey = requireEnv('CURSOR_API_KEY');
   const squad = await loadSquadConfig(repoRoot);
+  const providerName = resolveProviderName(squad.provider);
+  const provider = await createProvider(providerName);
+  const { models, reviewModelOverrides } = resolveModels(squad, providerName);
   const maxIters = Number(process.env.ORCH_MAX_ITERS ?? String(squad.defaults.maxIterations));
   const modelOverride = process.env.ORCH_MODEL ? normalizeModelId(process.env.ORCH_MODEL) : undefined;
+
+  // eslint-disable-next-line no-console
+  console.log(`Provider: ${providerName}`);
 
   const runDir = path.join(repoRoot, 'tickets', nowSlug());
   await ensureDir(runDir);
@@ -160,8 +147,8 @@ async function main() {
   // ── Coordinator / TicketMan ─────────────────────────────────────────────────
   // eslint-disable-next-line no-console
   console.log('Coordinator (TicketMan): drafting ticket...');
-  const coordinatorModel = modelOverride ?? squad.models.coordinator;
-  let ticketMd = await runAgent(apiKey, coordinatorModel, repoRoot, buildTicketManPrompt(userRequest), 'TicketMan');
+  const coordinatorModel = modelOverride ?? models.coordinator;
+  let ticketMd = await runAgent(provider, coordinatorModel, repoRoot, buildTicketManPrompt(userRequest), 'TicketMan');
 
   const ticketValidation = validateTicketMarkdown(ticketMd);
   if (!ticketValidation.ok) {
@@ -179,13 +166,13 @@ async function main() {
   // ── Implement → Gate → 3-pass Review loop ───────────────────────────────────
   let lastFailureContext: string | undefined;
   let lastReviewSummary = '(no reviews ran)';
-  const devModel = modelOverride ?? squad.models.dev;
+  const devModel = modelOverride ?? models.dev;
 
   for (let iter = 1; iter <= maxIters; iter++) {
     // eslint-disable-next-line no-console
     console.log(`Dev (Implementer): iteration ${iter}...`);
     const implementerSummary = await runAgent(
-      apiKey,
+      provider,
       devModel,
       repoRoot,
       buildImplementerPrompt({
@@ -221,11 +208,11 @@ async function main() {
     // 3-pass review with different models
     const reviews: string[] = [];
     for (const pass of REVIEW_PASSES) {
-      const reviewModel = modelOverride ?? reviewModelForPass(pass, squad.reviewModelOverrides);
+      const reviewModel = modelOverride ?? reviewModelForPass(pass, reviewModelOverrides);
       // eslint-disable-next-line no-console
       console.log(`Review ${pass} (${reviewModel})...`);
       const review = await runReviewPass(
-        apiKey,
+        provider,
         repoRoot,
         pass,
         reviewModel,
@@ -267,8 +254,8 @@ async function main() {
       // eslint-disable-next-line no-console
       console.log('DecisionLog: updating history...');
       const decisionSummary = await runAgent(
-        apiKey,
-        squad.models.lead,
+        provider,
+        models.lead,
         repoRoot,
         buildDecisionLogPrompt({
           ticketMd,

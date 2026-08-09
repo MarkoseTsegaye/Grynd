@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { validateTicketMarkdown, REQUIRED_TICKET_SECTIONS } from '../ticketTemplate';
 import { parseVerdictPass, parseVerdictFail, allReviewsPass } from '../verdict';
 import { extractAffectedPaths, extractTicketTitle, storySlugFromTitle } from '../ticketUtils';
-import { loadSquadConfig, normalizeModelId } from '../config';
+import { loadSquadConfig, normalizeModelId, resolveModels } from '../config';
 import path from 'node:path';
 
 const VALID_TICKET = `
@@ -133,5 +133,31 @@ describe('loadSquadConfig', () => {
     expect(config.gates.test).toBe('npm run test');
     expect(config.reviewModelOverrides.pass2_tests).toBe('gpt-5.5');
     expect(config.reviewModelOverrides.pass3_security).toBe('claude-sonnet-4-6');
+  });
+
+  it('reads the provider and the Claude model set', async () => {
+    const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
+    const config = await loadSquadConfig(repoRoot);
+    expect(config.provider).toBe('claude');
+    expect(config.claude.models.dev).toBe('claude-sonnet-5');
+    expect(config.claude.reviewModelOverrides.pass3_security).toBe('claude-opus-4-8');
+  });
+});
+
+describe('resolveModels', () => {
+  it('returns the Claude set for the claude provider', async () => {
+    const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
+    const config = await loadSquadConfig(repoRoot);
+    const resolved = resolveModels(config, 'claude');
+    expect(resolved.models.coordinator).toBe('claude-haiku-4-5');
+    expect(resolved.reviewModelOverrides.pass1_codeQuality).toBe('claude-sonnet-5');
+  });
+
+  it('returns the Cursor set for the cursor provider', async () => {
+    const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
+    const config = await loadSquadConfig(repoRoot);
+    const resolved = resolveModels(config, 'cursor');
+    expect(resolved.models.coordinator).toBe('composer-2.5');
+    expect(resolved.reviewModelOverrides.pass2_tests).toBe('gpt-5.5');
   });
 });
