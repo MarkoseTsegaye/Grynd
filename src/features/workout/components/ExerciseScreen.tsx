@@ -84,8 +84,14 @@ export function ExerciseScreen({
   // On web, SafeAreaView adds insets.top plus the pt-4 constant, which after
   // viewport-fit=cover became ~63 px on iOS PWA — too much vertical space
   // above the header. Bypass SafeAreaView's automatic top padding on web and
-  // set it explicitly to a tighter insets.top + 4.
-  const webContainerPaddingTop = Platform.OS === 'web' ? insets.top + 4 : undefined;
+  // set it explicitly. Also pass horizontal padding through inline style
+  // rather than relying on className: SafeAreaView.web rebuilds its own
+  // paddingStyle from `style` and the className-derived styles can get lost
+  // in that merge — being explicit here is bulletproof.
+  const webContainerStyle =
+    Platform.OS === 'web'
+      ? { paddingTop: insets.top + 4, paddingLeft: 20, paddingRight: 20 }
+      : undefined;
 
   const body = (
     <>
@@ -203,7 +209,7 @@ export function ExerciseScreen({
     <SafeAreaView
       edges={Platform.OS === 'web' ? ['bottom'] : undefined}
       className="flex-1 bg-surface-0 px-5 pt-4 pb-8"
-      style={webContainerPaddingTop != null ? { paddingTop: webContainerPaddingTop } : undefined}
+      style={webContainerStyle}
     >
       {/* Header row: cancel + progress + finish */}
       <View className="flex-row items-center justify-between mb-4">
