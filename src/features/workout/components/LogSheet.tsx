@@ -12,7 +12,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NumericInput } from '../../../shared/components/NumericInput';
 import { Icon } from '../../../shared/components/Icon';
 import { formatPlatesPerSide } from '../../../shared/lib/weight';
-import { textRoles } from '../../../shared/theme/typography';
+import { colors } from '../../../shared/theme/colors';
+import { textRoles, typography } from '../../../shared/theme/typography';
 
 const MAX_SET_NOTES_LENGTH = 200;
 const NOTES_MIN_HEIGHT = 48;
@@ -543,7 +544,20 @@ export function LogSheet({
             <Text className={`text-text-secondary ${textRoles.bodySmall} mb-1`}>Notes (optional)</Text>
             <BottomSheetTextInput
               className="bg-surface-2 rounded-lg px-4 py-3 text-text-primary font-sans text-base"
-              style={{ minHeight: NOTES_MIN_HEIGHT, height: notesInputHeight }}
+              style={{
+                minHeight: NOTES_MIN_HEIGHT,
+                height: notesInputHeight,
+                // Same issue as NumericInput: on web, className styles don't
+                // reliably reach the underlying <input>, so typed notes render
+                // as tiny default text. Force the display styles inline.
+                ...(Platform.OS === 'web'
+                  ? {
+                      fontSize: typography.sizes.base,
+                      color: colors['text-primary'],
+                      fontFamily: typography.fonts.sans,
+                    }
+                  : {}),
+              }}
               value={notesInput}
               onChangeText={onChangeNotes}
               placeholder="e.g. used straps, paused mid-set"
