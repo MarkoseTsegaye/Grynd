@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { View, Text, TouchableOpacity, Alert, Dimensions, AppState, BackHandler } from 'react-native';
+import { showDialog } from '../../src/shared/lib/dialog';
+import { View, Text, TouchableOpacity, Dimensions, AppState, BackHandler } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { usePreventRemove } from '@react-navigation/native';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
@@ -14,7 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { BottomSheetModal, BottomSheetView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
-import { useWorkout, ExerciseScreen, LogSheet, ExerciseOverviewSheet, SubstituteExerciseSheet } from '../../src/features/workout';
+import { useWorkout, ExerciseScreen, ExerciseOverviewSheet, SubstituteExerciseSheet } from '../../src/features/workout';
 import { FinishWorkoutSheet } from '../../src/features/workout/components/FinishWorkoutSheet';
 import { useWorkoutStore } from '../../src/features/workout';
 import { useSplitsStore } from '../../src/features/splits';
@@ -45,14 +46,13 @@ export default function WorkoutScreen() {
   const [bootstrapMessage, setBootstrapMessage] = useState<string | null>(null);
   const [allowLeave, setAllowLeave] = useState(false);
 
-  const logSheetRef = useRef<BottomSheetModal>(null);
   const overviewSheetRef = useRef<BottomSheetModal>(null);
   const substituteSheetRef = useRef<BottomSheetModal>(null);
   const finishSheetRef = useRef<BottomSheetModal>(null);
 
   const {
     session, currentExercise, currentExerciseIndex, totalExercises, isLastExercise,
-    logSheetVisible, overviewSheetVisible, substituteSheetVisible, substitutionLabel,
+    overviewSheetVisible, substituteSheetVisible, substitutionLabel,
     repInput, setRepInput,
     weightInput, setWeightInput,
     weightMode, toggleWeightMode,
@@ -60,24 +60,43 @@ export default function WorkoutScreen() {
     plates, plateList, addPlate, removePlate, clearPlates, computedWeightKg,
     setSide, setSetSide, isUnilateral,
     toFailure, setToFailure,
-    rpeInput, setRpeInput,
+    rir, setRir,
     notesInput, setNotesInput,
     isLogging,
-    isEditingSet,
-    openLogSheet, openEditSet, handleLogSheetDismiss, handleLogSheetChange, handleConfirmSet, handleDeleteSet,
+    isEditingSet, editingSetIndex,
+    padCollapsed, togglePadCollapsed,
+    openEditSet, cancelEditSet, handleConfirmSet, handleDeleteSet,
     handleOverviewSheetChange, handleSubstituteSheetChange, handleSubstitutePress, handleConfirmSubstitute,
     handleGoToExercise,
     handleSwipeNext, handleSwipePrev, handleFinish,
     currentPreviousPerformance,
     restTimerStatus,
     restTimerRemainingMs,
+    restTimerProgress,
     restTimerVisible,
     pauseRestTimer,
     resumeRestTimer,
     adjustRestSeconds,
     dismissRestComplete,
     resetRestTimer,
-  } = useWorkout(logSheetRef, substituteSheetRef);
+  } = useWorkout(substituteSheetRef);
+
+  // One tap on the slim rest bar pauses or resumes, whichever applies.
+  const handleRestToggle = useCallback(() => {
+    if (restTimerStatus === 'running') {
+      pauseRestTimer();
+    } else if (restTimerStatus === 'paused') {
+      resumeRestTimer();
+    }
+  }, [restTimerStatus, pauseRestTimer, resumeRestTimer]);
+
+  const handleRestDismiss = useCallback(() => {
+    if (restTimerStatus === 'complete') {
+      dismissRestComplete();
+    } else {
+      resetRestTimer();
+    }
+  }, [restTimerStatus, dismissRestComplete, resetRestTimer]);
 
   const openOverview = useCallback(() => {
     overviewSheetRef.current?.present();
@@ -90,21 +109,13 @@ export default function WorkoutScreen() {
     [handleGoToExercise],
   );
 
-  // Quick keypad log: confirm, then clear reps + failure but keep the weight
-  // so back-to-back same-weight sets stay one-handed and fast.
-  const handleQuickLog = useCallback(async () => {
-    await handleConfirmSet();
-    setRepInput('');
-    setToFailure(false);
-  }, [handleConfirmSet, setRepInput, setToFailure]);
-
   // Cancel sheet
   const cancelSheetRef = useRef<BottomSheetModal>(null);
   const pendingLeaveRef = useRef<(() => void) | null>(null);
   const cancelSnapPoints = useMemo(() => ['38%'], []);
   const [finishSheetVisible, setFinishSheetVisible] = useState(false);
   const sheetBlocksSwipe =
-    logSheetVisible || overviewSheetVisible || substituteSheetVisible || finishSheetVisible;
+    overviewSheetVisible || substituteSheetVisible || finishSheetVisible;
   const renderBackdrop = useCallback(
     (props: BottomSheetBackdropProps) => (
       <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.7} />
@@ -194,7 +205,7 @@ export default function WorkoutScreen() {
           `You have an unfinished ${storeSession.splitName} workout.`,
         );
         setBootstrapState('error');
-        Alert.alert(
+        showDialog(
           'Unfinished Workout',
           `You have an unfinished ${storeSession.splitName} workout.`,
           [
@@ -432,7 +443,6 @@ export default function WorkoutScreen() {
       canGoPrev,
       isAnimating,
       isLastExerciseSV,
-      logSheetVisible,
       overviewSheetVisible,
       substituteSheetVisible,
       finishSheetVisible,
@@ -473,7 +483,6 @@ export default function WorkoutScreen() {
 
   const handleLeaveWorkout = useCallback(async () => {
     cancelSheetRef.current?.dismiss();
-    logSheetRef.current?.dismiss();
     overviewSheetRef.current?.dismiss();
     substituteSheetRef.current?.dismiss();
     finishSheetRef.current?.dismiss();
@@ -525,15 +534,13 @@ export default function WorkoutScreen() {
         totalExercises={totalExercises}
         isLastExercise={isLastExercise}
         previousExercise={currentPreviousPerformance}
-        onOpenLog={openLogSheet}
+        weightMode={weightMode}
+        padCollapsed={padCollapsed}
+        onTogglePad={togglePadCollapsed}
         weightValue={weightInput}
         repValue={repInput}
         onChangeWeight={setWeightInput}
         onChangeReps={setRepInput}
-        toFailure={toFailure}
-        onToggleFailure={() => setToFailure((v) => !v)}
-        isLogging={isLogging}
-        onQuickLog={handleQuickLog}
         computedWeightKg={computedWeightKg}
         plates={plates}
         plateList={plateList}
@@ -541,23 +548,35 @@ export default function WorkoutScreen() {
         onRemovePlate={removePlate}
         onClearPlates={clearPlates}
         onToggleUnit={toggleUnit}
+        toFailure={toFailure}
+        onToggleFailure={() => setToFailure((v) => !v)}
+        rir={rir}
+        onChangeRir={setRir}
+        notes={notesInput}
+        onChangeNotes={setNotesInput}
+        isUnilateral={isUnilateral}
+        setSide={setSide}
+        onChangeSide={setSetSide}
+        isLogging={isLogging}
+        onLog={handleConfirmSet}
+        editingSetIndex={editingSetIndex}
         onEditSet={openEditSet}
+        onCancelEdit={cancelEditSet}
         onDeleteSet={handleDeleteSet}
         onFinish={presentFinishSheet}
         onCancel={handleCancelPress}
         onOpenOverview={openOverview}
         onSubstitute={handleSubstitutePress}
         substitutionLabel={substitutionLabel}
-        overviewDisabled={logSheetVisible || substituteSheetVisible}
+        overviewDisabled={substituteSheetVisible}
         renderSwipeable={renderSwipeable}
         restTimerVisible={restTimerVisible}
         restTimerStatus={restTimerStatus}
         restTimerRemainingMs={restTimerRemainingMs}
-        onRestTimerStart={resumeRestTimer}
-        onRestTimerStop={pauseRestTimer}
-        onRestTimerAdjustMinus={() => adjustRestSeconds(-15)}
+        restTimerProgress={restTimerProgress}
+        onRestTimerToggle={handleRestToggle}
         onRestTimerAdjustPlus={() => adjustRestSeconds(15)}
-        onRestTimerDismissComplete={dismissRestComplete}
+        onRestTimerDismiss={handleRestDismiss}
       />
 
       {/* Swipe hint overlay */}
@@ -570,36 +589,6 @@ export default function WorkoutScreen() {
         </Animated.View>
       )}
 
-      <LogSheet
-        sheetRef={logSheetRef}
-        onChange={handleLogSheetChange}
-        repInput={repInput}
-        onChangeReps={setRepInput}
-        weightMode={weightMode}
-        onToggleWeightMode={toggleWeightMode}
-        weightUnit={weightUnit}
-        onToggleUnit={toggleUnit}
-        weightInput={weightInput}
-        onChangeWeight={setWeightInput}
-        plates={plates}
-        plateList={plateList}
-        onAddPlate={addPlate}
-        onRemovePlate={removePlate}
-        computedWeightKg={computedWeightKg}
-        toFailure={toFailure}
-        onToggleFailure={() => setToFailure((v) => !v)}
-        rpeInput={rpeInput}
-        onChangeRpe={setRpeInput}
-        notesInput={notesInput}
-        onChangeNotes={setNotesInput}
-        isUnilateral={isUnilateral}
-        setSide={setSide}
-        onChangeSide={setSetSide}
-        isLogging={isLogging}
-        mode={isEditingSet ? 'edit' : 'create'}
-        onConfirm={handleConfirmSet}
-        onClose={handleLogSheetDismiss}
-      />
 
       {session && (
         <ExerciseOverviewSheet

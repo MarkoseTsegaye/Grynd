@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { showDialog } from '../../src/shared/lib/dialog';
 import { useRouter } from 'expo-router';
 import { useSplitsList, SplitCard } from '../../src/features/splits';
 import { useSplitsStore } from '../../src/features/splits';
@@ -71,7 +72,7 @@ export default function HomeScreen() {
       isIncompleteActiveSession(activeSession) &&
       activeSession.splitId !== targetSplitId
     ) {
-      Alert.alert(
+      showDialog(
         'Unfinished Workout',
         `You have an unfinished ${activeSession.splitName} workout.`,
         [

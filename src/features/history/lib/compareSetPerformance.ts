@@ -39,6 +39,14 @@ export function compareSets(prev: LoggedSet, current: LoggedSet): SetComparisonR
   return { direction, arrowCount: alignedWithVerdict ? 3 : 2 };
 }
 
+/**
+ * Short chip label for a comparison: the arrow count doubles as the magnitude,
+ * so "3" reads as "weight and reps both moved the same way".
+ */
+export function formatSetDeltaLabel(result: NonNullable<SetComparisonResult>): string {
+  return String(result.arrowCount);
+}
+
 export function buildSetComparisonAccessibilityLabel(
   setNumber: number,
   prev: LoggedSet,

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { Alert, AppState, type AppStateStatus } from 'react-native';
+import { showDialog } from '../../../shared/lib/dialog';
+import { AppState, type AppStateStatus } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { useWorkoutStore } from '../store/workoutStore';
 import {
@@ -26,7 +27,7 @@ export function useResumeWorkoutPrompt() {
       if (isWorkoutRoute(pathnameRef.current)) return;
 
       alertVisibleRef.current = true;
-      Alert.alert(
+      showDialog(
         'Resume Workout?',
         `You have an unfinished ${splitName} workout.`,
         [
