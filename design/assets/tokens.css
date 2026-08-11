@@ -1,0 +1,48 @@
+/* ============================================================
+   Grynd — Design Tokens  (RECONCILED with src/shared/theme)
+   Source of truth in code:
+     colors     → src/shared/theme/colors.ts
+     typography → src/shared/theme/typography.ts
+   Values below MATCH the app exactly. When they diverge, code wins.
+   ============================================================ */
+:root {
+  /* Surfaces (near-black, warm) — colors.ts */
+  --grynd-surface-0: #0A0A0A; /* app background            */
+  --grynd-surface-1: #141414; /* raised card / sheet        */
+  --grynd-surface-2: #1F1F1F; /* chip / segmented / divider border */
+
+  /* Text (warm off-white ramp) */
+  --grynd-text-primary:   #F0EDE8;
+  --grynd-text-secondary: #8A8580; /* secondary + most captions/labels */
+  --grynd-text-disabled:  #3D3B38; /* set labels, inactive, faint dots  */
+
+  /* Brand accent (bright lime) */
+  --grynd-accent:     #E8FF47;
+  --grynd-accent-dim: #B8CC2E; /* muted accent, plot dots           */
+  --grynd-on-accent:  #0A0A0A; /* text on accent = surface-0        */
+
+  /* Semantic */
+  --grynd-success: #3ECF6A; /* progression / up (▲)              */
+  --grynd-danger:  #FF4C4C; /* to-failure / destructive          */
+  --grynd-warning: #FFB020;
+
+  /* Derived (no dedicated token in code — documented conventions) */
+  --grynd-divider:   var(--grynd-surface-2);            /* borders use surface-2 */
+  --grynd-danger-bg: rgba(255, 76, 76, 0.10);           /* code: bg-danger/10    */
+  --grynd-accent-bg: rgba(232, 255, 71, 0.10);          /* code: bg-accent/10    */
+
+  /* Radii — Tailwind rounded-lg is the app default */
+  --grynd-radius:    12px; /* rounded-lg (cards, buttons, sheets) */
+  --grynd-radius-sm: 8px;  /* rounded (chips, small controls)     */
+
+  /* Type — typography.ts (Inter + JetBrains Mono, NOT SF/system) */
+  --grynd-font-sans:        "Inter_400Regular", -apple-system, "Segoe UI", Roboto, sans-serif;
+  --grynd-font-sans-medium: "Inter_500Medium";
+  --grynd-font-sans-bold:   "Inter_700Bold";
+  --grynd-font-mono:        "JetBrainsMono_400Regular", ui-monospace, Menlo, monospace; /* set/rep values */
+  --grynd-font-mono-bold:   "JetBrainsMono_700Bold";
+}
+
+/* Type scale (px) — typography.ts sizes/lineHeights
+   xs 14/18 · sm 16/22 · base 18/26 · lg 20/30 · xl 22/30
+   2xl 26/34 · 3xl 32/38 · 4xl 40/44 */

@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Grynd — Screen Mockups</title>
+<style>
+  /* ============================================================
+     GRYND — design tokens
+     Recreated from app screenshots for iteration.
+     ============================================================ */
+  :root {
+    /* Reconciled with src/shared/theme/colors.ts (see assets/tokens.css) */
+    --bg:        #0A0A0A;   /* surface-0 */
+    --bg-elev:   #141414;   /* surface-1 */
+    --bg-elev-2: #1F1F1F;   /* surface-2 */
+    --line:      #1F1F1F;   /* divider = surface-2 border */
+    --accent:    #E8FF47;   /* accent (lime) */
+    --accent-dim:#B8CC2E;   /* accent-dim */
+    --on-accent: #0A0A0A;
+    --text:      #F0EDE8;   /* text-primary */
+    --text-2:    #8A8580;   /* text-secondary */
+    --text-3:    #3D3B38;   /* text-disabled */
+    --up:        #3ECF6A;   /* success */
+    --danger:    #FF4C4C;   /* danger */
+    --danger-bg: rgba(255,76,76,0.10);
+    --radius:    12px;      /* rounded-lg */
+    --radius-sm: 8px;       /* rounded */
+    --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #050506; }
+  body {
+    font-family: var(--sans);
+    color: var(--text);
+    padding: 40px 24px 80px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page-head { max-width: 1200px; margin: 0 auto 32px; color: var(--text-2); }
+  .page-head h1 { color: var(--text); font-size: 26px; letter-spacing: -0.02em; }
+  .page-head h1 .mark { color: var(--accent); }
+  .page-head p { margin-top: 8px; font-size: 14px; max-width: 60ch; line-height: 1.5; }
+
+  .gallery {
+    display: flex; flex-wrap: wrap; gap: 40px 32px;
+    justify-content: center; align-items: flex-start;
+    max-width: 1500px; margin: 0 auto;
+  }
+  .frame-wrap { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .frame-label { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); }
+
+  /* ---- iPhone frame ---- */
+  .phone {
+    width: 340px; height: 736px;
+    background: var(--bg);
+    border-radius: 46px;
+    border: 10px solid #1a1a1c;
+    box-shadow: 0 0 0 2px #000, 0 30px 60px rgba(0,0,0,.6);
+    position: relative; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .screen { flex: 1; overflow: hidden; position: relative; display: flex; flex-direction: column; }
+
+  /* ---- status bar ---- */
+  .statusbar {
+    height: 44px; flex: 0 0 44px;
+    display: flex; align-items: flex-end; justify-content: space-between;
+    padding: 0 26px 6px; font-size: 14px; font-weight: 600;
+  }
+  .statusbar .time { font-size: 15px; }
+  .statusbar .icons { display: flex; align-items: center; gap: 5px; }
+  .statusbar svg { display: block; }
+  .batt { width: 24px; height: 12px; border: 1.5px solid var(--text); border-radius: 3px; position: relative; display: inline-flex; align-items: center; padding: 1.5px; }
+  .batt::after { content:""; position:absolute; right:-3px; top:3px; width:2px; height:5px; background: var(--text); border-radius: 0 1px 1px 0; }
+  .batt i { display:block; height:100%; width:35%; background: var(--accent-dim); border-radius: 1px; font-style: normal; }
+  .batt b { position:absolute; inset:0; font-size:8px; font-weight:700; display:flex; align-items:center; justify-content:center; color: var(--text); }
+
+  /* ---- scroll body ---- */
+  .body { flex: 1; overflow-y: auto; padding: 0 18px; }
+  .body::-webkit-scrollbar { width: 0; }
+  .h-title { font-size: 34px; font-weight: 800; letter-spacing: -0.03em; padding: 6px 4px 18px; }
+
+  /* ---- generic card ---- */
+  .card { background: var(--bg-elev); border-radius: var(--radius); }
+  .section-label { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--text-2); font-weight: 600; padding: 22px 6px 12px; }
+
+  /* ---- pill buttons / chips ---- */
+  .chip { background: var(--bg-elev-2); color: var(--text-2); border-radius: 10px; padding: 6px 12px; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; }
+  .chip.on { background: var(--accent); color: var(--on-accent); }
+
+  .row-arrow { color: var(--text-3); font-size: 20px; }
+  .up { color: var(--up); font-weight: 700; }
+  .fail { background: var(--danger-bg); color: var(--danger); font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 6px; }
+  .tag { background: var(--bg-elev-2); color: var(--text-2); font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 6px; }
+
+  .tab-active { color: var(--accent); }
+
+  /* ---- bottom tab bar ---- */
+  .tabbar {
+    flex: 0 0 auto; display: flex; justify-content: space-around; align-items: flex-start;
+    padding: 8px 4px 20px; border-top: 1px solid var(--line); background: var(--bg);
+  }
+  .tab { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text-2); font-size: 11px; }
+  .tab svg { width: 22px; height: 22px; }
+  .tab.active { color: var(--accent); }
+
+  /* ============ screen-specific ============ */
+
+  /* Today hero */
+  .today .kicker { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--text-3); font-weight: 700; }
+  .today h2 { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; margin: 8px 0 2px; display:flex; align-items:center; gap:10px;}
+  .today .day { color: var(--text-2); font-size: 15px; }
+  .btn-primary { background: var(--accent); color: var(--on-accent); border-radius: 14px; height: 58px; display:flex; align-items:center; justify-content:center; gap:10px; font-size:19px; font-weight:800; margin-top:20px; }
+  .btn-primary svg { width:24px; height:24px; }
+
+  .tomorrow { display:inline-flex; flex-direction:column; gap:2px; background: var(--bg-elev); border-radius: var(--radius-sm); padding: 12px 16px; margin-top: 16px; }
+  .tomorrow b { font-size: 15px; }
+  .tomorrow span { color: var(--text-2); font-size: 14px; }
+
+  .split-row { display:flex; align-items:center; justify-content:space-between; padding: 18px 18px; background: var(--bg-elev); border-radius: var(--radius); margin-bottom: 12px; }
+  .split-row .meta b { font-size: 19px; font-weight: 700; }
+  .split-row .meta span { display:block; color: var(--text-2); font-size: 14px; margin-top: 3px; }
+  .play { width: 30px; height: 30px; border: 2px solid var(--accent); border-radius: 50%; display:flex; align-items:center; justify-content:center; }
+  .play svg { width: 14px; height: 14px; color: var(--accent); margin-left: 2px; }
+
+  /* Progress volume card */
+  .vol-card { display:flex; align-items:center; gap:14px; padding: 18px; }
+  .vol-ic { width:40px;height:40px;border-radius:10px;background:var(--bg-elev-2);display:flex;align-items:center;justify-content:center;color:var(--accent); }
+  .vol-card .t b { font-size:18px; }
+  .vol-card .t span { display:block; color:var(--text-2); font-size:13px; margin-top:3px; }
+
+  /* Exercise detail */
+  .subhead { display:flex; align-items:center; gap:8px; padding: 6px 4px 0; }
+  .back-pill { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--line); border-radius:20px; padding:8px 16px; font-size:17px; font-weight:600; }
+  .seg { display:flex; gap:10px; padding: 4px; }
+  .stat-big { font-size: 40px; font-weight: 800; letter-spacing: -0.02em; display:flex; align-items:baseline; gap:12px; }
+  .stat-big .u { font-size:18px; color:var(--text-2); font-weight:600; }
+  .stat-big .x { color: var(--text-3); font-weight:400; }
+  .pb { color: var(--accent); font-weight:700; font-size:18px; margin-top:14px; }
+  .delta { color: var(--up); font-size:16px; margin-top:6px; }
+  .chart-card { background: var(--bg-elev); border-radius: var(--radius); padding: 18px 14px 10px; margin-top: 14px; }
+
+  /* History / Session log */
+  .log-card { background: var(--bg-elev); border-radius: var(--radius); padding: 4px 16px 16px; margin-bottom: 16px; }
+  .log-head { display:flex; justify-content:space-between; align-items:center; padding: 14px 0 12px; border-bottom:1px solid var(--line); }
+  .log-head .date { color: var(--text-2); font-size:15px; }
+  .log-head .name { font-weight:700; font-size:17px; }
+  .ex { padding: 14px 0; border-bottom: 1px solid var(--line); }
+  .ex:last-child { border-bottom:0; }
+  .ex-head { display:flex; justify-content:space-between; align-items:baseline; }
+  .ex-head b { font-size:17px; }
+  .ex-head span { color: var(--text-3); font-size:14px; }
+  .setline { font-family: var(--mono); font-size:15px; color: var(--text); margin-top:8px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .setline .lab { color: var(--text-3); }
+  .setline .unit { color: var(--text-3); }
+  .note { color: var(--text-3); font-size:13px; margin-top:6px; }
+  .more { color: var(--text-3); font-size:14px; padding-top:12px; }
+
+  /* Active workout logging */
+  .carousel-top { display:flex; flex-direction:column; align-items:center; gap:8px; padding-top:6px; }
+  .dots { display:flex; gap:7px; }
+  .dots i { width:7px;height:7px;border-radius:50%;background:var(--bg-elev-2); }
+  .dots i.on { background: var(--accent); }
+  .counter { color: var(--text-2); font-weight:600; display:flex; align-items:center; gap:8px; }
+  .viewall { color: var(--accent); font-weight:600; font-size:15px; }
+  .ex-title { font-size: 32px; font-weight: 800; letter-spacing:-0.02em; line-height:1.1; padding: 20px 4px 4px; }
+  .sets-count { font-family: var(--mono); color: var(--text-2); font-size:16px; padding: 8px 4px; }
+  .sets-count b { color: var(--accent); }
+  .lasttime { background: var(--bg-elev); border-radius: var(--radius); padding: 16px; }
+  .lasttime .lh { display:flex; justify-content:space-between; color: var(--text-2); font-size:15px; margin-bottom:10px; }
+  .btn-set { border:1px solid var(--line); border-radius:16px; height:64px; display:flex; align-items:center; justify-content:center; gap:12px; color:var(--accent); font-size:20px; font-weight:800; }
+  .btn-set svg { width:26px;height:26px; }
+  .substitute { color: var(--accent); font-weight:600; font-size:16px; }
+</style>
+</head>
+<body>
+
+<div class="page-head">
+  <h1><span class="mark">Grynd</span> — Screen Mockups <span style="color:var(--text-3);font-weight:400">(faithful baseline)</span></h1>
+  <p>All seven screens recreated in HTML from the app screenshots, using shared design tokens (near-black surfaces, lime accent, monospace set logs). This is the iteration surface: tweak here, then port refinements back into the React Native app.</p>
+</div>
+
+<div class="gallery">
+
+<!-- ============================ 1. WORKOUTS / HOME ============================ -->
+<div class="frame-wrap">
+  <div class="phone"><div class="screen">
+    <!-- status -->
+    <div class="statusbar">
+      <span class="time">9:25</span>
+      <span class="icons">
+        <svg width="18" height="12" viewBox="0 0 18 12"><g fill="#f4f4f5"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="5" y="4" width="3" height="8" rx="1"/><rect x="10" y="2" width="3" height="10" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></g></svg>
+        <svg width="18" height="13" viewBox="0 0 18 13" fill="#f4f4f5"><path d="M9 13l2.5-3a3.6 3.6 0 00-5 0L9 13zM3 6.5a9 9 0 0112 0l-1.6 1.9a6.4 6.4 0 00-8.8 0L3 6.5zM0 3.4a13.5 13.5 0 0118 0l-1.6 1.9a11 11 0 00-14.8 0L0 3.4z"/></svg>
+        <span class="batt"><i></i><b>7</b></span>
+      </span>
+    </div>
+    <div class="body">
+      <div class="h-title">Workouts</div>
+
+      <div class="card today" style="padding:20px">
+        <div class="kicker">Today</div>
+        <h2>🏋️ Legs 2</h2>
+        <div class="day">Day 5 of 8</div>
+        <div class="btn-primary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M10 8l6 4-6 4z" fill="currentColor" stroke="none"/></svg>
+          Start Workout
+        </div>
+      </div>
+
+      <div class="tomorrow"><b>Tomorrow</b><span>Rest</span></div>
+
+      <div class="section-label">All Splits</div>
+      <div class="split-row"><div class="meta"><b>Push</b><span>5 exercises</span></div><div class="play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5l10 7-10 7z"/></svg></div></div>
+      <div class="split-row"><div class="meta"><b>Pull</b><span>5 exercises</span></div><div class="play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5l10 7-10 7z"/></svg></div></div>
+      <div class="split-row"><div class="meta"><b>Legs 1</b><span>5 exercises</span></div><div class="play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5l10 7-10 7z"/></svg></div></div>
+      <div class="split-row"><div class="meta"><b>Push 2</b><span>5 exercises</span></div><div class="play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5l10 7-10 7z"/></svg></div></div>
+      <div class="split-row"><div class="meta"><b>Pull 2</b><span>5 exercises</span></div><div class="play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5l10 7-10 7z"/></svg></div></div>
+    </div>
+    <!-- tabs -->
+    <div class="tabbar">
+      <div class="tab active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Home</div>
+      <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Splits</div>
+      <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8"/></svg>Progr…</div>
+      <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>History</div>
+      <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1l2-1.5-2-3.5-2.3 1a7 7 0 00-1.7-1L16.5 3h-4l-.4 2.5a7 7 0 00-1.7 1l-2.3-1-2 3.5 2 1.5a7 7 0 000 2l-2 1.5 2 3.5 2.3-1a7 7 0 001.7 1l.4 2.5h4l.4-2.5a7 7 0 001.7-1l2.3 1 2-3.5-2-1.5c.1-.3.1-.7.1-1z"/></svg>Settings</div>
+      <div class="tab">▾<span style="margin-top:2px">picker</span></div>
+    </div>
+  </div></div>
+  <div class="frame-label">1 · Workouts (Home)</div>
+</div>
+
+<!-- ============================ 2. PROGRESS ============================ -->
+<div class="frame-wrap">
+  <div class="phone"><div class="screen">
+    <div class="statusbar"><span class="time">9:25</span><span class="icons">
+      <svg width="18" height="12" viewBox="0 0 18 12"><g fill="#f4f4f5"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="5" y="4" width="3" height="8" rx="1"/><rect x="10" y="2" width="3" height="10" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></g></svg>
+      <svg width="18" height="13" viewBox="0 0 18 13" fill="#f4f4f5"><path d="M9 13l2.5-3a3.6 3.6 0 00-5 0L9 13zM3 6.5a9 9 0 0112 0l-1.6 1.9a6.4 6.4 0 00-8.8 0L3 6.5zM0 3.4a13.5 13.5 0 0118 0l-1.6 1.9a11 11 0 00-14.8 0L0 3.4z"/></svg>
+      <span class="batt"><i></i><b>7</b></span></span></div>
+    <div class="body">
+      <div class="h-title">Progress</div>
+      <div class="card vol-card">
+        <div class="vol-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8"/></svg></div>
+        <div class="t" style="flex:1"><b>Workout volume</b><span>Total kg·reps across all sessions</span></div>
+        <span class="row-arrow">›</span>
+      </div>
+      <div style="height:14px"></div>
+      <div class="split-row"><div class="meta"><b>Push</b><span>5 exercises</span></div><span class="row-arrow">›</span></div>
+      <div class="split-row"><div class="meta"><b>Pull</b><span>5 exercises</span></div><span class="row-arrow">›</span></div>
+      <div class="split-row"><div class="meta"><b>Legs 1</b><span>5 exercises</span></div><span class="row-arrow">›</span></div>
+      <div class="split-row"><div class="meta"><b>Push 2</b><span>5 exercises</span></div><span class="row-arrow">›</span></div>
+      <div class="split-row"><div class="meta"><b>Pull 2</b><span>5 exercises</span></div><span class="row-arrow">›</span></div>
+      <div class="split-row"><div class="meta"><b>Legs 2</b><span>5 exercises</span></div><span class="row-arrow">›</span></div>
+      <div class="split-row"><div class="meta"><b>Yse</b><span>2 exercises</span></div><span class="row-arrow">›</span></div>
+    </div>
+    <div class="tabbar">
+      <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Home</div>
+      <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Splits</div>
+      <div class="tab active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8"/></svg>Progr…</div>
+      <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>History</div>
+      <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1l2-1.5-2-3.5-2.3 1a7 7 0 00-1.7-1L16.5 3h-4l-.4 2.5a7 7 0 00-1.7 1l-2.3-1-2 3.5 2 1.5a7 7 0 000 2l-2 1.5 2 3.5 2.3-1a7 7 0 001.7 1l.4 2.5h4l.4-2.5a7 7 0 001.7-1l2.3 1 2-3.5-2-1.5c.1-.3.1-.7.1-1z"/></svg>Settings</div>
+      <div class="tab">▾<span style="margin-top:2px">picker</span></div>
+    </div>
+  </div></div>
+  <div class="frame-label">2 · Progress</div>
+</div>
+
+<!-- ============================ 3. EXERCISE DETAIL ============================ -->
+<div class="frame-wrap">
+  <div class="phone"><div class="screen">
+    <div class="statusbar"><span class="time">9:25</span><span class="icons">
+      <svg width="18" height="12" viewBox="0 0 18 12"><g fill="#f4f4f5"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="5" y="4" width="3" height="8" rx="1"/><rect x="10" y="2" width="3" height="10" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></g></svg>
+      <svg width="18" height="13" viewBox="0 0 18 13" fill="#f4f4f5"><path d="M9 13l2.5-3a3.6 3.6 0 00-5 0L9 13zM3 6.5a9 9 0 0112 0l-1.6 1.9a6.4 6.4 0 00-8.8 0L3 6.5zM0 3.4a13.5 13.5 0 0118 0l-1.6 1.9a11 11 0 00-14.8 0L0 3.4z"/></svg>
+      <span class="batt"><i></i><b>7</b></span></span></div>
+    <div class="subhead" style="padding-bottom:14px;border-bottom:1px solid var(--line);margin:0 -18px;padding-left:18px;padding-right:18px">
+      <span class="back-pill">‹ Exercises</span>
+      <span style="font-size:22px;font-weight:800;margin-left:8px">Progress</span>
+    </div>
+    <div class="body">
+      <div style="height:14px"></div>
+      <div style="font-size:38px;font-weight:800;letter-spacing:-0.02em;padding:0 4px">RDL</div>
+      <div style="color:var(--text-2);font-size:16px;padding:6px 4px 18px">First set over time</div>
+      <div class="seg" style="padding-left:0">
+        <span class="chip">1 mo</span><span class="chip on">2 mo</span><span class="chip">6 mo</span><span class="chip">All</span>
+      </div>
+      <div class="section-label" style="padding-left:4px">First set · Jul 30</div>
+      <div class="stat-big" style="padding:0 4px">10 <span class="x">×</span> 205 <span class="u">lbs</span></div>
+      <div class="pb" style="padding-left:4px">Personal best</div>
+      <div class="delta" style="padding-left:4px">Same weight · +2 reps</div>
+
+      <div class="section-label" style="padding-left:4px">Weight over time</div>
+      <div class="chart-card">
+        <svg viewBox="0 0 300 170" width="100%" style="display:block">
+          <text x="18" y="30" fill="#6b6b72" font-size="12" font-family="sans-serif">215</text>
+          <line x1="46" y1="26" x2="290" y2="26" stroke="#232327"/>
+          <text x="18" y="98" fill="#6b6b72" font-size="12" font-family="sans-serif">205</text>
+          <line x1="46" y1="94" x2="290" y2="94" stroke="#232327"/>
+          <text x="18" y="150" fill="#6b6b72" font-size="12" font-family="sans-serif">195</text>
+          <line x1="46" y1="146" x2="290" y2="146" stroke="#232327"/>
+          <line x1="56" y1="94" x2="278" y2="94" stroke="#d8f24e" stroke-width="2.5"/>
+          <circle cx="56" cy="94" r="7" fill="#aebf3a"/>
+          <circle cx="132" cy="94" r="5" fill="#aebf3a"/>
+          <circle cx="205" cy="94" r="8" fill="#aebf3a"/>
+          <circle cx="278" cy="94" r="11" fill="#d8f24e" stroke="#fff" stroke-width="2.5"/>
+          <text x="56" y="168" fill="#a1a1aa" font-size="11" text-anchor="middle" font-family="sans-serif">Jun 25</text>
+          <text x="132" y="168" fill="#a1a1aa" font-size="11" text-anchor="middle" font-family="sans-serif">Jul 5</text>
+          <text x="205" y="168" fill="#a1a1aa" font-size="11" text-anchor="middle" font-family="sans-serif">Jul 21</text>
+          <text x="278" y="168" fill="#a1a1aa" font-size="11" text-anchor="middle" font-family="sans-serif">Jul 30</text>
+        </svg>
+        <div style="color:var(--text-3);font-size:12px;padding:6px 4px 4px">Dot size = reps on the first set</div>
+      </div>
+    </div>
+  </div></div>
+  <div class="frame-label">3 · Exercise detail (RDL)</div>
+</div>
+
+<!-- ============================ 4. HISTORY ============================ -->
+<div class="frame-wrap">
+  <div class="phone"><div class="screen">
+    <div class="statusbar"><span class="time">9:25</span><span class="icons">
+      <svg width="18" height="12" viewBox="0 0 18 12"><g fill="#f4f4f5"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="5" y="4" width="3" height="8" rx="1"/><rect x="10" y="2" width="3" height="10" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></g></svg>
+      <svg width="18" height="13" viewBox="0 0 18 13" fill="#f4f4f5"><path d="M9 13l2.5-3a3.6 3.6 0 00-5 0L9 13zM3 6.5a9 9 0 0112 0l-1.6 1.9a6.4 6.4 0 00-8.8 0L3 6.5zM0 3.4a13.5 13.5 0 0118 0l-1.6 1.9a11 11 0 00-14.8 0L0 3.4z"/></svg>
+      <span class="batt"><i></i><b>7</b></span></span></div>
+    <div class="body">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="h-title" style="padding-bottom:8px">History</div>
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="2"><path d="M3 17l6-6 4 4 8-8"/></svg>
+      </div>
+      <div class="log-card">
+        <div class="log-head"><span class="date">Aug 8</span><span class="name">Push</span></div>
+        <div class="ex">
+          <div class="ex-head"><b>Incline Dumbbell Press</b><span>2 sets</span></div>
+          <div class="setline"><span class="lab">Set 1</span> <b>60</b> <span class="unit">lbs</span> × <b>6</b> <span class="unit">reps</span> <span class="up">^ ^</span> <span class="tag">RPE 10</span></div>
+          <div class="setline"><span class="tag">Good reps 0RIR</span></div>
+          <div class="setline"><span class="lab">Set 2</span> <b>55</b> <span class="unit">lbs</span> × <b>7</b> <span class="unit">reps</span> <span class="fail">FAIL</span> <span class="tag">Assist</span></div>
+        </div>
+        <div class="ex">
+          <div class="ex-head"><b>Single Tricep Pushdown</b><span>2 sets</span></div>
+          <div class="setline"><span class="lab">Set 1</span> <b>22</b> <span class="unit">lbs</span> × <b>6</b> <span class="unit">reps</span> <span style="color:var(--danger)">˅</span> <span class="tag">L</span></div>
+          <div class="setline"><span class="lab">Set 2</span> <b>22</b> <span class="unit">lbs</span> × <b>5</b> <span class="unit">reps</span> <span style="color:var(--danger)">˅</span> <span class="fail">FAIL</span></div>
+        </div>
+        <div class="ex">
+          <div class="ex-head"><b>Machine Fly/Press</b><span>1 sets</span></div>
+          <div class="setline"><span class="lab">Set 1</span> <b>70</b> <span class="unit">lbs</span> × <b>7</b> <span class="unit">reps</span> <span class="up">^ ^</span></div>
+        </div>
+        <div class="ex">
+          <div class="ex-head"><b>Y-Raise</b><span>2 sets</span></div>
+          <div class="setline"><span class="lab">Set 1</span> <b>13</b> <span class="unit">lbs</span> × <b>6</b> <span class="unit">reps</span> <span class="up">^ ^</span></div>
+          <div class="setline"><span class="lab">Set 2</span> <b>13</b> <span class="unit">lbs</span> × <b>2</b> <span class="unit">reps</span></div>
+          <div class="more">+1 exercises<br>9 sets total</div>
+        </div>
+      </div>
+      <div class="log-card">
+        <div class="log-head"><span class="date">Aug 6</span><span class="name">Legs 2</span></div>
+        <div class="ex">
+          <div class="ex-head"><b>Pendulum Squat</b><span>2 sets</span></div>
+          <div class="setline"><span class="lab">Set 1</span> <b>45</b>×1, <b>25</b>×1 × <b>8</b> <span class="unit">reps</span> <span class="up">^</span> <span class="fail">FAIL</span></div>
+          <div class="setline"><span class="tag">Assist</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="tabbar">
+      <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Home</div>
+      <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Splits</div>
+      <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8"/></svg>Progr…</div>
+      <div class="tab active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>History</div>
+      <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1l2-1.5-2-3.5-2.3 1a7 7 0 00-1.7-1L16.5 3h-4l-.4 2.5a7 7 0 00-1.7 1l-2.3-1-2 3.5 2 1.5a7 7 0 000 2l-2 1.5 2 3.5 2.3-1a7 7 0 001.7 1l.4 2.5h4l.4-2.5a7 7 0 001.7-1l2.3 1 2-3.5-2-1.5c.1-.3.1-.7.1-1z"/></svg>Settings</div>
+      <div class="tab">▾<span style="margin-top:2px">picker</span></div>
+    </div>
+  </div></div>
+  <div class="frame-label">4 · History</div>
+</div>
+
+<!-- ============================ 5. SETTINGS ============================ -->
+<div class="frame-wrap">
+  <div class="phone"><div class="screen">
+    <div class="statusbar"><span class="time">9:25</span><span class="icons">
+      <svg width="18" height="12" viewBox="0 0 18 12"><g fill="#f4f4f5"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="5" y="4" width="3" height="8" rx="1"/><rect x="10" y="2" width="3" height="10" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></g></svg>
+      <svg width="18" height="13" viewBox="0 0 18 13" fill="#f4f4f5"><path d="M9 13l2.5-3a3.6 3.6 0 00-5 0L9 13zM3 6.5a9 9 0 0112 0l-1.6 1.9a6.4 6.4 0 00-8.8 0L3 6.5zM0 3.4a13.5 13.5 0 0118 0l-1.6 1.9a11 11 0 00-14.8 0L0 3.4z"/></svg>
+      <span class="batt"><i></i><b>7</b></span></span></div>
+    <div class="body">
+      <div class="h-title">Settings</div>
+      <div class="section-label" style="padding-top:6px">Units</div>
+      <div class="card" style="padding:18px;display:flex;align-items:center;gap:12px">
+        <div style="flex:1"><b style="font-size:18px">Weight unit</b><div style="color:var(--text-2);font-size:14px;margin-top:4px">Show and log weights in kilograms or pounds</div></div>
+        <span class="chip">kg</span><span class="chip on">lbs</span>
+      </div>
+      <div class="section-label">Workout</div>
+      <div class="card" style="padding:18px">
+        <b style="font-size:18px">Default rest between sets</b>
+        <div style="color:var(--text-2);font-size:14px;margin:4px 0 14px">Countdown starts after every logged set</div>
+        <div style="display:flex;gap:10px"><span class="chip">60s</span><span class="chip">90s</span><span class="chip on">120s</span><span class="chip">180s</span></div>
+      </div>
+      <div class="section-label">Training cycle</div>
+      <div class="card" style="padding:18px;display:flex;align-items:center;margin-bottom:12px">
+        <div style="flex:1"><b style="font-size:18px">Edit Training Cycle</b><div style="color:var(--text-2);font-size:14px;margin-top:4px">Day 5 of 8 · Legs 2</div></div>
+        <span class="row-arrow">›</span>
+      </div>
+      <div class="card" style="padding:18px;display:flex;align-items:center;margin-bottom:12px">
+        <div style="flex:1"><b style="font-size:18px">Auto-advance after workout</b><div style="color:var(--text-2);font-size:14px;margin-top:4px">Move to the next cycle day when a workout is finished</div></div>
+        <div style="width:52px;height:31px;border-radius:16px;background:var(--accent);position:relative;flex:0 0 auto"><div style="width:27px;height:27px;border-radius:50%;background:#fff;position:absolute;top:2px;right:2px"></div></div>
+      </div>
+      <div class="card" style="padding:18px">
+        <b style="font-size:18px;color:var(--danger)">Reset to Day 1</b>
+        <div style="color:var(--text-2);font-size:14px;margin-top:4px">Start the cycle over from day 1</div>
+      </div>
+      <div class="section-label">Data</div>
+      <div class="card" style="padding:18px;display:flex;align-items:center">
+        <div style="flex:1"><b style="font-size:18px">Export data</b><div style="color:var(--text-2);font-size:14px;margin-top:4px">Save all splits, exercises, history, and settings</div></div>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="2"><path d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7"/><path d="M12 3v13M7 8l5-5 5 5"/></svg>
+      </div>
+      <div style="height:20px"></div>
+    </div>
+    <div class="tabbar">
+      <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Home</div>
+      <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Splits</div>
+      <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8"/></svg>Progr…</div>
+      <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>History</div>
+      <div class="tab active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1l2-1.5-2-3.5-2.3 1a7 7 0 00-1.7-1L16.5 3h-4l-.4 2.5a7 7 0 00-1.7 1l-2.3-1-2 3.5 2 1.5a7 7 0 000 2l-2 1.5 2 3.5 2.3-1a7 7 0 001.7 1l.4 2.5h4l.4-2.5a7 7 0 001.7-1l2.3 1 2-3.5-2-1.5c.1-.3.1-.7.1-1z"/></svg>Settings</div>
+      <div class="tab">▾<span style="margin-top:2px">picker</span></div>
+    </div>
+  </div></div>
+  <div class="frame-label">5 · Settings</div>
+</div>
+
+<!-- ============================ 6. SESSION (read-only) ============================ -->
+<div class="frame-wrap">
+  <div class="phone"><div class="screen">
+    <div class="statusbar"><span class="time">9:25</span><span class="icons">
+      <svg width="18" height="12" viewBox="0 0 18 12"><g fill="#f4f4f5"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="5" y="4" width="3" height="8" rx="1"/><rect x="10" y="2" width="3" height="10" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></g></svg>
+      <svg width="18" height="13" viewBox="0 0 18 13" fill="#f4f4f5"><path d="M9 13l2.5-3a3.6 3.6 0 00-5 0L9 13zM3 6.5a9 9 0 0112 0l-1.6 1.9a6.4 6.4 0 00-8.8 0L3 6.5zM0 3.4a13.5 13.5 0 0118 0l-1.6 1.9a11 11 0 00-14.8 0L0 3.4z"/></svg>
+      <span class="batt"><i></i><b>7</b></span></span></div>
+    <div class="subhead" style="padding-bottom:14px;border-bottom:1px solid var(--line);margin:0 -18px 0;padding-left:18px;padding-right:18px">
+      <span class="back-pill">‹ (tabs)</span>
+      <span style="font-size:22px;font-weight:800;margin-left:8px">Session</span>
+    </div>
+    <div class="body">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 4px 12px;border-bottom:1px solid var(--line)">
+        <span style="color:var(--text-2);font-size:15px">Aug 8</span><span style="font-weight:800;font-size:19px">Push</span>
+      </div>
+      <div class="ex">
+        <div class="ex-head"><b>Incline Dumbbell Press</b><span>2 sets</span></div>
+        <div class="setline"><span class="lab">Set 1</span> <b>60</b> <span class="unit">lbs</span> × <b>6</b> <span class="unit">reps</span> <span class="up">^ ^</span> <span class="tag">RPE 10</span></div>
+        <div class="note">Good reps 0RIR</div>
+        <div class="setline"><span class="lab">Set 2</span> <b>55</b> <span class="unit">lbs</span> × <b>7</b> <span class="unit">reps</span> <span class="fail">FAIL</span></div>
+        <div class="note">Assist</div>
+      </div>
+      <div class="ex">
+        <div class="ex-head"><b>Single Tricep Pushdown</b><span>2 sets</span></div>
+        <div class="setline"><span class="lab">Set 1</span> <b>22</b> <span class="unit">lbs</span> × <b>6</b> <span class="unit">reps</span> <span style="color:var(--danger)">˅</span></div>
+        <div class="note">L</div>
+        <div class="setline"><span class="lab">Set 2</span> <b>22</b> <span class="unit">lbs</span> × <b>5</b> <span class="unit">reps</span> <span style="color:var(--danger)">˅</span> <span class="fail">FAIL</span></div>
+      </div>
+      <div class="ex">
+        <div class="ex-head"><b>Machine Fly/Press</b><span>1 sets</span></div>
+        <div class="setline"><span class="lab">Set 1</span> <b>70</b> <span class="unit">lbs</span> × <b>7</b> <span class="unit">reps</span> <span class="up">^ ^</span></div>
+      </div>
+      <div class="ex">
+        <div class="ex-head"><b>Y-Raise</b><span>2 sets</span></div>
+        <div class="setline"><span class="lab">Set 1</span> <b>13</b> <span class="unit">lbs</span> × <b>6</b> <span class="unit">reps</span> <span class="up">^ ^</span></div>
+        <div class="setline"><span class="lab">Set 2</span> <b>13</b> <span class="unit">lbs</span> × <b>2</b> <span class="unit">reps</span></div>
+      </div>
+      <div class="ex">
+        <div class="ex-head"><b>Shoulder Press</b><span>2 sets</span></div>
+        <div class="setline"><span class="lab">Set 1</span> <b>45</b>×1, <b>10</b>×2 × <b>10</b> <span class="unit">reps</span> <span class="up">^ ^ ^</span></div>
+        <div class="setline"><span class="lab">Set 2</span> <b>45</b>×1, <b>10</b>×2 × <b>6</b> <span class="unit">reps</span> <span class="up">^ ^</span> <span class="fail">FAIL</span></div>
+      </div>
+    </div>
+  </div></div>
+  <div class="frame-label">6 · Session (read-only)</div>
+</div>
+
+<!-- ============================ 7. ACTIVE WORKOUT ============================ -->
+<div class="frame-wrap">
+  <div class="phone"><div class="screen">
+    <div class="statusbar"><span class="time">9:25</span><span class="icons">
+      <svg width="18" height="12" viewBox="0 0 18 12"><g fill="#f4f4f5"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="5" y="4" width="3" height="8" rx="1"/><rect x="10" y="2" width="3" height="10" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></g></svg>
+      <svg width="18" height="13" viewBox="0 0 18 13" fill="#f4f4f5"><path d="M9 13l2.5-3a3.6 3.6 0 00-5 0L9 13zM3 6.5a9 9 0 0112 0l-1.6 1.9a6.4 6.4 0 00-8.8 0L3 6.5zM0 3.4a13.5 13.5 0 0118 0l-1.6 1.9a11 11 0 00-14.8 0L0 3.4z"/></svg>
+      <span class="batt"><i></i><b>7</b></span></span></div>
+    <div class="body" style="display:flex;flex-direction:column">
+      <div class="carousel-top">
+        <div class="dots"><i class="on"></i><i></i><i></i><i></i><i></i></div>
+        <div class="counter">🏋️ 1 / 5</div>
+        <div class="viewall">View all</div>
+      </div>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-top:18px">
+        <div>
+          <div style="color:var(--text-3);font-size:20px">‹</div>
+          <div class="ex-title">Single Tricep<br>Pushdown</div>
+          <div class="sets-count"><b>0</b> sets</div>
+        </div>
+        <span class="substitute" style="margin-top:36px">Substitute</span>
+      </div>
+      <div class="lasttime" style="margin-top:8px">
+        <div class="lh"><span>Last time</span><span>Aug 8</span></div>
+        <div class="setline"><span class="lab">Set 1</span> <b>22</b> <span class="unit">lbs</span> × <b>6</b> <span class="unit">reps</span> <span class="tag">L</span></div>
+        <div class="setline"><span class="lab">Set 2</span> <b>22</b> <span class="unit">lbs</span> × <b>5</b> <span class="unit">reps</span> <span class="fail">FAIL</span></div>
+      </div>
+      <div style="flex:1"></div>
+      <div class="btn-set" style="margin-bottom:16px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
+        Set
+      </div>
+    </div>
+    <div style="position:absolute;top:12px;left:14px;font-size:26px;color:var(--text-2)">✕</div>
+  </div></div>
+  <div class="frame-label">7 · Active workout (logging)</div>
+</div>
+
+</div>
+</body>
+</html>
