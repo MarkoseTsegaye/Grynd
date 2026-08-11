@@ -164,11 +164,11 @@
   .cbar .go{background:var(--accent);color:var(--on-accent);border-radius:10px;height:40px;padding:0 18px;display:flex;align-items:center;gap:6px;font-size:15px;font-weight:800}
   .cbar .go svg{width:17px;height:17px}
 
-  /* inline RPE picker (NEW) */
+  /* inline RIR picker (NEW) */
   .inline-panel{background:var(--bg);border-radius:11px;padding:10px;margin-bottom:8px}
   .inline-panel .ttl{display:flex;align-items:center;justify-content:space-between;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--text-3);font-weight:700;margin-bottom:9px}
   .inline-panel .ttl .clear{color:var(--text-2);letter-spacing:0;text-transform:none;font-size:12px}
-  .rpe-scale{display:grid;grid-template-columns:repeat(6,1fr);gap:5px}
+  .rpe-scale{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
   .rpe{height:38px;border-radius:8px;background:var(--bg-elev-2);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:15px;font-weight:700;color:var(--text-2)}
   .rpe.on{background:var(--accent);color:var(--on-accent)}
   .rpe-hint{font-size:11px;color:var(--text-3);margin-top:8px;text-align:center}
@@ -191,7 +191,7 @@
   <h1><span>Grynd</span> — Active-workout logging rework</h1>
   <p>
     Four changes to the logging screen: a <b>dismissible</b> log pad, a <b>readable set table</b> that
-    matches the new History rows, a <b>slim rest timer</b>, and <b>RPE / notes moved inline</b> — off the
+    matches the new History rows, a <b>slim rest timer</b>, and <b>RIR / notes moved inline</b> — off the
     modal that currently discards whatever you already typed.
   </p>
 </div>
@@ -200,7 +200,7 @@
   <div class="fix"><b>1 · Dismissible pad</b><span>Grab handle + chevron collapses the keypad to a 52px bar, handing the whole screen to the set list. Tap anywhere on the bar to bring it back.</span></div>
   <div class="fix"><b>2 · Set table</b><span>Aligned columns instead of wrapping pills. Last week's sets sit inline as dim <i>ghost rows</i> you overwrite as you go — no separate cramped header line.</span></div>
   <div class="fix"><b>3 · Slim rest timer</b><span>100px card → 38px bar with the countdown as a background fill. Dismissable with <code>✕</code>, +15s inline.</span></div>
-  <div class="fix bug"><b>4 · RPE / notes — BUG</b><span>Confirmed: tapping “Plates · RPE · Note” calls <code>resetLogForm()</code> and <b>wipes the weight and reps you just typed</b>. Now inline panels that keep your entry and attach to the set being logged.</span></div>
+  <div class="fix bug"><b>4 · RIR / notes — BUG</b><span>Confirmed: tapping “Plates · RPE · Note” calls <code>resetLogForm()</code> and <b>wipes the weight and reps you just typed</b>. Now inline panels that keep your entry and attach to the set being logged.</span></div>
 </div>
 
 <div class="gallery">
@@ -240,7 +240,7 @@
           <span class="d"><span class="d-chip up"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 8l5 6H7z"/></svg>3</span></span>
         </div>
         <div class="smeta">
-          <span class="flag fail">FAILURE</span><span class="flag rpe">RPE 9</span>
+          <span class="flag fail">FAILURE</span><span class="flag rpe">1 RIR</span>
           <span class="note"><span>spotter took the last one</span></span>
         </div>
 
@@ -262,7 +262,7 @@
         </div>
         <div class="metarow">
           <div class="mchip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2s6 5 6 10a6 6 0 01-12 0c0-5 6-10 6-10z"/></svg>Failure</div>
-          <div class="mchip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>RPE</div>
+          <div class="mchip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>RIR</div>
           <div class="mchip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 11h16M4 17h9"/></svg>Note</div>
         </div>
         <div class="keypad">
@@ -311,7 +311,7 @@
         <div class="srow"><span class="n">2</span><span class="w">55<u>lbs</u></span><span class="r">7<u>×</u></span>
           <span class="d"><span class="d-chip up"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 8l5 6H7z"/></svg>3</span></span></div>
         <div class="smeta">
-          <span class="flag fail">FAILURE</span><span class="flag rpe">RPE 9</span>
+          <span class="flag fail">FAILURE</span><span class="flag rpe">1 RIR</span>
           <span class="note"><span>spotter took the last one</span></span>
         </div>
 
@@ -388,17 +388,17 @@
         </div>
         <div class="metarow">
           <div class="mchip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2s6 5 6 10a6 6 0 01-12 0c0-5 6-10 6-10z"/></svg>Failure</div>
-          <div class="mchip set"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>RPE <b>9</b></div>
+          <div class="mchip set"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>RIR <b>1</b></div>
           <div class="mchip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 11h16M4 17h9"/></svg>Note</div>
         </div>
 
         <div class="inline-panel">
-          <div class="ttl"><span>Rate of perceived exertion</span><span class="clear">Clear</span></div>
+          <div class="ttl"><span>Reps in reserve</span><span class="clear">Clear</span></div>
           <div class="rpe-scale">
-            <div class="rpe">5</div><div class="rpe">6</div><div class="rpe">7</div>
-            <div class="rpe">8</div><div class="rpe on">9</div><div class="rpe">10</div>
+            <div class="rpe">0</div><div class="rpe on">1</div><div class="rpe">2</div>
+            <div class="rpe">3</div><div class="rpe">4+</div>
           </div>
-          <div class="rpe-hint">9 · one rep left in the tank</div>
+          <div class="rpe-hint">1 rep left in the tank</div>
         </div>
 
         <div class="btn-log"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Log set</div>
@@ -407,7 +407,7 @@
 
     <div class="callout l" style="top:474px;left:22px">weight + reps kept</div>
   </div></div>
-  <div class="frame-label"><b>C · RPE inline</b>Tapping RPE swaps the keypad for a 5–10 scale — <b>no modal, entry preserved</b>. The chip shows the value so you can see it without opening anything.</div>
+  <div class="frame-label"><b>C · RIR inline</b>Tapping RIR swaps the keypad for a reps-in-reserve scale — <b>no modal, entry preserved</b>. The chip shows the value so you can see it without opening anything. Stored as RIR; legacy RPE sets read back via RIR = 10 − RPE.</div>
 </div>
 
 <!-- ============ D · NOTE INLINE ============ -->
@@ -446,7 +446,7 @@
         </div>
         <div class="metarow">
           <div class="mchip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2s6 5 6 10a6 6 0 01-12 0c0-5 6-10 6-10z"/></svg>Failure</div>
-          <div class="mchip set"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>RPE <b>9</b></div>
+          <div class="mchip set"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>RIR <b>1</b></div>
           <div class="mchip set"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 11h16M4 17h9"/></svg>Note</div>
         </div>
 
@@ -466,7 +466,7 @@
 
     <div class="callout r" style="top:588px;right:96px">reusable phrases</div>
   </div></div>
-  <div class="frame-label"><b>D · Note inline</b>Same panel slot as RPE. Tap-to-insert phrases cover the common cases without typing. Both chips light up so the set's metadata is visible before you log it.</div>
+  <div class="frame-label"><b>D · Note inline</b>Same panel slot as RIR. Tap-to-insert phrases cover the common cases without typing. Both chips light up so the set's metadata is visible before you log it.</div>
 </div>
 
 <!-- ============ E · EDIT A LOGGED SET ============ -->
@@ -511,7 +511,7 @@
         </div>
         <div class="metarow">
           <div class="mchip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2s6 5 6 10a6 6 0 01-12 0c0-5 6-10 6-10z"/></svg>Failure</div>
-          <div class="mchip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>RPE</div>
+          <div class="mchip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>RIR</div>
           <div class="mchip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 11h16M4 17h9"/></svg>Note</div>
         </div>
         <div class="plate-pad">
@@ -528,7 +528,7 @@
 
     <div class="callout l" style="top:283px;left:26px">tapped row</div>
   </div></div>
-  <div class="frame-label"><b>E · Editing a logged set</b>Tapping a row loads it into the same pad — no separate modal, no separate layout. RPE and notes are editable per set here, which is what's broken today.</div>
+  <div class="frame-label"><b>E · Editing a logged set</b>Tapping a row loads it into the same pad — no separate modal, no separate layout. RIR and notes are editable per set here, which is what's broken today.</div>
 </div>
 
 </div>

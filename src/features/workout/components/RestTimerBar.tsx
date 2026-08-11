@@ -14,94 +14,87 @@ function formatRemaining(ms: number): string {
 interface Props {
   status: RestTimerStatus;
   remainingMs: number;
-  onStart: () => void;
-  onStop: () => void;
-  onAdjustMinus: () => void;
+  /** Remaining fraction (1 → 0) driving the background fill. */
+  progress: number;
+  onToggle: () => void;
   onAdjustPlus: () => void;
-  onDismissComplete: () => void;
+  onDismiss: () => void;
 }
 
+/**
+ * Slim rest strip: 40px instead of the old ~100px card. The countdown drains
+ * as a background fill so the time is readable peripherally, +15s stays one
+ * tap, and the whole thing can be dismissed outright.
+ */
 export function RestTimerBar({
   status,
   remainingMs,
-  onStart,
-  onStop,
-  onAdjustMinus,
+  progress,
+  onToggle,
   onAdjustPlus,
-  onDismissComplete,
+  onDismiss,
 }: Props) {
   const isComplete = status === 'complete';
   const isRunning = status === 'running';
   const displayTime = isComplete ? '0:00' : formatRemaining(remainingMs);
 
   return (
-    <View className="bg-surface-1 border border-surface-2 rounded-lg px-4 py-3 mt-4 mb-1">
-      <View className="flex-row items-center justify-between mb-3">
-        <Text className={`text-text-secondary ${textRoles.caption}`}>Rest</Text>
-        {isComplete ? (
-          <TouchableOpacity
-            onPress={onDismissComplete}
-            accessibilityLabel="Dismiss rest complete"
-            activeOpacity={0.7}
-          >
-            <Text className={`text-accent ${textRoles.caption}`}>Done</Text>
-          </TouchableOpacity>
-        ) : (
-          <Text
-            className={`text-text-primary ${textRoles.metricLarge}`}
-            accessibilityLabel={`Rest time remaining, ${displayTime}`}
-          >
-            {displayTime}
-          </Text>
-        )}
-      </View>
-
-      {isComplete ? (
-        <Text
-          className={`text-accent ${textRoles.body} text-center py-1`}
-          accessibilityLabel="Rest complete"
-        >
-          Rest complete
-        </Text>
-      ) : (
-        <View className="flex-row items-center justify-between gap-2">
-          <TouchableOpacity
-            className="bg-surface-2 rounded-lg px-3 py-2.5 min-w-[56px] items-center"
-            onPress={onAdjustMinus}
-            accessibilityLabel="Subtract 15 seconds from rest"
-            activeOpacity={0.7}
-          >
-            <Text className={`text-text-primary ${textRoles.buttonLabelSmall}`}>−15s</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            className={`rounded-lg px-4 py-2.5 flex-row items-center gap-1.5 ${isRunning ? 'bg-surface-2' : 'bg-accent'}`}
-            onPress={isRunning ? onStop : onStart}
-            accessibilityLabel={isRunning ? 'Stop rest timer' : 'Start rest timer'}
-            activeOpacity={0.7}
-          >
-            <Icon
-              name={isRunning ? 'pause' : 'play'}
-              size={18}
-              color={isRunning ? 'text-primary' : 'surface-0'}
-            />
-            <Text
-              className={`${textRoles.buttonLabelSmall} ${isRunning ? 'text-text-primary' : 'text-surface-0'}`}
-            >
-              {isRunning ? 'Stop' : 'Start'}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            className="bg-surface-2 rounded-lg px-3 py-2.5 min-w-[56px] items-center"
-            onPress={onAdjustPlus}
-            accessibilityLabel="Add 15 seconds to rest"
-            activeOpacity={0.7}
-          >
-            <Text className={`text-text-primary ${textRoles.buttonLabelSmall}`}>+15s</Text>
-          </TouchableOpacity>
-        </View>
+    <View
+      className={`flex-row items-center rounded-lg overflow-hidden mb-2 ${isComplete ? 'bg-accent/15 border border-accent/40' : 'bg-surface-1'}`}
+      style={{ height: 40 }}
+    >
+      {/* Countdown as a draining fill */}
+      {!isComplete && (
+        <View
+          className="absolute left-0 top-0 bottom-0 bg-accent/10 border-r border-accent/40"
+          style={{ width: `${Math.round(progress * 100)}%` }}
+          pointerEvents="none"
+        />
       )}
+
+      <TouchableOpacity
+        className="flex-row items-center gap-2 flex-1 h-full pl-3"
+        onPress={onToggle}
+        disabled={isComplete}
+        accessibilityRole="button"
+        accessibilityLabel={
+          isComplete
+            ? 'Rest complete'
+            : `Rest ${displayTime} remaining, tap to ${isRunning ? 'pause' : 'resume'}`
+        }
+        activeOpacity={0.7}
+      >
+        <Icon name={isRunning ? 'timer-outline' : isComplete ? 'check-circle' : 'pause'} size={15} color="accent" />
+        <Text className={`text-accent ${textRoles.metricBold}`}>{displayTime}</Text>
+        <Text className={`${textRoles.caption} ${isComplete ? 'text-accent' : 'text-text-secondary'}`}>
+          {isComplete ? 'rest done' : isRunning ? 'rest' : 'paused'}
+        </Text>
+      </TouchableOpacity>
+
+      {!isComplete && (
+        <TouchableOpacity
+          className="bg-surface-2 rounded-md px-2 py-1 mr-1.5"
+          onPress={onAdjustPlus}
+          accessibilityRole="button"
+          accessibilityLabel="Add 15 seconds to rest"
+          activeOpacity={0.7}
+        >
+          <Text className={`text-text-secondary ${textRoles.caption}`} style={{ fontSize: 12 }}>
+            +15s
+          </Text>
+        </TouchableOpacity>
+      )}
+
+      <TouchableOpacity
+        className="h-full justify-center pr-3 pl-1"
+        onPress={onDismiss}
+        accessibilityRole="button"
+        accessibilityLabel="Dismiss rest timer"
+        hitSlop={8}
+        activeOpacity={0.7}
+      >
+        <Icon name="close" size={16} color={isComplete ? 'accent' : 'text-disabled'} />
+      </TouchableOpacity>
     </View>
   );
 }
