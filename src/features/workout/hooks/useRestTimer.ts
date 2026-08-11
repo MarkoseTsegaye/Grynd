@@ -7,6 +7,8 @@ export function useRestTimer(onComplete?: () => void) {
   const [status, setStatus] = useState<RestTimerStatus>('idle');
   const [endsAt, setEndsAt] = useState<number | null>(null);
   const [pausedRemainingMs, setPausedRemainingMs] = useState(0);
+  // Tracked so the slim bar can render remaining time as a background fill.
+  const [totalMs, setTotalMs] = useState(0);
   const [, setTick] = useState(0);
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
@@ -32,6 +34,7 @@ export function useRestTimer(onComplete?: () => void) {
     setStatus('idle');
     setEndsAt(null);
     setPausedRemainingMs(0);
+    setTotalMs(0);
   }, []);
 
   const dismissComplete = useCallback(() => {
@@ -43,6 +46,7 @@ export function useRestTimer(onComplete?: () => void) {
   const start = useCallback((seconds: number) => {
     setEndsAt(Date.now() + seconds * 1000);
     setPausedRemainingMs(0);
+    setTotalMs(seconds * 1000);
     setStatus('running');
     setTick((t) => t + 1);
   }, []);
@@ -83,6 +87,9 @@ export function useRestTimer(onComplete?: () => void) {
       } else {
         setPausedRemainingMs(next);
       }
+      // Grow the denominator when the user adds time, so the fill never
+      // overflows past full after a +15s.
+      setTotalMs((prev) => Math.max(prev, next));
       setTick((t) => t + 1);
     },
     [status, getRemainingMs, complete],
@@ -120,10 +127,12 @@ export function useRestTimer(onComplete?: () => void) {
 
   const remainingMs = getRemainingMs();
   const isVisible = status !== 'idle';
+  const progress = totalMs > 0 ? Math.min(1, Math.max(0, remainingMs / totalMs)) : 0;
 
   return {
     status,
     remainingMs,
+    progress,
     isVisible,
     start,
     pause,

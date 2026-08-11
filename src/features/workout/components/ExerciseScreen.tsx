@@ -1,16 +1,13 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
-import { SetChip } from './SetChip';
+import { View, Text, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { RestTimerBar } from './RestTimerBar';
-import { QuickLogBar } from './QuickLogBar';
-import { PlateLogBar } from './PlateLogBar';
+import { SetTable } from './SetTable';
+import { LogPad } from './LogPad';
 import type { LoggedExercise } from '../types';
 import type { RestTimerStatus } from '../hooks/useRestTimer';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Icon } from '../../../shared/components/Icon';
-import { formatShortDate } from '../../../shared/lib/date';
 import { usePrefsStore } from '../../../shared/store/prefsStore';
-import { formatSetWeightDisplay } from '../../../shared/lib/weight';
 import { textRoles } from '../../../shared/theme/typography';
 
 interface Props {
@@ -19,17 +16,15 @@ interface Props {
   totalExercises: number;
   isLastExercise: boolean;
   previousExercise: LoggedExercise | null;
-  onOpenLog: () => void;
-  // Quick-log keypad (fast straight-weight path)
+
+  // Log pad
+  weightMode: 'straight' | 'plates';
+  padCollapsed: boolean;
+  onTogglePad: () => void;
   weightValue: string;
   repValue: string;
   onChangeWeight: (value: string) => void;
   onChangeReps: (value: string) => void;
-  toFailure: boolean;
-  onToggleFailure: () => void;
-  isLogging: boolean;
-  onQuickLog: () => void;
-  // Plate-loaded path
   computedWeightKg: number;
   plates: Record<number, number>;
   plateList: number[];
@@ -37,8 +32,24 @@ interface Props {
   onRemovePlate: (weight: number) => void;
   onClearPlates: () => void;
   onToggleUnit: () => void;
+  toFailure: boolean;
+  onToggleFailure: () => void;
+  rir: number | undefined;
+  onChangeRir: (rir: number | undefined) => void;
+  notes: string;
+  onChangeNotes: (notes: string) => void;
+  isUnilateral: boolean;
+  setSide: 'left' | 'right';
+  onChangeSide: (side: 'left' | 'right') => void;
+  isLogging: boolean;
+  onLog: () => void;
+
+  // Sets
+  editingSetIndex: number | null;
   onEditSet: (index: number) => void;
+  onCancelEdit: () => void;
   onDeleteSet: (index: number) => void;
+
   onFinish: () => void;
   onCancel: () => void;
   onOpenOverview?: () => void;
@@ -46,14 +57,14 @@ interface Props {
   onSubstitute?: () => void;
   substitutionLabel?: string;
   renderSwipeable?: (body: React.ReactNode) => React.ReactNode;
+
   restTimerStatus?: RestTimerStatus;
   restTimerRemainingMs?: number;
+  restTimerProgress?: number;
   restTimerVisible?: boolean;
-  onRestTimerStart?: () => void;
-  onRestTimerStop?: () => void;
-  onRestTimerAdjustMinus?: () => void;
+  onRestTimerToggle?: () => void;
   onRestTimerAdjustPlus?: () => void;
-  onRestTimerDismissComplete?: () => void;
+  onRestTimerDismiss?: () => void;
 }
 
 const MAX_DOTS = 8;
@@ -70,17 +81,17 @@ function DotProgress({ current, total }: { current: number; total: number }) {
   const dots = Array.from({ length: endIdx - startIdx }, (_, i) => startIdx + i);
 
   return (
-    <View className="flex-row items-center justify-center gap-1.5 mb-1">
+    <View className="flex-row items-center justify-center gap-1.5">
       {dots.map((idx) => {
         const isActive = idx === current;
         const isCompleted = idx < current;
-        // Dot sizes: active = 9px, normal = 6px (inline style needed for dynamic sizing)
-        const size = isActive ? 9 : 6;
+        // Inline style: the active dot is a wider pill, so size is dynamic.
+        const width = isActive ? 16 : 5;
         const bg = isActive ? '#E8FF47' : isCompleted ? '#8A8580' : '#3D3B38';
         return (
           <View
             key={idx}
-            style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: bg }}
+            style={{ width, height: 5, borderRadius: 3, backgroundColor: bg }}
           />
         );
       })}
@@ -90,47 +101,27 @@ function DotProgress({ current, total }: { current: number; total: number }) {
 
 export function ExerciseScreen({
   exercise, exerciseIndex, totalExercises, isLastExercise, previousExercise,
-  onOpenLog,
+  weightMode, padCollapsed, onTogglePad,
   weightValue, repValue, onChangeWeight, onChangeReps,
-  toFailure, onToggleFailure, isLogging, onQuickLog,
   computedWeightKg, plates, plateList, onAddPlate, onRemovePlate, onClearPlates, onToggleUnit,
-  onEditSet, onDeleteSet, onFinish, onCancel, onOpenOverview, overviewDisabled,
+  toFailure, onToggleFailure, rir, onChangeRir, notes, onChangeNotes,
+  isUnilateral, setSide, onChangeSide,
+  isLogging, onLog,
+  editingSetIndex, onEditSet, onCancelEdit, onDeleteSet,
+  onFinish, onCancel, onOpenOverview, overviewDisabled,
   onSubstitute, substitutionLabel,
   renderSwipeable,
-  restTimerStatus, restTimerRemainingMs, restTimerVisible,
-  onRestTimerStart, onRestTimerStop, onRestTimerAdjustMinus, onRestTimerAdjustPlus,
-  onRestTimerDismissComplete,
+  restTimerStatus, restTimerRemainingMs, restTimerProgress, restTimerVisible,
+  onRestTimerToggle, onRestTimerAdjustPlus, onRestTimerDismiss,
 }: Props) {
-  const isFirst = exerciseIndex === 0;
   const { weightUnit } = usePrefsStore();
-
-  const hasPrev = !!previousExercise && previousExercise.sets.length > 0;
-  const prevDate = hasPrev ? formatShortDate(previousExercise!.sets[0].loggedAt) : null;
-  const prevSummary = hasPrev
-    ? previousExercise!.sets
-        .map((s) => `${formatSetWeightDisplay(s, weightUnit).weightText}×${s.reps}`)
-        .join('   ·   ')
-    : '';
 
   const body = (
     <>
-      {/* Compact header: title · sets badge · substitute + swipe affordances */}
-      <View className="flex-row items-center mb-1">
-        <View style={{ width: 18 }}>
-          {!isLastExercise && <Icon name="chevron-left" size={18} color="text-disabled" />}
-          {isLastExercise && <Icon name="flag-checkered" size={18} color="text-disabled" />}
-        </View>
-        <Text
-          className={`flex-1 text-text-primary font-sans-bold text-xl mx-1`}
-          numberOfLines={1}
-        >
+      <View className="flex-row items-center gap-2 mb-1">
+        <Text className="flex-1 text-text-primary font-sans-bold text-xl" numberOfLines={1}>
           {exercise.exerciseName}
         </Text>
-        <View className="bg-surface-1 rounded-md px-2 py-0.5 mr-1">
-          <Text className={`text-text-secondary ${textRoles.metric}`}>
-            {exercise.sets.length} {exercise.sets.length === 1 ? 'set' : 'sets'}
-          </Text>
-        </View>
         {onSubstitute && (
           <TouchableOpacity
             onPress={onSubstitute}
@@ -138,100 +129,78 @@ export function ExerciseScreen({
             accessibilityRole="button"
             activeOpacity={0.7}
             hitSlop={8}
-            className="p-1"
           >
             <Icon name="swap-horizontal" size={20} color="accent" />
           </TouchableOpacity>
         )}
-        <View style={{ width: 18 }} className="items-end">
-          {!isFirst && <Icon name="chevron-right" size={18} color="text-disabled" />}
-        </View>
       </View>
 
       {substitutionLabel && (
-        <Text className={`text-text-secondary ${textRoles.caption} mb-1`} numberOfLines={1}>
+        <Text className={`text-text-disabled ${textRoles.caption} mb-1`} numberOfLines={1}>
           {substitutionLabel}
         </Text>
       )}
 
-      {/* One-line "last time" reference */}
-      {hasPrev && (
-        <View className="flex-row items-baseline mb-2">
-          <Text className={`text-text-disabled ${textRoles.caption} mr-2`}>Last {prevDate}</Text>
-          <Text
-            className={`flex-1 text-text-secondary ${textRoles.metric}`}
-            numberOfLines={1}
-          >
-            {prevSummary}
-          </Text>
-        </View>
-      )}
-
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        <View className="flex-row flex-wrap">
-          {exercise.sets.map((set, i) => (
-            <SetChip
-              key={`${set.loggedAt}-${i}`}
-              setNumber={i + 1}
-              set={set}
-              previousSet={previousExercise?.sets[i]}
-              onPress={() => onEditSet(i)}
-              onDelete={() => onDeleteSet(i)}
-            />
-          ))}
-        </View>
-      </ScrollView>
+      <SetTable
+        sets={exercise.sets}
+        previousSets={previousExercise?.sets ?? []}
+        weightUnit={weightUnit}
+        editingSetIndex={editingSetIndex}
+        onEditSet={onEditSet}
+        onDeleteSet={onDeleteSet}
+      />
     </>
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-surface-0 px-5 pt-4 pb-8">
-      {/* Header row: cancel + progress + finish */}
-      <View className="flex-row items-center justify-between mb-4">
+    // SafeAreaView owns the notch/home-indicator insets and writes them as its
+    // own padding, which would overwrite className padding — so the screen's
+    // gutters live on an inner View and stack on top of the insets.
+    <SafeAreaView className="flex-1 bg-surface-0">
+      <View className="flex-1 px-4 pt-2 pb-2">
+      {/* Header: cancel · progress · finish */}
+      <View className="flex-row items-center justify-between mb-2 gap-2">
         <TouchableOpacity
           onPress={onCancel}
           accessibilityLabel="Cancel workout"
+          accessibilityRole="button"
           activeOpacity={0.7}
-          className="p-1"
+          className="bg-surface-1 rounded-lg items-center justify-center"
+          style={{ width: 34, height: 34 }}
         >
-          <Icon name="close" size={24} color="text-secondary" />
+          <Icon name="close" size={18} color="text-secondary" />
         </TouchableOpacity>
 
-        <View className="flex-1 items-center">
+        <View className="flex-1 items-center gap-1">
           <DotProgress current={exerciseIndex} total={totalExercises} />
-          <View className="flex-row items-center gap-1.5">
-            <Icon name="dumbbell" size={14} color="text-secondary" />
-            <Text className={`text-text-secondary ${textRoles.captionMono}`}>
-              {exerciseIndex + 1} / {totalExercises}
+          <TouchableOpacity
+            onPress={onOpenOverview}
+            disabled={overviewDisabled || !onOpenOverview}
+            accessibilityLabel="View all exercises"
+            accessibilityRole="button"
+            activeOpacity={0.7}
+            className={overviewDisabled ? 'opacity-40' : ''}
+          >
+            <Text className={`text-text-disabled ${textRoles.captionMono}`} style={{ fontSize: 11 }}>
+              {exerciseIndex + 1} / {totalExercises} · View all
             </Text>
-          </View>
-          {onOpenOverview && (
-            <TouchableOpacity
-              onPress={onOpenOverview}
-              disabled={overviewDisabled}
-              accessibilityLabel="View all exercises"
-              accessibilityRole="button"
-              accessibilityState={{ disabled: overviewDisabled }}
-              activeOpacity={0.7}
-              className={`mt-1 ${overviewDisabled ? 'opacity-40' : ''}`}
-            >
-              <Text className={`text-accent ${textRoles.caption}`}>View all</Text>
-            </TouchableOpacity>
-          )}
+          </TouchableOpacity>
         </View>
 
         {isLastExercise ? (
           <TouchableOpacity
-            className="bg-success rounded-lg px-3 py-2 flex-row items-center gap-1"
+            className="bg-success rounded-lg px-3 flex-row items-center gap-1"
+            style={{ height: 34 }}
             onPress={onFinish}
             accessibilityLabel="Finish workout"
+            accessibilityRole="button"
             activeOpacity={0.7}
           >
-            <Icon name="flag-checkered" size={18} color="surface-0" />
+            <Icon name="flag-checkered" size={16} color="surface-0" />
             <Text className={`text-surface-0 ${textRoles.buttonLabelSmall}`}>Finish</Text>
           </TouchableOpacity>
         ) : (
-          <View style={{ width: 68 }} />
+          <View style={{ width: 34 }} />
         )}
       </View>
 
@@ -239,57 +208,55 @@ export function ExerciseScreen({
         {renderSwipeable ? renderSwipeable(body) : body}
       </View>
 
-      {restTimerVisible &&
-        restTimerStatus &&
-        restTimerRemainingMs !== undefined &&
-        onRestTimerStart &&
-        onRestTimerStop &&
-        onRestTimerAdjustMinus &&
-        onRestTimerAdjustPlus &&
-        onRestTimerDismissComplete && (
-          <RestTimerBar
-            status={restTimerStatus}
-            remainingMs={restTimerRemainingMs}
-            onStart={onRestTimerStart}
-            onStop={onRestTimerStop}
-            onAdjustMinus={onRestTimerAdjustMinus}
-            onAdjustPlus={onRestTimerAdjustPlus}
-            onDismissComplete={onRestTimerDismissComplete}
-          />
-        )}
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        {restTimerVisible &&
+          restTimerStatus &&
+          restTimerRemainingMs !== undefined &&
+          onRestTimerToggle &&
+          onRestTimerAdjustPlus &&
+          onRestTimerDismiss && (
+            <RestTimerBar
+              status={restTimerStatus}
+              remainingMs={restTimerRemainingMs}
+              progress={restTimerProgress ?? 0}
+              onToggle={onRestTimerToggle}
+              onAdjustPlus={onRestTimerAdjustPlus}
+              onDismiss={onRestTimerDismiss}
+            />
+          )}
 
-      {exercise.plateLoaded ? (
-        <PlateLogBar
-          computedWeightKg={computedWeightKg}
+        <LogPad
+          mode={weightMode}
+          collapsed={padCollapsed}
+          onToggleCollapsed={onTogglePad}
+          weightValue={weightValue}
+          repValue={repValue}
           weightUnit={weightUnit}
+          onChangeWeight={onChangeWeight}
+          onChangeReps={onChangeReps}
+          computedWeightKg={computedWeightKg}
           plates={plates}
           plateList={plateList}
           onAddPlate={onAddPlate}
           onRemovePlate={onRemovePlate}
           onClearPlates={onClearPlates}
           onToggleUnit={onToggleUnit}
-          repValue={repValue}
-          onChangeReps={onChangeReps}
           toFailure={toFailure}
           onToggleFailure={onToggleFailure}
+          rir={rir}
+          onChangeRir={onChangeRir}
+          notes={notes}
+          onChangeNotes={onChangeNotes}
+          isUnilateral={isUnilateral}
+          setSide={setSide}
+          onChangeSide={onChangeSide}
+          isEditing={editingSetIndex !== null}
           isLogging={isLogging}
-          onLog={onQuickLog}
-          onMore={onOpenLog}
+          onLog={onLog}
+          onCancelEdit={onCancelEdit}
         />
-      ) : (
-        <QuickLogBar
-          weightValue={weightValue}
-          repValue={repValue}
-          weightUnit={weightUnit}
-          onChangeWeight={onChangeWeight}
-          onChangeReps={onChangeReps}
-          toFailure={toFailure}
-          onToggleFailure={onToggleFailure}
-          isLogging={isLogging}
-          onLog={onQuickLog}
-          onMore={onOpenLog}
-        />
-      )}
+      </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
   );
 }

@@ -12,7 +12,13 @@ export interface LoggedSet {
   side?: SetSide;
   effort?: {
     toFailure: boolean;
+    /**
+     * Legacy field. Sets logged before the RIR switch stored perceived
+     * exertion; read them through `getSetRir` rather than directly.
+     */
     rpe?: number;
+    /** Reps in reserve — what the pad logs now. 0 = nothing left in the tank. */
+    rir?: number;
   };
   notes?: string;
   loggedAt: number;

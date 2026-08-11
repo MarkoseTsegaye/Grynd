@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
-import { Alert } from 'react-native';
+import { showDialog } from '../../../shared/lib/dialog';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useWorkoutStore } from '../store/workoutStore';
 import { usePrefsStore } from '../../../shared/store/prefsStore';
@@ -14,6 +14,7 @@ import {
   LBS_PLATES,
   KG_PLATES,
 } from '../../../shared/lib/weight';
+import { buildEffort, getSetRir } from '../lib/effort';
 import type { LoggedExercise, LoggedSet } from '../types';
 
 type WeightMode = 'straight' | 'plates';
@@ -31,10 +32,7 @@ function presentSheet(
   });
 }
 
-export function useWorkout(
-  logSheetRef: RefObject<BottomSheetModal | null>,
-  substituteSheetRef: RefObject<BottomSheetModal | null>,
-) {
+export function useWorkout(substituteSheetRef: RefObject<BottomSheetModal | null>) {
   const {
     session,
     currentExerciseIndex,
@@ -57,10 +55,10 @@ export function useWorkout(
     dismissComplete: dismissRestComplete,
     status: restTimerStatus,
     remainingMs: restTimerRemainingMs,
+    progress: restTimerProgress,
     isVisible: restTimerVisible,
   } = useRestTimer(light);
 
-  const [logSheetVisible, setLogSheetVisible] = useState(false);
   const [overviewSheetVisible, setOverviewSheetVisible] = useState(false);
   const [substituteSheetVisible, setSubstituteSheetVisible] = useState(false);
   const [editingSetIndex, setEditingSetIndex] = useState<number | null>(null);
@@ -70,9 +68,10 @@ export function useWorkout(
   const [plates, setPlates] = useState<Record<number, number>>({});
   const [setSide, setSetSide] = useState<'left' | 'right'>('left');
   const [toFailure, setToFailure] = useState(false);
-  const [rpeInput, setRpeInput] = useState('');
+  const [rir, setRir] = useState<number | undefined>(undefined);
   const [notesInput, setNotesInput] = useState('');
   const [isLogging, setIsLogging] = useState(false);
+  const [padCollapsed, setPadCollapsed] = useState(false);
 
   const [previousPerformances, setPreviousPerformances] = useState<
     Record<string, LoggedExercise | null>
@@ -131,11 +130,18 @@ export function useWorkout(
     setPlates({});
     setSetSide('left');
     setToFailure(false);
-    setRpeInput('');
+    setRir(undefined);
     setNotesInput('');
     setWeightMode(currentExercise?.plateLoaded ? 'plates' : 'straight');
     setEditingSetIndex(null);
   }, [currentExercise?.plateLoaded]);
+
+  /** Clears only the per-set metadata, leaving weight/reps for the next set. */
+  const resetSetMetadata = useCallback(() => {
+    setToFailure(false);
+    setRir(undefined);
+    setNotesInput('');
+  }, []);
 
   // Reset the docked log form when switching exercises so each starts clean
   // and in its correct entry mode (plate pad vs number keypad).
@@ -145,12 +151,27 @@ export function useWorkout(
 
   const clearPlates = useCallback(() => setPlates({}), []);
 
+  const togglePadCollapsed = useCallback(() => setPadCollapsed((v) => !v), []);
+
+  // Collapse the pad while resting so the set list owns the screen, and hand it
+  // back the moment rest ends. Editing a set always wins — it needs the pad.
+  const wasRestingRef = useRef(false);
+  useEffect(() => {
+    const isResting = restTimerStatus === 'running' || restTimerStatus === 'paused';
+    if (isResting && !wasRestingRef.current && editingSetIndex === null) {
+      setPadCollapsed(true);
+    } else if (!isResting && wasRestingRef.current) {
+      setPadCollapsed(false);
+    }
+    wasRestingRef.current = isResting;
+  }, [restTimerStatus, editingSetIndex]);
+
   const populateFormFromSet = useCallback(
     (set: LoggedSet) => {
       setRepInput(String(set.reps));
       setNotesInput(set.notes ?? '');
       setToFailure(set.effort?.toFailure ?? false);
-      setRpeInput(set.effort?.rpe !== undefined ? String(set.effort.rpe) : '');
+      setRir(getSetRir(set.effort));
 
       const hasPlates =
         !!set.plates &&
@@ -171,12 +192,7 @@ export function useWorkout(
     [weightUnit],
   );
 
-  const openLogSheet = useCallback(() => {
-    resetLogForm();
-    setWeightMode(currentExercise?.plateLoaded ? 'plates' : 'straight');
-    presentSheet(logSheetRef, presentRafRef);
-  }, [currentExercise?.plateLoaded, logSheetRef, resetLogForm]);
-
+  /** Loads a logged set into the docked pad for editing — no modal involved. */
   const openEditSet = useCallback(
     (setIndex: number) => {
       if (!currentExercise) return;
@@ -185,22 +201,15 @@ export function useWorkout(
 
       setEditingSetIndex(setIndex);
       populateFormFromSet(set);
-      presentSheet(logSheetRef, presentRafRef);
+      setPadCollapsed(false);
     },
-    [currentExercise, logSheetRef, populateFormFromSet],
+    [currentExercise, populateFormFromSet],
   );
 
-  const dismissLogSheet = useCallback(() => {
-    logSheetRef.current?.dismiss();
-  }, [logSheetRef]);
-
-  const handleLogSheetDismiss = useCallback(() => {
+  const cancelEditSet = useCallback(() => {
     resetLogForm();
   }, [resetLogForm]);
 
-  const handleLogSheetChange = useCallback((index: number) => {
-    setLogSheetVisible(index >= 0);
-  }, []);
 
   const handleOverviewSheetChange = useCallback((index: number) => {
     setOverviewSheetVisible(index >= 0);
@@ -232,7 +241,7 @@ export function useWorkout(
       if (!trimmed || !currentExercise) return;
 
       if (currentExercise.sets.length > 0) {
-        Alert.alert(
+        showDialog(
           'Replace exercise?',
           'Substituting will clear the sets logged for this exercise.',
           [
@@ -278,11 +287,7 @@ export function useWorkout(
         : computedWeightKg > 0;
     if (!currentExercise || isNaN(reps) || reps <= 0 || !hasValidWeight) return;
 
-    const rpeNum = rpeInput ? Math.min(10, Math.max(1, parseInt(rpeInput, 10))) : undefined;
-    const effort =
-      toFailure || rpeNum !== undefined
-        ? { toFailure, ...(rpeNum !== undefined ? { rpe: rpeNum } : {}) }
-        : undefined;
+    const effort = buildEffort(toFailure, rir);
     const trimmedNotes = notesInput.trim();
     const notes = trimmedNotes.length > 0 ? trimmedNotes : undefined;
 
@@ -324,7 +329,14 @@ export function useWorkout(
         );
       }
       impact();
-      dismissLogSheet();
+
+      // Keep the weight (or plate load) so back-to-back sets stay fast, but
+      // never carry this set's reps or metadata onto the next one. Saving an
+      // edit additionally drops back out of edit mode.
+      setEditingSetIndex(null);
+      setRepInput('');
+      resetSetMetadata();
+
       if (shouldStartRest) {
         startRestTimer(defaultRestSeconds);
       }
@@ -336,7 +348,7 @@ export function useWorkout(
     computedWeightKg,
     currentExercise,
     toFailure,
-    rpeInput,
+    rir,
     notesInput,
     weightMode,
     plates,
@@ -346,21 +358,23 @@ export function useWorkout(
     logSet,
     updateSet,
     impact,
-    dismissLogSheet,
     defaultRestSeconds,
     startRestTimer,
+    resetLogForm,
+    resetSetMetadata,
   ]);
 
   const handleDeleteSet = useCallback(
     async (setIndex: number) => {
       if (!currentExercise) return;
       light();
+      // Editing the row being removed would leave the pad pointed at a gone index.
       if (editingSetIndex === setIndex) {
-        dismissLogSheet();
+        resetLogForm();
       }
       await deleteSet(currentExercise.exerciseId, setIndex);
     },
-    [currentExercise, deleteSet, dismissLogSheet, editingSetIndex, light, resetRestTimer],
+    [currentExercise, deleteSet, editingSetIndex, light, resetLogForm],
   );
 
   const handleSwipeNext = useCallback(() => {
@@ -419,7 +433,6 @@ export function useWorkout(
     currentExerciseIndex,
     totalExercises,
     isLastExercise,
-    logSheetVisible,
     overviewSheetVisible,
     substituteSheetVisible,
     substitutionLabel,
@@ -444,15 +457,15 @@ export function useWorkout(
     isUnilateral: !!currentExercise?.unilateral,
     toFailure,
     setToFailure,
-    rpeInput,
-    setRpeInput,
+    rir,
+    setRir,
     notesInput,
     setNotesInput,
     isLogging,
-    openLogSheet,
+    padCollapsed,
+    togglePadCollapsed,
     openEditSet,
-    handleLogSheetDismiss,
-    handleLogSheetChange,
+    cancelEditSet,
     handleOverviewSheetChange,
     handleSubstituteSheetChange,
     handleSubstitutePress,
@@ -466,6 +479,7 @@ export function useWorkout(
     currentPreviousPerformance,
     restTimerStatus,
     restTimerRemainingMs,
+    restTimerProgress,
     restTimerVisible,
     pauseRestTimer,
     resumeRestTimer,

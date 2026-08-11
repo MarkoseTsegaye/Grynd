@@ -2,11 +2,20 @@ export { useWorkoutStore } from './store/workoutStore';
 export { useWorkout } from './hooks/useWorkout';
 export { useResumeWorkoutPrompt } from './hooks/useResumeWorkoutPrompt';
 export { ExerciseScreen } from './components/ExerciseScreen';
-export { LogSheet } from './components/LogSheet';
+export { LogPad } from './components/LogPad';
+export { SetTable } from './components/SetTable';
+export { RestTimerBar } from './components/RestTimerBar';
 export { ExerciseOverviewSheet } from './components/ExerciseOverviewSheet';
 export { SubstituteExerciseSheet } from './components/SubstituteExerciseSheet';
-export { SetChip } from './components/SetChip';
 export { PausedWorkoutResumeCard } from './components/PausedWorkoutResumeCard';
+export {
+  RIR_OPTIONS,
+  buildEffort,
+  formatRir,
+  getSetRir,
+  rirToRpe,
+  rpeToRir,
+} from './lib/effort';
 export {
   hasPausedSession,
   isIncompleteActiveSession,
