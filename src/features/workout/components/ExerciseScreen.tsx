@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { SetChip } from './SetChip';
 import { RestTimerBar } from './RestTimerBar';
 import { QuickLogBar } from './QuickLogBar';
+import { PlateLogBar } from './PlateLogBar';
 import type { LoggedExercise } from '../types';
 import type { RestTimerStatus } from '../hooks/useRestTimer';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -28,6 +29,14 @@ interface Props {
   onToggleFailure: () => void;
   isLogging: boolean;
   onQuickLog: () => void;
+  // Plate-loaded path
+  computedWeightKg: number;
+  plates: Record<number, number>;
+  plateList: number[];
+  onAddPlate: (weight: number) => void;
+  onRemovePlate: (weight: number) => void;
+  onClearPlates: () => void;
+  onToggleUnit: () => void;
   onEditSet: (index: number) => void;
   onDeleteSet: (index: number) => void;
   onFinish: () => void;
@@ -84,6 +93,7 @@ export function ExerciseScreen({
   onOpenLog,
   weightValue, repValue, onChangeWeight, onChangeReps,
   toFailure, onToggleFailure, isLogging, onQuickLog,
+  computedWeightKg, plates, plateList, onAddPlate, onRemovePlate, onClearPlates, onToggleUnit,
   onEditSet, onDeleteSet, onFinish, onCancel, onOpenOverview, overviewDisabled,
   onSubstitute, substitutionLabel,
   renderSwipeable,
@@ -249,16 +259,23 @@ export function ExerciseScreen({
         )}
 
       {exercise.plateLoaded ? (
-        // Plate-loaded exercises use the full sheet (plate picker lives there).
-        <TouchableOpacity
-          className="bg-surface-1 border border-text-disabled rounded-lg py-5 flex-row items-center justify-center gap-2 mt-4"
-          onPress={onOpenLog}
-          accessibilityLabel="Log a set with plates"
-          activeOpacity={0.7}
-        >
-          <Icon name="plus-circle-outline" size={20} color="accent" />
-          <Text className={`text-accent ${textRoles.actionLabel}`}>Set · Plates</Text>
-        </TouchableOpacity>
+        <PlateLogBar
+          computedWeightKg={computedWeightKg}
+          weightUnit={weightUnit}
+          plates={plates}
+          plateList={plateList}
+          onAddPlate={onAddPlate}
+          onRemovePlate={onRemovePlate}
+          onClearPlates={onClearPlates}
+          onToggleUnit={onToggleUnit}
+          repValue={repValue}
+          onChangeReps={onChangeReps}
+          toFailure={toFailure}
+          onToggleFailure={onToggleFailure}
+          isLogging={isLogging}
+          onLog={onQuickLog}
+          onMore={onOpenLog}
+        />
       ) : (
         <QuickLogBar
           weightValue={weightValue}

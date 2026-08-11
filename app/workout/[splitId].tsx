@@ -57,7 +57,7 @@ export default function WorkoutScreen() {
     weightInput, setWeightInput,
     weightMode, toggleWeightMode,
     weightUnit, toggleUnit,
-    plates, plateList, addPlate, removePlate, computedWeightKg,
+    plates, plateList, addPlate, removePlate, clearPlates, computedWeightKg,
     setSide, setSetSide, isUnilateral,
     toFailure, setToFailure,
     rpeInput, setRpeInput,
@@ -534,6 +534,13 @@ export default function WorkoutScreen() {
         onToggleFailure={() => setToFailure((v) => !v)}
         isLogging={isLogging}
         onQuickLog={handleQuickLog}
+        computedWeightKg={computedWeightKg}
+        plates={plates}
+        plateList={plateList}
+        onAddPlate={addPlate}
+        onRemovePlate={removePlate}
+        onClearPlates={clearPlates}
+        onToggleUnit={toggleUnit}
         onEditSet={openEditSet}
         onDeleteSet={handleDeleteSet}
         onFinish={presentFinishSheet}

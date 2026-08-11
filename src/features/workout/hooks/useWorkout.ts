@@ -133,9 +133,17 @@ export function useWorkout(
     setToFailure(false);
     setRpeInput('');
     setNotesInput('');
-    setWeightMode('straight');
+    setWeightMode(currentExercise?.plateLoaded ? 'plates' : 'straight');
     setEditingSetIndex(null);
-  }, []);
+  }, [currentExercise?.plateLoaded]);
+
+  // Reset the docked log form when switching exercises so each starts clean
+  // and in its correct entry mode (plate pad vs number keypad).
+  useEffect(() => {
+    resetLogForm();
+  }, [currentExercise?.exerciseId, resetLogForm]);
+
+  const clearPlates = useCallback(() => setPlates({}), []);
 
   const populateFormFromSet = useCallback(
     (set: LoggedSet) => {
@@ -428,6 +436,7 @@ export function useWorkout(
     plates,
     addPlate,
     removePlate,
+    clearPlates,
     plateList,
     computedWeightKg,
     setSide,
