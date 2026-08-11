@@ -5,10 +5,14 @@ import { usePrefsStore } from '../../../shared/store/prefsStore';
 import { formatSetWeightDisplay } from '../../../shared/lib/weight';
 import { textRoles } from '../../../shared/theme/typography';
 import type { LoggedSet } from '../types';
+import { compareSets } from '../../history/lib/compareSetPerformance';
+import { SetProgressIndicator } from '../../history/components/SetProgressIndicator';
 
 interface Props {
   setNumber: number;
   set: LoggedSet;
+  /** Same-position set from the previous session, for a live "beating last time?" delta. */
+  previousSet?: LoggedSet;
   onPress: () => void;
   onDelete: () => void;
 }
@@ -33,11 +37,12 @@ function EffortBadge({ effort }: { effort: NonNullable<LoggedSet['effort']> }) {
   );
 }
 
-export function SetChip({ setNumber, set, onPress, onDelete }: Props) {
+export function SetChip({ setNumber, set, previousSet, onPress, onDelete }: Props) {
   const { weightUnit } = usePrefsStore();
   const { weightText, unitLabel } = formatSetWeightDisplay(set, weightUnit);
   const weightAccessibility = unitLabel ? `${weightText} ${unitLabel}` : weightText;
   const sideLabel = set.side === 'left' ? 'left' : set.side === 'right' ? 'right' : null;
+  const comparison = previousSet ? compareSets(previousSet, set) : null;
 
   return (
     <View className="bg-surface-2 rounded px-3 py-2 mr-2 mb-2 flex-row items-center gap-2 self-start">
@@ -62,6 +67,14 @@ export function SetChip({ setNumber, set, onPress, onDelete }: Props) {
         )}
         <Text className={`text-text-primary ${textRoles.metricBold}`}>{set.reps}</Text>
         <Text className={`text-text-secondary ${textRoles.metric}`}> reps</Text>
+        {previousSet && comparison && (
+          <SetProgressIndicator
+            setNumber={setNumber}
+            prev={previousSet}
+            current={set}
+            result={comparison}
+          />
+        )}
         {set.effort && <EffortBadge effort={set.effort} />}
         {set.notes ? (
           <View className="rounded-md px-1.5 py-0.5 bg-surface-1 max-w-[140px]">

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { SetChip } from './SetChip';
 import { RestTimerBar } from './RestTimerBar';
+import { QuickLogBar } from './QuickLogBar';
 import type { LoggedExercise } from '../types';
 import type { RestTimerStatus } from '../hooks/useRestTimer';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,6 +19,15 @@ interface Props {
   isLastExercise: boolean;
   previousExercise: LoggedExercise | null;
   onOpenLog: () => void;
+  // Quick-log keypad (fast straight-weight path)
+  weightValue: string;
+  repValue: string;
+  onChangeWeight: (value: string) => void;
+  onChangeReps: (value: string) => void;
+  toFailure: boolean;
+  onToggleFailure: () => void;
+  isLogging: boolean;
+  onQuickLog: () => void;
   onEditSet: (index: number) => void;
   onDeleteSet: (index: number) => void;
   onFinish: () => void;
@@ -71,7 +81,10 @@ function DotProgress({ current, total }: { current: number; total: number }) {
 
 export function ExerciseScreen({
   exercise, exerciseIndex, totalExercises, isLastExercise, previousExercise,
-  onOpenLog, onEditSet, onDeleteSet, onFinish, onCancel, onOpenOverview, overviewDisabled,
+  onOpenLog,
+  weightValue, repValue, onChangeWeight, onChangeReps,
+  toFailure, onToggleFailure, isLogging, onQuickLog,
+  onEditSet, onDeleteSet, onFinish, onCancel, onOpenOverview, overviewDisabled,
   onSubstitute, substitutionLabel,
   renderSwipeable,
   restTimerStatus, restTimerRemainingMs, restTimerVisible,
@@ -81,29 +94,32 @@ export function ExerciseScreen({
   const isFirst = exerciseIndex === 0;
   const { weightUnit } = usePrefsStore();
 
+  const hasPrev = !!previousExercise && previousExercise.sets.length > 0;
+  const prevDate = hasPrev ? formatShortDate(previousExercise!.sets[0].loggedAt) : null;
+  const prevSummary = hasPrev
+    ? previousExercise!.sets
+        .map((s) => `${formatSetWeightDisplay(s, weightUnit).weightText}×${s.reps}`)
+        .join('   ·   ')
+    : '';
+
   const body = (
     <>
-      {/* Swipe direction hints: left = forward, right = back */}
-      <View className="flex-row items-center justify-between mb-2">
-        <View style={{ width: 24 }}>
-          {!isLastExercise && <Icon name="chevron-left" size={24} color="text-disabled" />}
-          {isLastExercise && <Icon name="flag-checkered" size={24} color="text-disabled" />}
+      {/* Compact header: title · sets badge · substitute + swipe affordances */}
+      <View className="flex-row items-center mb-1">
+        <View style={{ width: 18 }}>
+          {!isLastExercise && <Icon name="chevron-left" size={18} color="text-disabled" />}
+          {isLastExercise && <Icon name="flag-checkered" size={18} color="text-disabled" />}
         </View>
-        <View style={{ width: 24 }}>
-          {!isFirst && <Icon name="chevron-right" size={24} color="text-disabled" />}
-        </View>
-      </View>
-
-      <View className="flex-row items-start justify-between mb-1">
-        <View className="flex-1 mr-2">
-          <Text className={`text-text-primary ${textRoles.listTitle}`} numberOfLines={2}>
-            {exercise.exerciseName}
+        <Text
+          className={`flex-1 text-text-primary font-sans-bold text-xl mx-1`}
+          numberOfLines={1}
+        >
+          {exercise.exerciseName}
+        </Text>
+        <View className="bg-surface-1 rounded-md px-2 py-0.5 mr-1">
+          <Text className={`text-text-secondary ${textRoles.metric}`}>
+            {exercise.sets.length} {exercise.sets.length === 1 ? 'set' : 'sets'}
           </Text>
-          {substitutionLabel && (
-            <Text className={`text-text-secondary ${textRoles.caption} mt-0.5`}>
-              {substitutionLabel}
-            </Text>
-          )}
         </View>
         {onSubstitute && (
           <TouchableOpacity
@@ -111,69 +127,33 @@ export function ExerciseScreen({
             accessibilityLabel="Substitute exercise"
             accessibilityRole="button"
             activeOpacity={0.7}
-            className="pt-0.5"
+            hitSlop={8}
+            className="p-1"
           >
-            <Text className={`text-accent ${textRoles.caption}`}>Substitute</Text>
+            <Icon name="swap-horizontal" size={20} color="accent" />
           </TouchableOpacity>
         )}
+        <View style={{ width: 18 }} className="items-end">
+          {!isFirst && <Icon name="chevron-right" size={18} color="text-disabled" />}
+        </View>
       </View>
 
-      <View className="flex-row items-center mt-1 mb-4">
-        <Text className={`text-accent ${textRoles.metricLarge}`}>{exercise.sets.length}</Text>
-        <Text className={`text-text-secondary ${textRoles.bodyMono} ml-1`}>
-          {exercise.sets.length === 1 ? 'set' : 'sets'}
+      {substitutionLabel && (
+        <Text className={`text-text-secondary ${textRoles.caption} mb-1`} numberOfLines={1}>
+          {substitutionLabel}
         </Text>
-      </View>
+      )}
 
-      {/* Previous performance panel */}
-      {previousExercise && (
-        <View className="bg-surface-1 rounded-lg px-4 py-3 mb-4 border border-surface-2">
-          <View className="flex-row items-center justify-between mb-2">
-            <Text className={`text-text-secondary ${textRoles.caption}`}>Last time</Text>
-            <Text className={`text-text-secondary ${textRoles.caption}`}>
-              {previousExercise.sets.length > 0
-                ? formatShortDate(previousExercise.sets[0].loggedAt)
-                : ''}
-            </Text>
-          </View>
-          {previousExercise.sets.slice(0, 5).map((set, i) => {
-            const { weightText, unitLabel } = formatSetWeightDisplay(set, weightUnit);
-            const hasFail = set.effort?.toFailure;
-            const hasRpe = set.effort?.rpe !== undefined;
-            const hasNotes = !!set.notes;
-            return (
-              <View key={`prev-${i}`} className="flex-row items-center gap-1 mb-0.5 flex-wrap">
-                <Text className={`text-text-disabled ${textRoles.caption}`}>Set {i + 1}</Text>
-                <Text className={`text-text-primary ${textRoles.metric}`}> {weightText}</Text>
-                {unitLabel ? (
-                  <Text className={`text-text-secondary ${textRoles.metric}`}> {unitLabel} × </Text>
-                ) : (
-                  <Text className={`text-text-secondary ${textRoles.metric}`}> × </Text>
-                )}
-                <Text className={`text-text-primary ${textRoles.metric}`}>{set.reps}</Text>
-                <Text className={`text-text-secondary ${textRoles.metric}`}> reps</Text>
-                {(hasFail || hasRpe) && (
-                  <View className={`rounded-md px-1 py-0.5 ${hasFail ? 'bg-danger/10' : 'bg-surface-2'}`}>
-                    <Text className={`${textRoles.caption} ${hasFail ? 'text-danger' : 'text-text-secondary'}`}>
-                      {hasFail && hasRpe ? `FAIL · RPE ${set.effort?.rpe}` : hasFail ? 'FAIL' : `RPE ${set.effort?.rpe}`}
-                    </Text>
-                  </View>
-                )}
-                {hasNotes && (
-                  <View className="rounded-md px-1 py-0.5 bg-surface-2 max-w-[120px]">
-                    <Text className={`text-text-secondary ${textRoles.caption}`} numberOfLines={1}>
-                      {set.notes}
-                    </Text>
-                  </View>
-                )}
-              </View>
-            );
-          })}
-          {previousExercise.sets.length > 5 && (
-            <Text className={`text-text-disabled ${textRoles.caption} mt-1`}>
-              +{previousExercise.sets.length - 5} more
-            </Text>
-          )}
+      {/* One-line "last time" reference */}
+      {hasPrev && (
+        <View className="flex-row items-baseline mb-2">
+          <Text className={`text-text-disabled ${textRoles.caption} mr-2`}>Last {prevDate}</Text>
+          <Text
+            className={`flex-1 text-text-secondary ${textRoles.metric}`}
+            numberOfLines={1}
+          >
+            {prevSummary}
+          </Text>
         </View>
       )}
 
@@ -184,6 +164,7 @@ export function ExerciseScreen({
               key={`${set.loggedAt}-${i}`}
               setNumber={i + 1}
               set={set}
+              previousSet={previousExercise?.sets[i]}
               onPress={() => onEditSet(i)}
               onDelete={() => onDeleteSet(i)}
             />
@@ -267,15 +248,31 @@ export function ExerciseScreen({
           />
         )}
 
-      <TouchableOpacity
-        className="bg-surface-1 border border-text-disabled rounded-lg py-5 flex-row items-center justify-center gap-2 mt-4"
-        onPress={onOpenLog}
-        accessibilityLabel="Log a set"
-        activeOpacity={0.7}
-      >
-        <Icon name="plus-circle-outline" size={20} color="accent" />
-        <Text className={`text-accent ${textRoles.actionLabel}`}>Set</Text>
-      </TouchableOpacity>
+      {exercise.plateLoaded ? (
+        // Plate-loaded exercises use the full sheet (plate picker lives there).
+        <TouchableOpacity
+          className="bg-surface-1 border border-text-disabled rounded-lg py-5 flex-row items-center justify-center gap-2 mt-4"
+          onPress={onOpenLog}
+          accessibilityLabel="Log a set with plates"
+          activeOpacity={0.7}
+        >
+          <Icon name="plus-circle-outline" size={20} color="accent" />
+          <Text className={`text-accent ${textRoles.actionLabel}`}>Set · Plates</Text>
+        </TouchableOpacity>
+      ) : (
+        <QuickLogBar
+          weightValue={weightValue}
+          repValue={repValue}
+          weightUnit={weightUnit}
+          onChangeWeight={onChangeWeight}
+          onChangeReps={onChangeReps}
+          toFailure={toFailure}
+          onToggleFailure={onToggleFailure}
+          isLogging={isLogging}
+          onLog={onQuickLog}
+          onMore={onOpenLog}
+        />
+      )}
     </SafeAreaView>
   );
 }

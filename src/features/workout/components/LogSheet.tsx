@@ -391,8 +391,9 @@ export function LogSheet({
                 InputComponent={BottomSheetTextInput}
                 value={weightInput}
                 onChangeText={onChangeWeight}
+                integerOnly={false}
                 suffix={weightUnit}
-                keyboardType="number-pad"
+                keyboardType="decimal-pad"
                 returnKeyType="next"
                 onSubmitEditing={() => repsRef.current?.focus()}
                 onFocus={() => handleFieldFocus('weight')}

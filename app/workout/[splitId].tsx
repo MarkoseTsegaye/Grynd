@@ -90,6 +90,14 @@ export default function WorkoutScreen() {
     [handleGoToExercise],
   );
 
+  // Quick keypad log: confirm, then clear reps + failure but keep the weight
+  // so back-to-back same-weight sets stay one-handed and fast.
+  const handleQuickLog = useCallback(async () => {
+    await handleConfirmSet();
+    setRepInput('');
+    setToFailure(false);
+  }, [handleConfirmSet, setRepInput, setToFailure]);
+
   // Cancel sheet
   const cancelSheetRef = useRef<BottomSheetModal>(null);
   const pendingLeaveRef = useRef<(() => void) | null>(null);
@@ -518,6 +526,14 @@ export default function WorkoutScreen() {
         isLastExercise={isLastExercise}
         previousExercise={currentPreviousPerformance}
         onOpenLog={openLogSheet}
+        weightValue={weightInput}
+        repValue={repInput}
+        onChangeWeight={setWeightInput}
+        onChangeReps={setRepInput}
+        toFailure={toFailure}
+        onToggleFailure={() => setToFailure((v) => !v)}
+        isLogging={isLogging}
+        onQuickLog={handleQuickLog}
         onEditSet={openEditSet}
         onDeleteSet={handleDeleteSet}
         onFinish={presentFinishSheet}
