@@ -5,7 +5,7 @@ import { SetTable } from './SetTable';
 import { LogPad } from './LogPad';
 import type { LoggedExercise } from '../types';
 import type { RestTimerStatus } from '../hooks/useRestTimer';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../../../shared/components/Icon';
 import { usePrefsStore } from '../../../shared/store/prefsStore';
 import { textRoles } from '../../../shared/theme/typography';
@@ -115,6 +115,17 @@ export function ExerciseScreen({
   onRestTimerToggle, onRestTimerAdjustPlus, onRestTimerDismiss,
 }: Props) {
   const { weightUnit } = usePrefsStore();
+  const insets = useSafeAreaInsets();
+  // On web, SafeAreaView adds insets.top on top of any constant padding, which
+  // after viewport-fit=cover came to ~63 px on the iOS PWA — too much space
+  // above the header. Bypass its automatic top padding (edges={['bottom']})
+  // and set the top explicitly instead.
+  //
+  // Horizontal gutters deliberately live on the inner View rather than here:
+  // SafeAreaView.web rebuilds its own paddingStyle from `style`, so padding
+  // set on both would stack and double the inset.
+  const webContainerStyle =
+    Platform.OS === 'web' ? { paddingTop: insets.top + 4 } : undefined;
 
   const body = (
     <>
@@ -153,10 +164,14 @@ export function ExerciseScreen({
   );
 
   return (
-    // SafeAreaView owns the notch/home-indicator insets and writes them as its
-    // own padding, which would overwrite className padding — so the screen's
-    // gutters live on an inner View and stack on top of the insets.
-    <SafeAreaView className="flex-1 bg-surface-0">
+    // SafeAreaView writes inset padding into its own style, which can drop the
+    // className-derived padding in the merge — so gutters live on an inner
+    // View, and on web the top inset is applied explicitly (see above).
+    <SafeAreaView
+      edges={Platform.OS === 'web' ? ['bottom'] : undefined}
+      className="flex-1 bg-surface-0"
+      style={webContainerStyle}
+    >
       <View className="flex-1 px-4 pt-2 pb-2">
       {/* Header: cancel · progress · finish */}
       <View className="flex-row items-center justify-between mb-2 gap-2">

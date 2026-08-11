@@ -2,35 +2,45 @@ import React, { type PropsWithChildren } from 'react';
 import { ScrollViewStyleReset } from 'expo-router/html';
 
 /**
- * Root HTML for the web/PWA build. Only runs in Node during static rendering,
- * so it has no access to the DOM or the app's React tree.
+ * Root HTML shell for the static web export. Overrides the default Expo Router
+ * shell so the viewport opts into `viewport-fit=cover` — iOS Safari only
+ * populates `env(safe-area-inset-*)` values (and therefore
+ * `useSafeAreaInsets()` on web) when this is set. Without it, the tab bar and
+ * screen headers collapse onto the notch / home indicator.
  *
- * Two things here are load-bearing for the home-screen PWA on iPhone:
- *
- * - `viewport-fit=cover` is what makes `env(safe-area-inset-*)` report real
- *   values. react-native-safe-area-context's web implementation reads those,
- *   so without it every inset is 0 — content sits under the notch and the tab
- *   bar gets clipped by the home indicator.
- * - `apple-mobile-web-app-status-bar-style: black-translucent` makes the status
- *   bar area transparent instead of the default opaque white bar. It only takes
- *   effect in standalone (added-to-home-screen) mode, and it requires the safe
- *   area insets above so content is not hidden underneath it.
+ * Also enables the PWA "add to home screen" install path with a matching
+ * status-bar style so the standalone shell blends into the dark theme.
  */
 const backgroundColor = '#0A0A0A';
+const tabBarColor = '#141414';
 
-const rootStyles = `
-html, body, #root {
-  background-color: ${backgroundColor};
-  color-scheme: dark;
-}
-body {
-  /* Standalone PWAs should not rubber-band or offer pull-to-refresh mid-set. */
-  overscroll-behavior-y: none;
-  /* Removes the double-tap-to-zoom gesture (and its 300ms tap delay) so fast
-     repeated taps on the number pad register as taps. */
-  touch-action: manipulation;
-}
-`;
+/*
+ * Paint the html/body dark so the env(safe-area-inset-*) regions around the
+ * viewport (visible now that we opted into viewport-fit=cover) blend into the
+ * tab bar / status bar area instead of exposing the browser's default white.
+ *
+ * The pseudo-element paints only the bottom safe-area strip with the tab bar's
+ * surface-1 color so the ~34 px iOS home-indicator gap visually blends into
+ * the tab bar (which react-navigation on web positions above that safe area
+ * with its own offset). The top safe area keeps the surface-0 body color so
+ * the screen header still reads as content, not tab bar.
+ */
+const rootStyles = [
+  `html,body{background-color:${backgroundColor};color-scheme:dark;}`,
+  // A standalone PWA should not rubber-band or offer pull-to-refresh mid-set,
+  // and double-tap zoom would otherwise eat fast repeated number-pad taps.
+  // Pinch zoom is deliberately left enabled.
+  'body{overscroll-behavior-y:none;touch-action:manipulation;}',
+  'body::after{',
+  'content:"";',
+  'position:fixed;',
+  'left:0;right:0;bottom:0;',
+  'height:env(safe-area-inset-bottom);',
+  `background-color:${tabBarColor};`,
+  'pointer-events:none;',
+  'z-index:0;',
+  '}',
+].join('');
 
 export default function Root({ children }: PropsWithChildren) {
   return (
@@ -38,22 +48,16 @@ export default function Root({ children }: PropsWithChildren) {
       <head>
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
-        {/* Zoom stays enabled on purpose — `touch-action` below kills the
-            double-tap zoom that rapid keypad taps would otherwise trigger,
-            without taking pinch-zoom away from anyone who needs it. */}
         <meta
           name="viewport"
-          content="width=device-width, initial-scale=1, viewport-fit=cover"
+          content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover"
         />
-
-        {/* Home-screen PWA behaviour */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Grynd" />
         <meta name="theme-color" content={backgroundColor} />
         <link rel="manifest" href="/manifest.json" />
-
         <ScrollViewStyleReset />
         <style dangerouslySetInnerHTML={{ __html: rootStyles }} />
       </head>

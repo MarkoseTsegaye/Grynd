@@ -1,6 +1,7 @@
 import React, { useRef, useCallback, useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import { FlatList } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Swipeable } from 'react-native-gesture-handler';
 import * as Haptics from 'expo-haptics';
@@ -15,6 +16,7 @@ import { textRoles } from '../../src/shared/theme/typography';
 
 export default function HistoryScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { sessions, isLoaded, deleteSession } = useHistory();
   const currentOpenRef = useRef<Swipeable | null>(null);
   const [splitFilter, setSplitFilter] = useState<string | null>(null);
@@ -51,7 +53,12 @@ export default function HistoryScreen() {
   );
 
   const header = (
-    <View className="px-5 pt-14 pb-4 flex-row items-center justify-between">
+    <View
+      className="px-5 pb-4 flex-row items-center justify-between"
+      // Web reads the notch from env(safe-area-inset-*) once viewport-fit=cover
+      // is set; the 56 floor keeps the header clear on devices without one.
+      style={{ paddingTop: Platform.OS === 'web' ? Math.max(insets.top + 8, 56) : 56 }}
+    >
       <Text className={`text-text-primary ${textRoles.screenTitle}`}>History</Text>
       <View className="flex-row items-center gap-4">
         {sessions.length > 0 && (

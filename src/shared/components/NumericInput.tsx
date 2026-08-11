@@ -2,6 +2,7 @@ import React, { useCallback } from 'react';
 import { View, TextInput, Text, Platform } from 'react-native';
 import type { TextInputProps } from 'react-native';
 import { sanitizeIntegerInput } from '../lib/weight';
+import { colors } from '../theme/colors';
 import { textRoles, typography } from '../theme/typography';
 
 type NumericInputSize = 'default' | 'compact';
@@ -10,16 +11,29 @@ const sizeConfig = {
   default: {
     container: 'min-h-16 px-4',
     inputClass: textRoles.inputValue,
+    fontSize: typography.sizes['4xl'],
     lineHeight: typography.lineHeights['4xl'],
     suffixClass: `${textRoles.inputSuffix} ml-1.5`,
   },
   compact: {
     container: 'min-h-10 px-2',
     inputClass: textRoles.inputValueCompact,
+    fontSize: typography.sizes['2xl'],
     lineHeight: typography.lineHeights['2xl'],
     suffixClass: `${textRoles.inputSuffixCompact} ml-1`,
   },
 } as const;
+
+/**
+ * On web, NativeWind's className styles don't reliably propagate to the
+ * underlying `<input>` element when TextInput is wrapped (e.g. via
+ * BottomSheetTextInput → gesture-handler's TextInput → react-native-web's
+ * TextInput). Result: iOS Safari's default input styles win, and typed
+ * values render as tiny black text instead of the big white numbers the
+ * container expects. Passing font size, color, and family through the
+ * inline `style` prop bypasses that chain and guarantees the styles land.
+ */
+const isWeb = Platform.OS === 'web';
 
 interface NumericInputProps {
   value: string;
@@ -90,6 +104,23 @@ export const NumericInput = React.forwardRef<TextInput, NumericInputProps>(
           style={{
             lineHeight: config.lineHeight,
             ...(Platform.OS === 'android' ? { includeFontPadding: false } : {}),
+            ...(isWeb
+              ? {
+                  fontSize: config.fontSize,
+                  color: colors['text-primary'],
+                  fontFamily: typography.fonts.monoBold,
+                  // NativeWind's `flex-1` on className can drop when passed
+                  // through the BottomSheetTextInput → gesture-handler →
+                  // react-native-web wrapper chain, leaving the underlying
+                  // <input> at its default browser width. That makes the
+                  // WEIGHT input sit narrow inside its column and the
+                  // adjacent REPS column's tap target overlaps into it.
+                  // Force fill-width explicitly on web.
+                  flex: 1,
+                  minWidth: 0,
+                  width: '100%',
+                }
+              : {}),
           }}
           maxLength={maxLength}
           accessibilityLabel={accessibilityLabel}

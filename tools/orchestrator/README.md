@@ -38,13 +38,31 @@ npm run orchestrate:drain
 
 Failed tasks are **logged to `failed.txt` and skipped** so the queue keeps moving. They are not re-run immediately (that caused infinite loops). Set `ORCH_RETRY_FAILED=1` to append failures to the **end** of the queue for one later attempt. Ctrl+C re-queues the in-flight task.
 
+### Providers
+
+The implement/review agents run through a pluggable backend selected by
+`.squad/config.json → provider` (default `claude`), overridable per-run with
+`ORCH_PROVIDER`:
+
+- `claude` — Claude Agent SDK (`@anthropic-ai/claude-agent-sdk`). Uses the
+  `claude.models` / `claude.reviewModelOverrides` model set. Auth via
+  `ANTHROPIC_API_KEY` (or an existing `claude` login).
+- `cursor` — Cursor SDK (`@cursor/sdk`). Uses the top-level `models` /
+  `reviewModelOverrides` set. Auth via `CURSOR_API_KEY`.
+
+Only the selected backend's SDK is loaded, so a Claude-only setup does not need
+`@cursor/sdk` at runtime.
+
 ### Environment
 
 | Variable | Required | Default |
 |---|---|---|
-| `CURSOR_API_KEY` | Yes | — |
-| `ORCH_MODEL` | No | Uses per-role models from `.squad/config.json` |
+| `ANTHROPIC_API_KEY` | For `claude` provider | — (or a `claude` login) |
+| `CURSOR_API_KEY` | For `cursor` provider | — |
+| `ORCH_PROVIDER` | No | `provider` from `.squad/config.json` (`claude`) |
+| `ORCH_MODEL` | No | Uses per-role models for the active provider |
 | `ORCH_MAX_ITERS` | No | `3` (from config) |
+| `ORCH_MAX_TURNS` | No | `60` (Claude provider agent turn cap) |
 
 ## Artifacts
 
