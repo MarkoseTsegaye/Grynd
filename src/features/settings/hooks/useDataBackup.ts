@@ -1,8 +1,11 @@
 import { useCallback, useState } from 'react';
-import { Alert } from 'react-native';
+import { showDialog } from '../../../shared/lib/dialog';
 import * as DocumentPicker from 'expo-document-picker';
-import * as Sharing from 'expo-sharing';
-import { cacheDirectory, writeAsStringAsync, readAsStringAsync } from 'expo-file-system/legacy';
+import {
+  BACKUP_PICKER_TYPES,
+  readPickedFile,
+  saveBackupFile,
+} from '../lib/backupFile';
 import { exportBackup, importBackup, validateBackup } from '../../../storage/backup';
 import { useSplitsStore } from '../../splits';
 import { useCycleStore } from '../../splits/store/cycleStore';
@@ -36,27 +39,16 @@ export function useDataBackup() {
     try {
       const backup = await exportBackup();
       const filename = getBackupFilename(backup.exportedAt);
+      const outcome = await saveBackupFile(filename, JSON.stringify(backup, null, 2));
 
-      if (!cacheDirectory) {
-        throw new Error('Cache directory unavailable');
-      }
-
-      const fileUri = `${cacheDirectory}${filename}`;
-      await writeAsStringAsync(fileUri, JSON.stringify(backup, null, 2));
-
-      const canShare = await Sharing.isAvailableAsync();
-      if (!canShare) {
-        Alert.alert('Export failed', 'Sharing is not available on this device.');
-        return;
-      }
-
-      await Sharing.shareAsync(fileUri, {
-        mimeType: 'application/json',
-        UTI: 'public.json',
-      });
-      Alert.alert('Export complete', 'Your backup file is ready to save or share.');
-    } catch {
-      Alert.alert('Export failed', 'Could not create backup file. Please try again.');
+      showDialog(
+        'Export complete',
+        outcome === 'downloaded'
+          ? `Saved ${filename} to your downloads.`
+          : 'Your backup file is ready to save or share.',
+      );
+    } catch (err) {
+      showDialog('Export failed', `Could not create backup file.\n\n${String(err)}`);
     } finally {
       setIsExporting(false);
     }
@@ -66,12 +58,8 @@ export function useDataBackup() {
     if (isExporting || isImporting) return;
 
     try {
-      // iOS filters the picker by UTI, and a backup that has been through
-      // Files/iCloud/AirDrop often reports as public.data rather than
-      // public.json — which greys the file out and makes it unpickable. Accept
-      // anything and let validateBackup reject it on content instead.
       const result = await DocumentPicker.getDocumentAsync({
-        type: ['application/json', 'public.json', 'text/plain', '*/*'],
+        type: BACKUP_PICKER_TYPES,
         copyToCacheDirectory: true,
       });
 
@@ -81,9 +69,9 @@ export function useDataBackup() {
 
       let raw: string;
       try {
-        raw = await readAsStringAsync(result.assets[0].uri);
+        raw = await readPickedFile(result.assets[0]);
       } catch (err) {
-        Alert.alert(
+        showDialog(
           'Import failed',
           `Could not read "${result.assets[0].name ?? 'the selected file'}". If it is stored in iCloud, open it once in the Files app to download it, then try again.\n\n${String(err)}`,
         );
@@ -94,7 +82,7 @@ export function useDataBackup() {
       try {
         parsed = JSON.parse(raw);
       } catch {
-        Alert.alert(
+        showDialog(
           'Import failed',
           `"${result.assets[0].name ?? 'The selected file'}" is not valid JSON. Pick the grynd-backup-*.json file produced by Export data.`,
         );
@@ -103,11 +91,11 @@ export function useDataBackup() {
 
       const validation = validateBackup(parsed);
       if (!validation.ok) {
-        Alert.alert('Import failed', validation.error);
+        showDialog('Import failed', validation.error);
         return;
       }
 
-      Alert.alert(
+      showDialog(
         'Import data?',
         'This will replace all splits, exercises, history, and settings on this device. Any workout in progress will be discarded.',
         [
@@ -121,9 +109,9 @@ export function useDataBackup() {
                 try {
                   await importBackup(validation.backup);
                   await reloadStores();
-                  Alert.alert('Import complete', 'Your data has been restored.');
+                  showDialog('Import complete', 'Your data has been restored.');
                 } catch (err) {
-                  Alert.alert(
+                  showDialog(
                     'Import failed',
                     `Could not fully restore the backup. Some data may have been partially updated — try importing again.\n\n${String(err)}`,
                   );
@@ -136,7 +124,7 @@ export function useDataBackup() {
         ],
       );
     } catch (err) {
-      Alert.alert('Import failed', `Could not open the file picker.\n\n${String(err)}`);
+      showDialog('Import failed', `Could not open the file picker.\n\n${String(err)}`);
     }
   }, [isExporting, isImporting, reloadStores]);
 

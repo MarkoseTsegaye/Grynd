@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { View, Text, TouchableOpacity, Alert, Dimensions, AppState, BackHandler } from 'react-native';
+import { showDialog } from '../../src/shared/lib/dialog';
+import { View, Text, TouchableOpacity, Dimensions, AppState, BackHandler } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { usePreventRemove } from '@react-navigation/native';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
@@ -204,7 +205,7 @@ export default function WorkoutScreen() {
           `You have an unfinished ${storeSession.splitName} workout.`,
         );
         setBootstrapState('error');
-        Alert.alert(
+        showDialog(
           'Unfinished Workout',
           `You have an unfinished ${storeSession.splitName} workout.`,
           [

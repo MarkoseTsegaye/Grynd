@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
-import { Alert } from 'react-native';
+import { showDialog } from '../../../shared/lib/dialog';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useWorkoutStore } from '../store/workoutStore';
 import { usePrefsStore } from '../../../shared/store/prefsStore';
@@ -241,7 +241,7 @@ export function useWorkout(substituteSheetRef: RefObject<BottomSheetModal | null
       if (!trimmed || !currentExercise) return;
 
       if (currentExercise.sets.length > 0) {
-        Alert.alert(
+        showDialog(
           'Replace exercise?',
           'Substituting will clear the sets logged for this exercise.',
           [

@@ -1,5 +1,6 @@
 import React, { useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, Switch, Alert, ScrollView } from 'react-native';
+import { showDialog } from '../../src/shared/lib/dialog';
+import { View, Text, TouchableOpacity, Switch, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCycleStore } from '../../src/features/splits/store/cycleStore';
@@ -68,7 +69,7 @@ export default function SettingsScreen() {
   const handleReset = useCallback(() => {
     if (!canReset) return;
 
-    Alert.alert(
+    showDialog(
       'Reset to Day 1?',
       'Your cycle days will stay the same. Only the current position resets to day 1.',
       [
