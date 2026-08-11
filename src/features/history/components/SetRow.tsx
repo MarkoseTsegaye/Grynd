@@ -4,6 +4,7 @@ import { formatSetWeightParts } from '../../../shared/lib/weight';
 import { textRoles } from '../../../shared/theme/typography';
 import { compareSets } from '../lib/compareSetPerformance';
 import { SetProgressIndicator } from './SetProgressIndicator';
+import { getEffortLabels } from '../../workout/lib/effort';
 import type { LoggedSet } from '../../workout/types';
 
 interface Props {
@@ -18,22 +19,23 @@ interface Props {
  * One logged set, shared by the History card and the session detail so both
  * read identically. Two tiers keep the numbers scannable down a column:
  *
- *   1   70 lb × 8 reps              [▲3] [TO FAILURE]
- *       45+25 · RPE 9 · free-text note
+ *   1   70 lb × 8 reps              [▲3] [FAILURE]
+ *       45+25 · 1 RIR · free-text note
  *
  * The total weight is always the headline; the plate breakdown drops to the
  * detail line so a plate set no longer renders as "45 × 1, 25 × 1 × 8 reps".
- * Anything that can grow unpredictably (plates, RPE, notes) lives on tier two,
+ * Anything that can grow unpredictably (plates, RIR, notes) lives on tier two,
  * so the primary line never wraps and every set lines up with its neighbours.
  */
 export function SetRow({ setNumber, set, priorSet, weightUnit }: Props) {
   const { weightText, unitLabel, plateBreakdown } = formatSetWeightParts(set, weightUnit);
   const comparison = priorSet ? compareSets(priorSet, set) : null;
 
-  const toFailure = !!set.effort?.toFailure;
-  const rpe = set.effort?.rpe;
+  // Read effort through the shared helper so legacy RPE sets render as RIR,
+  // the same way the active-workout set list shows them.
+  const { toFailure, rirLabel } = getEffortLabels(set.effort);
   const sideLabel = set.side === 'left' ? 'L' : set.side === 'right' ? 'R' : null;
-  const hasDetail = !!plateBreakdown || rpe !== undefined || !!set.notes;
+  const hasDetail = !!plateBreakdown || !!rirLabel || !!set.notes;
 
   return (
     <View className="py-1">
@@ -77,17 +79,17 @@ export function SetRow({ setNumber, set, priorSet, weightUnit }: Props) {
               {plateBreakdown}
             </Text>
           )}
-          {plateBreakdown && rpe !== undefined && (
+          {plateBreakdown && rirLabel && (
             <Text className={`text-text-disabled ${textRoles.caption}`}>·</Text>
           )}
-          {rpe !== undefined && (
+          {rirLabel && (
             <Text className={`text-text-secondary ${textRoles.caption}`} style={{ fontSize: 12 }}>
-              RPE {rpe}
+              {rirLabel}
             </Text>
           )}
           {!!set.notes && (
             <View className="flex-row items-center gap-1.5 flex-1">
-              {(plateBreakdown || rpe !== undefined) && (
+              {(plateBreakdown || rirLabel) && (
                 <View className="rounded-full bg-text-disabled" style={{ width: 3, height: 3 }} />
               )}
               <Text
