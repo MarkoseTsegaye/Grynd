@@ -5,7 +5,8 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0A0A0A",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/icon.png",
@@ -14,9 +15,8 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.mtsegaye.grynd"
-
-      
+      "bundleIdentifier": "com.mtsegaye.grynd",
+      "backgroundColor": "#0A0A0A"
     },
     "android": {
       "adaptiveIcon": {

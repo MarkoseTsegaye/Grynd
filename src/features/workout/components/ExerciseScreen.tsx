@@ -153,10 +153,11 @@ export function ExerciseScreen({
   );
 
   return (
-    // SafeAreaView writes its own inset padding, which clobbers className
-    // padding — so the screen's own gutters live on an inner View.
+    // SafeAreaView owns the notch/home-indicator insets and writes them as its
+    // own padding, which would overwrite className padding — so the screen's
+    // gutters live on an inner View and stack on top of the insets.
     <SafeAreaView className="flex-1 bg-surface-0">
-      <View className="flex-1 px-4 pt-2 pb-4">
+      <View className="flex-1 px-4 pt-2 pb-2">
       {/* Header: cancel · progress · finish */}
       <View className="flex-row items-center justify-between mb-2 gap-2">
         <TouchableOpacity

@@ -4,15 +4,29 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { colors } from '../../src/shared/theme/colors';
 import { typography } from '../../src/shared/theme/typography';
 
+/**
+ * The tab bar was styled with typography.sizes.xs (14px) labels, which do not
+ * fit the standard tab bar alongside a 24pt icon — the labels rendered clipped
+ * in half. Let react-navigation size the bar (it adds the home-indicator inset
+ * itself) and use a label size that actually fits.
+ */
+const TAB_LABEL_FONT_SIZE = 11;
+
 export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarStyle: { backgroundColor: colors['surface-1'], borderTopColor: colors['surface-2'] },
+        tabBarStyle: {
+          backgroundColor: colors['surface-1'],
+          borderTopColor: colors['surface-2'],
+        },
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors['text-secondary'],
-        tabBarLabelStyle: { fontFamily: typography.fonts.sansMedium, fontSize: typography.sizes.xs },
+        tabBarLabelStyle: {
+          fontFamily: typography.fonts.sansMedium,
+          fontSize: TAB_LABEL_FONT_SIZE,
+        },
       }}
     >
       <Tabs.Screen

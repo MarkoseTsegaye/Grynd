@@ -66,8 +66,12 @@ export function useDataBackup() {
     if (isExporting || isImporting) return;
 
     try {
+      // iOS filters the picker by UTI, and a backup that has been through
+      // Files/iCloud/AirDrop often reports as public.data rather than
+      // public.json — which greys the file out and makes it unpickable. Accept
+      // anything and let validateBackup reject it on content instead.
       const result = await DocumentPicker.getDocumentAsync({
-        type: 'application/json',
+        type: ['application/json', 'public.json', 'text/plain', '*/*'],
         copyToCacheDirectory: true,
       });
 
@@ -75,13 +79,25 @@ export function useDataBackup() {
         return;
       }
 
-      const raw = await readAsStringAsync(result.assets[0].uri);
-      let parsed: unknown;
+      let raw: string;
+      try {
+        raw = await readAsStringAsync(result.assets[0].uri);
+      } catch (err) {
+        Alert.alert(
+          'Import failed',
+          `Could not read "${result.assets[0].name ?? 'the selected file'}". If it is stored in iCloud, open it once in the Files app to download it, then try again.\n\n${String(err)}`,
+        );
+        return;
+      }
 
+      let parsed: unknown;
       try {
         parsed = JSON.parse(raw);
       } catch {
-        Alert.alert('Import failed', 'The selected file is not valid JSON.');
+        Alert.alert(
+          'Import failed',
+          `"${result.assets[0].name ?? 'The selected file'}" is not valid JSON. Pick the grynd-backup-*.json file produced by Export data.`,
+        );
         return;
       }
 
@@ -106,10 +122,10 @@ export function useDataBackup() {
                   await importBackup(validation.backup);
                   await reloadStores();
                   Alert.alert('Import complete', 'Your data has been restored.');
-                } catch {
+                } catch (err) {
                   Alert.alert(
                     'Import failed',
-                    'Could not fully restore the backup. Some data may have been partially updated — try importing again.',
+                    `Could not fully restore the backup. Some data may have been partially updated — try importing again.\n\n${String(err)}`,
                   );
                 } finally {
                   setIsImporting(false);
@@ -119,8 +135,8 @@ export function useDataBackup() {
           },
         ],
       );
-    } catch {
-      Alert.alert('Import failed', 'Could not read the selected file.');
+    } catch (err) {
+      Alert.alert('Import failed', `Could not open the file picker.\n\n${String(err)}`);
     }
   }, [isExporting, isImporting, reloadStores]);
 

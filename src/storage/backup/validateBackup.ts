@@ -46,17 +46,30 @@ function validateCycle(value: unknown): GryndBackup['data']['cycle'] | null {
   if (typeof value.currentIndex !== 'number') return null;
   if (value.lastAdvancedAt !== null && typeof value.lastAdvancedAt !== 'number') return null;
 
+  const days: GryndBackup['data']['cycle']['days'] = [];
+
   for (const day of value.days) {
     if (!isRecord(day)) return null;
     if (!isNonEmptyString(day.id)) return null;
     if (day.type !== 'split' && day.type !== 'rest') return null;
-    if (day.type === 'split' && day.splitId !== undefined && typeof day.splitId !== 'string') {
+
+    // An unassigned split day may carry null instead of omitting the key.
+    // Normalize rather than reject: refusing the whole file over one cycle
+    // entry would make an otherwise-good backup permanently unimportable.
+    const splitId = typeof day.splitId === 'string' ? day.splitId : undefined;
+    if (day.splitId !== undefined && day.splitId !== null && splitId === undefined) {
       return null;
     }
+
+    days.push({
+      id: day.id,
+      type: day.type,
+      ...(splitId !== undefined ? { splitId } : {}),
+    });
   }
 
   return {
-    days: value.days as GryndBackup['data']['cycle']['days'],
+    days,
     currentIndex: value.currentIndex,
     lastAdvancedAt: value.lastAdvancedAt,
   };

@@ -3,6 +3,7 @@ import React, { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import {
   useFonts,
@@ -47,7 +48,11 @@ export default function RootLayout() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    // SafeAreaProvider is required for SafeAreaView / useSafeAreaInsets to
+    // report real insets. Without it they silently resolve to 0, which put
+    // content under the notch and clipped the tab bar above the home indicator.
+    <SafeAreaProvider>
+      <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#0A0A0A' }}>
       <BottomSheetModalProvider>
         <StatusBar style="light" />
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#0A0A0A' } }}>
@@ -87,6 +92,7 @@ export default function RootLayout() {
         </Stack>
         <DevBadge />
       </BottomSheetModalProvider>
-    </GestureHandlerRootView>
+      </GestureHandlerRootView>
+    </SafeAreaProvider>
   );
 }
