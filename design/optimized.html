@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Grynd — Optimized (function-first)</title>
+<style>
+  :root{
+    /* Reconciled with src/shared/theme/colors.ts (see assets/tokens.css) */
+    --bg:#0A0A0A; --bg-elev:#141414; --bg-elev-2:#1F1F1F; --line:#1F1F1F;
+    --accent:#E8FF47; --accent-dim:#B8CC2E; --on-accent:#0A0A0A;
+    --text:#F0EDE8; --text-2:#8A8580; --text-3:#3D3B38;
+    --up:#3ECF6A; --danger:#FF4C4C;
+    --r:12px; --r-sm:8px;
+    --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+    --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:#050506}
+  body{font-family:var(--sans);color:var(--text);padding:40px 24px 90px;-webkit-font-smoothing:antialiased}
+  .head{max-width:1200px;margin:0 auto 14px;color:var(--text-2)}
+  .head h1{color:var(--text);font-size:26px;letter-spacing:-.02em}
+  .head h1 span{color:var(--accent)}
+  .head p{margin-top:8px;font-size:14px;max-width:70ch;line-height:1.55}
+  .legend{max-width:1200px;margin:0 auto 30px;display:flex;flex-wrap:wrap;gap:8px 18px;font-size:12px;color:var(--text-2);align-items:center;background:var(--bg-elev);border:1px solid var(--line);border-radius:12px;padding:12px 16px}
+  .legend b{color:var(--text-3);letter-spacing:.1em;text-transform:uppercase;font-size:11px;margin-right:4px}
+  .legend .d{margin-right:2px}
+
+  .gallery{display:flex;flex-wrap:wrap;gap:44px 32px;justify-content:center;align-items:flex-start;max-width:1500px;margin:0 auto}
+  .frame-wrap{display:flex;flex-direction:column;align-items:center;gap:12px}
+  .frame-label{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);text-align:center;max-width:340px}
+  .frame-label b{color:var(--accent);display:block;font-size:13px;letter-spacing:.02em;text-transform:none;margin-bottom:2px}
+
+  .phone{width:340px;height:740px;background:var(--bg);border-radius:46px;border:10px solid #1a1a1c;box-shadow:0 0 0 2px #000,0 30px 60px rgba(0,0,0,.6);position:relative;overflow:hidden;display:flex;flex-direction:column}
+  .screen{flex:1;overflow:hidden;position:relative;display:flex;flex-direction:column}
+
+  .statusbar{height:44px;flex:0 0 44px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 26px 6px;font-size:14px;font-weight:600}
+  .statusbar .time{font-size:15px}
+  .icons{display:flex;align-items:center;gap:5px}
+  .batt{width:24px;height:12px;border:1.5px solid var(--text);border-radius:3px;position:relative;display:inline-flex;align-items:center;padding:1.5px}
+  .batt::after{content:"";position:absolute;right:-3px;top:3px;width:2px;height:5px;background:var(--text);border-radius:0 1px 1px 0}
+  .batt i{display:block;height:100%;width:70%;background:var(--up);border-radius:1px}
+
+  .body{flex:1;overflow-y:auto;padding:0 16px}
+  .body::-webkit-scrollbar{width:0}
+  .h-title{font-size:32px;font-weight:800;letter-spacing:-.03em;padding:6px 4px 14px}
+  .card{background:var(--bg-elev);border-radius:var(--r)}
+  .lbl{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-2);font-weight:700;padding:20px 6px 10px}
+
+  /* delta / trend system */
+  .d{display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:700;padding:3px 8px;border-radius:7px;line-height:1;white-space:nowrap}
+  .d.up{color:var(--up);background:rgba(126,217,87,.13)}
+  .d.down{color:var(--danger);background:rgba(239,83,80,.13)}
+  .d.fail{color:var(--danger);border:1px solid rgba(239,83,80,.55);background:transparent;letter-spacing:.04em}
+  .d.pb{color:var(--on-accent);background:var(--accent)}
+  .note-line{color:var(--text-3);font-size:12.5px;font-style:italic;margin-top:5px;display:flex;align-items:center;gap:6px}
+  .note-line::before{content:"";width:4px;height:4px;border-radius:50%;background:var(--text-3);flex:0 0 auto}
+
+  /* tab bar (5 tabs, no picker) */
+  .tabbar{flex:0 0 auto;display:flex;justify-content:space-around;align-items:flex-start;padding:8px 4px 20px;border-top:1px solid var(--line);background:var(--bg)}
+  .tab{display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--text-2);font-size:11px;min-width:56px;padding:4px 0}
+  .tab svg{width:23px;height:23px}
+  .tab.active{color:var(--accent)}
+
+  /* set row (history/session/active) */
+  .setrow{display:flex;align-items:center;gap:8px;padding:9px 0;font-family:var(--mono);font-size:15px}
+  .setrow .n{color:var(--text-3);font-size:12px;width:34px;flex:0 0 auto;font-family:var(--sans);font-weight:600}
+  .setrow .v{color:var(--text);font-weight:600}
+  .setrow .u{color:var(--text-3);font-size:13px}
+  .setrow .sp{flex:1}
+
+  /* buttons */
+  .btn-primary{background:var(--accent);color:var(--on-accent);border-radius:14px;height:56px;display:flex;align-items:center;justify-content:center;gap:10px;font-size:18px;font-weight:800}
+  .btn-ghost{border:1px solid var(--line);border-radius:14px;height:52px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:16px;font-weight:700;color:var(--text)}
+
+  /* home cycle strip */
+  .cycle{display:flex;gap:6px;margin-top:14px}
+  .cyc{flex:1;height:44px;border-radius:10px;background:var(--bg-elev);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;color:var(--text-2)}
+  .cyc b{font-size:13px;color:var(--text)}
+  .cyc.done{color:var(--text-3)}.cyc.done b{color:var(--text-3)}
+  .cyc.today{background:var(--accent);color:var(--on-accent)}
+  .cyc.today b{color:var(--on-accent)}
+  .cyc.rest b{color:var(--text-3)}
+
+  .split{display:flex;align-items:center;gap:12px;padding:14px 14px;background:var(--bg-elev);border-radius:var(--r);margin-bottom:10px;min-height:64px}
+  .split .glyph{width:42px;height:42px;border-radius:11px;background:var(--bg-elev-2);display:flex;align-items:center;justify-content:center;color:var(--accent);flex:0 0 auto;font-size:18px}
+  .split .meta{flex:1}
+  .split .meta b{font-size:17px;font-weight:700}
+  .split .meta span{display:block;color:var(--text-2);font-size:12.5px;margin-top:2px}
+  .split.today{border:1px solid rgba(216,242,78,.4)}
+  .tag-today{background:var(--accent);color:var(--on-accent);font-size:10px;font-weight:800;padding:2px 7px;border-radius:6px;letter-spacing:.05em}
+  .play{width:44px;height:44px;border-radius:50%;background:rgba(216,242,78,.12);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .play svg{width:16px;height:16px;color:var(--accent);margin-left:2px}
+  .spark{width:64px;height:26px;flex:0 0 auto}
+
+  /* progress detail */
+  .seg{display:flex;gap:8px;background:var(--bg-elev);padding:4px;border-radius:12px}
+  .seg .s{flex:1;text-align:center;padding:9px 0;border-radius:9px;font-size:13px;font-weight:600;color:var(--text-2)}
+  .seg .s.on{background:var(--bg-elev-2);color:var(--text)}
+  .toggle2{display:flex;gap:0;background:var(--bg-elev);border-radius:11px;padding:3px}
+  .toggle2 .t{flex:1;text-align:center;padding:8px 0;font-size:13px;font-weight:700;border-radius:9px;color:var(--text-2)}
+  .toggle2 .t.on{background:var(--accent);color:var(--on-accent)}
+
+  /* keypad screen */
+  .aw-head{display:flex;align-items:center;justify-content:space-between;padding:6px 4px 0}
+  .icon-btn{width:40px;height:40px;border-radius:11px;background:var(--bg-elev);display:flex;align-items:center;justify-content:center;color:var(--text-2);font-size:20px}
+  .dots{display:flex;gap:6px;align-items:center}
+  .dots i{width:6px;height:6px;border-radius:50%;background:var(--bg-elev-2)}
+  .dots i.on{background:var(--accent);width:18px;border-radius:3px}
+  .rest{display:flex;align-items:center;gap:10px;background:rgba(216,242,78,.1);border:1px solid rgba(216,242,78,.3);border-radius:12px;padding:10px 14px;margin:0 0 10px}
+  .rest .ring{width:30px;height:30px;flex:0 0 auto}
+  .rest b{font-family:var(--mono);font-size:18px;color:var(--accent)}
+  .rest span{color:var(--text-2);font-size:12px}
+  .rest .skip{margin-left:auto;color:var(--accent);font-weight:700;font-size:13px}
+  .fieldrow{display:flex;gap:10px;margin-bottom:10px}
+  .field{flex:1;background:var(--bg-elev);border-radius:14px;padding:10px 14px}
+  .field .fl{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-3);font-weight:700}
+  .field .fv{font-size:30px;font-weight:800;letter-spacing:-.02em;margin-top:2px}
+  .field .fv small{font-size:14px;color:var(--text-3);font-weight:600}
+  .field.on{background:var(--bg-elev-2);box-shadow:inset 0 0 0 2px var(--accent)}
+  .field.on .fv{color:var(--accent)}
+  .quickbar{display:flex;gap:8px;margin-bottom:10px}
+  .qb{flex:1;height:42px;border-radius:11px;background:var(--bg-elev);display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:700;color:var(--text-2)}
+  .qb.on{background:rgba(239,83,80,.14);color:var(--danger);box-shadow:inset 0 0 0 1px rgba(239,83,80,.5)}
+  .qb svg{width:15px;height:15px}
+  .keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+  .key{height:52px;border-radius:12px;background:var(--bg-elev);display:flex;align-items:center;justify-content:center;font-size:23px;font-weight:600;color:var(--text)}
+  .key.fn{font-size:16px;color:var(--text-2)}
+  .aw-body{flex:1;display:flex;flex-direction:column;padding:0 16px;overflow:hidden}
+  .logged{background:var(--bg-elev);border-radius:14px;padding:4px 14px;margin-bottom:10px}
+  .logged .lh{display:flex;justify-content:space-between;color:var(--text-3);font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;padding:10px 0 6px;border-bottom:1px solid var(--line)}
+  .sub{color:var(--text-2);font-size:14px;font-weight:600}
+
+  /* settings */
+  .srow{background:var(--bg-elev);border-radius:var(--r);padding:16px;display:flex;align-items:center;gap:12px;min-height:66px;margin-bottom:10px}
+  .srow .t{flex:1}
+  .srow .t b{font-size:16px}
+  .srow .t span{display:block;color:var(--text-2);font-size:12.5px;margin-top:3px;line-height:1.35}
+  .chip{background:var(--bg-elev-2);color:var(--text-2);border-radius:10px;padding:9px 14px;font-size:14px;font-weight:700;min-width:48px;text-align:center}
+  .chip.on{background:var(--accent);color:var(--on-accent)}
+  .sw{width:52px;height:31px;border-radius:16px;background:var(--accent);position:relative;flex:0 0 auto}
+  .sw i{width:27px;height:27px;border-radius:50%;background:#fff;position:absolute;top:2px;right:2px}
+  .danger-row{border:1px solid rgba(239,83,80,.3)}
+  .summary{display:flex;gap:0;background:var(--bg-elev-2);border-radius:12px;overflow:hidden;margin:10px 0}
+  .summary .c{flex:1;text-align:center;padding:10px 4px;border-right:1px solid var(--line)}
+  .summary .c:last-child{border-right:0}
+  .summary .c b{font-size:17px;display:block}
+  .summary .c span{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);margin-top:2px;display:block}
+</style>
+</head>
+<body>
+
+<div class="head">
+  <h1><span>Grynd</span> — Optimized · function-first</h1>
+  <p>Rebuilt for one metric above all: <b style="color:var(--text)">logging speed</b>. Mobile-only, thumb-anchored, ≥48px targets, numeric-keypad set entry, dense trend data made glanceable. Compare against <code>mockup.html</code> (the v1 baseline).</p>
+</div>
+<div class="legend">
+  <span><b>Legend</b></span>
+  <span><span class="d up">▲2</span> beat last time on both weight &amp; reps</span>
+  <span><span class="d up">▲1</span> improved one metric</span>
+  <span><span class="d down">▼</span> down vs last time</span>
+  <span><span class="d fail">TO FAILURE</span> set taken to failure (intensity, not a miss)</span>
+  <span><span class="d pb">PB</span> personal best</span>
+  <span>· <i>italic</i> = free-text note</span>
+</div>
+
+<div class="gallery">
+
+<!-- ============ 7. ACTIVE WORKOUT — the hero ============ -->
+<div class="frame-wrap">
+  <div class="phone"><div class="screen">
+    <div class="statusbar"><span class="time">9:25</span><span class="icons">
+      <svg width="18" height="12" viewBox="0 0 18 12"><g fill="#f4f4f5"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="5" y="4" width="3" height="8" rx="1"/><rect x="10" y="2" width="3" height="10" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></g></svg>
+      <svg width="18" height="13" viewBox="0 0 18 13" fill="#f4f4f5"><path d="M9 13l2.5-3a3.6 3.6 0 00-5 0zM3 6.5a9 9 0 0112 0l-1.6 1.9a6.4 6.4 0 00-8.8 0zM0 3.4a13.5 13.5 0 0118 0l-1.6 1.9a11 11 0 00-14.8 0z"/></svg>
+      <span class="batt"><i></i></span></span></div>
+
+    <div class="aw-head">
+      <div class="icon-btn">✕</div>
+      <div class="dots"><i class="on"></i><i></i><i></i><i></i><i></i></div>
+      <div class="icon-btn">⋯</div>
+    </div>
+
+    <div class="aw-body">
+      <div style="padding:14px 4px 4px">
+        <div style="font-size:24px;font-weight:800;letter-spacing:-.02em;line-height:1.1">Single Tricep Pushdown</div>
+        <div class="sub" style="margin-top:4px">Exercise 1 / 5 · <span style="color:var(--text-3)">1 set logged</span></div>
+      </div>
+
+      <!-- rest timer running -->
+      <div class="rest" style="margin-top:12px">
+        <svg class="ring" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15" fill="none" stroke="#232327" stroke-width="4"/><circle cx="18" cy="18" r="15" fill="none" stroke="#d8f24e" stroke-width="4" stroke-linecap="round" stroke-dasharray="94" stroke-dashoffset="34" transform="rotate(-90 18 18)"/></svg>
+        <div><b>1:48</b> <span>rest</span></div>
+        <div class="skip">Skip ›</div>
+      </div>
+
+      <!-- logged sets + last-time reference -->
+      <div class="logged">
+        <div class="lh"><span>This session</span><span>vs Aug 8</span></div>
+        <div class="setrow"><span class="n">Set 1</span><span class="v">22</span><span class="u">lb</span> <span class="u">×</span> <span class="v">7</span><span class="u">reps</span><span class="sp"></span><span class="d up">▲1</span></div>
+      </div>
+
+      <div style="flex:1"></div>
+
+      <!-- INPUT: fields + quick flags + keypad + primary -->
+      <div class="fieldrow">
+        <div class="field on"><div class="fl">Weight</div><div class="fv">22<small> lb</small></div></div>
+        <div class="field"><div class="fl">Reps</div><div class="fv">5</div></div>
+      </div>
+      <div class="quickbar">
+        <div class="qb on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg>To failure</div>
+        <div class="qb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v12H8l-4 4z"/></svg>Note</div>
+        <div class="qb">More ⌄</div>
+      </div>
+      <div class="keypad">
+        <div class="key">1</div><div class="key">2</div><div class="key">3</div>
+        <div class="key">4</div><div class="key">5</div><div class="key">6</div>
+        <div class="key">7</div><div class="key">8</div><div class="key">9</div>
+        <div class="key fn">.</div><div class="key">0</div><div class="key fn">⌫</div>
+      </div>
+      <div class="btn-primary" style="margin-bottom:14px">Log set 2</div>
+    </div>
+  </div></div>
+  <div class="frame-label"><b>7 · Active workout — the hot path</b>Keypad in the thumb zone · FAIL + Note one tap · rest timer inline · logged set shows live delta vs last time</div>
+</div>
+
+<!-- ============ 1. HOME ============ -->
+<div class="frame-wrap">
+  <div class="phone"><div class="screen">
+    <div class="statusbar"><span class="time">9:25</span><span class="icons">
+      <svg width="18" height="12" viewBox="0 0 18 12"><g fill="#f4f4f5"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="5" y="4" width="3" height="8" rx="1"/><rect x="10" y="2" width="3" height="10" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></g></svg>
+      <svg width="18" height="13" viewBox="0 0 18 13" fill="#f4f4f5"><path d="M9 13l2.5-3a3.6 3.6 0 00-5 0zM3 6.5a9 9 0 0112 0l-1.6 1.9a6.4 6.4 0 00-8.8 0zM0 3.4a13.5 13.5 0 0118 0l-1.6 1.9a11 11 0 00-14.8 0z"/></svg>
+      <span class="batt"><i></i></span></span></div>
+    <div class="body">
+      <div class="h-title">Workouts</div>
+      <div class="card" style="padding:18px">
+        <div class="lbl" style="padding:0 0 8px">Today · Day 5 of 8</div>
+        <div style="font-size:27px;font-weight:800;letter-spacing:-.02em;display:flex;align-items:center;gap:10px">🦵 Legs 2</div>
+        <div style="color:var(--text-2);font-size:13px;margin-top:4px">6 exercises · ~48 min · last done Aug 6</div>
+        <div class="cycle">
+          <div class="cyc done"><b>1</b>Pu</div><div class="cyc done"><b>2</b>Pl</div><div class="cyc done"><b>3</b>L1</div><div class="cyc done"><b>4</b>P2</div>
+          <div class="cyc today"><b>5</b>L2</div><div class="cyc rest"><b>6</b>R</div><div class="cyc"><b>7</b>Pl</div><div class="cyc"><b>8</b>L1</div>
+        </div>
+        <div class="btn-primary" style="margin-top:16px">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M10 8l6 4-6 4z" fill="currentColor" stroke="none"/></svg>
+          Start Workout
+        </div>
+      </div>
+      <div class="lbl">All splits</div>
+      <div class="split today"><div class="glyph">🦵</div><div class="meta"><b>Legs 2 <span class="tag-today">TODAY</span></b><span>6 exercises · Quads, Hams</span></div><div class="play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5l10 7-10 7z"/></svg></div></div>
+      <div class="split"><div class="glyph">💪</div><div class="meta"><b>Push</b><span>5 exercises · Chest, Delts, Tri</span></div><div class="play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5l10 7-10 7z"/></svg></div></div>
+      <div class="split"><div class="glyph">🔙</div><div class="meta"><b>Pull</b><span>5 exercises · Back, Biceps</span></div><div class="play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5l10 7-10 7z"/></svg></div></div>
+      <div class="split"><div class="glyph">🦵</div><div class="meta"><b>Legs 1</b><span>5 exercises · Quads, Calves</span></div><div class="play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5l10 7-10 7z"/></svg></div></div>
+    </div>
+    <div class="tabbar">
+      <div class="tab active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Home</div>
+      <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Splits</div>
+      <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8"/></svg>Progress</div>
+      <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>History</div>
+      <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1l2-1.5-2-3.5-2.3 1a7 7 0 00-1.7-1L16.5 3h-4l-.4 2.5a7 7 0 00-1.7 1l-2.3-1-2 3.5 2 1.5a7 7 0 000 2l-2 1.5 2 3.5 2.3-1a7 7 0 001.7 1l.4 2.5h4l.4-2.5a7 7 0 001.7-1l2.3 1 2-3.5-2-1.5c.1-.3.1-.7.1-1z"/></svg>Settings</div>
+    </div>
+  </div></div>
+  <div class="frame-label"><b>1 · Home</b>8-day cycle strip · today marked in list · duration + muscle metadata · big Start CTA</div>
+</div>
+
+<!-- ============ 4. HISTORY ============ -->
+<div class="frame-wrap">
+  <div class="phone"><div class="screen">
+    <div class="statusbar"><span class="time">9:25</span><span class="icons">
+      <svg width="18" height="12" viewBox="0 0 18 12"><g fill="#f4f4f5"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="5" y="4" width="3" height="8" rx="1"/><rect x="10" y="2" width="3" height="10" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></g></svg>
+      <svg width="18" height="13" viewBox="0 0 18 13" fill="#f4f4f5"><path d="M9 13l2.5-3a3.6 3.6 0 00-5 0zM3 6.5a9 9 0 0112 0l-1.6 1.9a6.4 6.4 0 00-8.8 0zM0 3.4a13.5 13.5 0 0118 0l-1.6 1.9a11 11 0 00-14.8 0z"/></svg>
+      <span class="batt"><i></i></span></span></div>
+    <div class="body">
+      <div class="h-title" style="padding-bottom:10px">History</div>
+      <div class="seg" style="margin-bottom:14px"><div class="s on">All</div><div class="s">Push</div><div class="s">Pull</div><div class="s">Legs</div></div>
+
+      <div class="card" style="padding:14px 16px 8px;margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center"><div><b style="font-size:17px">Push</b> <span style="color:var(--text-3);font-size:13px">· Aug 8</span></div><span class="d pb">1 PB</span></div>
+        <div class="summary">
+          <div class="c"><b>9</b><span>sets</span></div>
+          <div class="c"><b>6.4k</b><span>lb·reps</span></div>
+          <div class="c"><b>52m</b><span>time</span></div>
+        </div>
+        <div style="padding:2px 0 10px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;padding:8px 0 0"><b style="font-size:15px">Incline Dumbbell Press</b><span style="color:var(--text-3);font-size:12px">2 sets</span></div>
+          <div class="setrow"><span class="n">1</span><span class="v">60</span><span class="u">lb</span><span class="u">×</span><span class="v">6</span><span class="u">reps</span><span class="sp"></span><span class="d up">▲2</span></div>
+          <div class="setrow"><span class="n">2</span><span class="v">55</span><span class="u">lb</span><span class="u">×</span><span class="v">7</span><span class="u">reps</span><span class="sp"></span><span class="d fail">TO FAILURE</span></div>
+          <div class="note-line">Good reps, 0 RIR · assisted</div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;padding:12px 0 0;border-top:1px solid var(--line);margin-top:8px"><b style="font-size:15px">Single Tricep Pushdown</b><span style="color:var(--text-3);font-size:12px">2 sets</span></div>
+          <div class="setrow"><span class="n">1</span><span class="v">22</span><span class="u">lb</span><span class="u">×</span><span class="v">6</span><span class="u">reps</span><span class="sp"></span><span class="d down">▼</span></div>
+          <div class="setrow"><span class="n">2</span><span class="v">22</span><span class="u">lb</span><span class="u">×</span><span class="v">5</span><span class="u">reps</span><span class="sp"></span><span class="d fail">TO FAILURE</span></div>
+        </div>
+        <div style="text-align:center;color:var(--accent);font-weight:700;font-size:13px;padding:6px 0 12px;border-top:1px solid var(--line)">View full session · +2 exercises ›</div>
+      </div>
+
+      <div class="card" style="padding:14px 16px 8px;margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center"><div><b style="font-size:17px">Legs 2</b> <span style="color:var(--text-3);font-size:13px">· Aug 6</span></div></div>
+        <div class="summary"><div class="c"><b>11</b><span>sets</span></div><div class="c"><b>18k</b><span>lb·reps</span></div><div class="c"><b>61m</b><span>time</span></div></div>
+        <div style="padding:2px 0 10px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;padding:8px 0 0"><b style="font-size:15px">Pendulum Squat</b><span style="color:var(--text-3);font-size:12px">2 sets · drop</span></div>
+          <div class="setrow"><span class="n">1</span><span class="v">45→25</span><span class="u">lb</span><span class="u">×</span><span class="v">8</span><span class="u">reps</span><span class="sp"></span><span class="d fail">TO FAILURE</span></div>
+          <div class="note-line">Assisted last 2 reps</div>
+        </div>
+      </div>
+    </div>
+    <div class="tabbar">
+      <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Home</div>
+      <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Splits</div>
+      <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8"/></svg>Progress</div>
+      <div class="tab active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>History</div>
+      <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1l2-1.5-2-3.5-2.3 1a7 7 0 00-1.7-1L16.5 3h-4l-.4 2.5a7 7 0 00-1.7 1l-2.3-1-2 3.5 2 1.5a7 7 0 000 2l-2 1.5 2 3.5 2.3-1a7 7 0 001.7 1l.4 2.5h4l.4-2.5a7 7 0 001.7-1l2.3 1 2-3.5-2-1.5c.1-.3.1-.7.1-1z"/></svg>Settings</div>
+    </div>
+  </div></div>
+  <div class="frame-label"><b>4 · History</b>Session summary row · ▲/▼ deltas replace ASCII · drop set as 45→25 · notes demoted · tap-through</div>
+</div>
+
+<!-- ============ 3. EXERCISE DETAIL ============ -->
+<div class="frame-wrap">
+  <div class="phone"><div class="screen">
+    <div class="statusbar"><span class="time">9:25</span><span class="icons">
+      <svg width="18" height="12" viewBox="0 0 18 12"><g fill="#f4f4f5"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="5" y="4" width="3" height="8" rx="1"/><rect x="10" y="2" width="3" height="10" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></g></svg>
+      <svg width="18" height="13" viewBox="0 0 18 13" fill="#f4f4f5"><path d="M9 13l2.5-3a3.6 3.6 0 00-5 0zM3 6.5a9 9 0 0112 0l-1.6 1.9a6.4 6.4 0 00-8.8 0zM0 3.4a13.5 13.5 0 0118 0l-1.6 1.9a11 11 0 00-14.8 0z"/></svg>
+      <span class="batt"><i></i></span></span></div>
+    <div class="body">
+      <div style="display:flex;align-items:center;gap:10px;padding:6px 0 14px"><div class="icon-btn">‹</div><span style="font-size:20px;font-weight:800">RDL</span></div>
+      <div class="toggle2" style="margin-bottom:12px"><div class="t on">Est. 1RM</div><div class="t">Top weight</div><div class="t">Volume</div></div>
+      <div class="seg" style="margin-bottom:16px"><div class="s">1M</div><div class="s on">2M</div><div class="s">6M</div><div class="s">All</div></div>
+
+      <div style="display:flex;align-items:baseline;gap:10px;padding:0 4px"><span style="font-size:38px;font-weight:800;letter-spacing:-.02em">247</span><span style="font-size:15px;color:var(--text-2);font-weight:600">lb est. 1RM</span><span class="d pb" style="margin-left:auto">PB</span></div>
+      <div style="display:flex;gap:8px;padding:8px 4px 0"><span class="d up">▲ +6 lb</span><span style="color:var(--text-3);font-size:13px;align-self:center">205×10 → up 2 reps · Jul 30</span></div>
+
+      <div class="lbl" style="padding-left:4px">Est. 1RM over time · auto-scaled</div>
+      <div class="card" style="padding:16px 12px 10px">
+        <svg viewBox="0 0 300 160" width="100%" style="display:block">
+          <text x="12" y="24" fill="#6b6b72" font-size="11" font-family="sans-serif">250</text>
+          <line x1="40" y1="20" x2="292" y2="20" stroke="#232327"/>
+          <text x="12" y="74" fill="#6b6b72" font-size="11" font-family="sans-serif">235</text>
+          <line x1="40" y1="70" x2="292" y2="70" stroke="#1c1c1f"/>
+          <text x="12" y="124" fill="#6b6b72" font-size="11" font-family="sans-serif">220</text>
+          <line x1="40" y1="120" x2="292" y2="120" stroke="#1c1c1f"/>
+          <polyline points="52,112 120,96 190,74 278,34" fill="none" stroke="#d8f24e" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="52" cy="112" r="4" fill="#aebf3a"/><circle cx="120" cy="96" r="4" fill="#aebf3a"/><circle cx="190" cy="74" r="4" fill="#aebf3a"/>
+          <circle cx="278" cy="34" r="7" fill="#d8f24e" stroke="#0a0a0b" stroke-width="2"/>
+          <text x="278" y="24" fill="#f4f4f5" font-size="11" text-anchor="middle" font-weight="700" font-family="sans-serif">247</text>
+          <text x="52" y="150" fill="#a1a1aa" font-size="10" text-anchor="middle" font-family="sans-serif">Jun 25</text>
+          <text x="120" y="150" fill="#a1a1aa" font-size="10" text-anchor="middle" font-family="sans-serif">Jul 5</text>
+          <text x="190" y="150" fill="#a1a1aa" font-size="10" text-anchor="middle" font-family="sans-serif">Jul 21</text>
+          <text x="278" y="150" fill="#a1a1aa" font-size="10" text-anchor="middle" font-family="sans-serif">Jul 30</text>
+        </svg>
+        <div style="color:var(--text-3);font-size:11px;padding:4px">Weight × reps normalized — rep gains now show as a rising line</div>
+      </div>
+    </div>
+  </div></div>
+  <div class="frame-label"><b>3 · Exercise detail</b>Est. 1RM by default (rep gains visible) · auto-scaled axis · explicit delta + labeled latest point</div>
+</div>
+
+<!-- ============ 2. PROGRESS LIST ============ -->
+<div class="frame-wrap">
+  <div class="phone"><div class="screen">
+    <div class="statusbar"><span class="time">9:25</span><span class="icons">
+      <svg width="18" height="12" viewBox="0 0 18 12"><g fill="#f4f4f5"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="5" y="4" width="3" height="8" rx="1"/><rect x="10" y="2" width="3" height="10" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></g></svg>
+      <svg width="18" height="13" viewBox="0 0 18 13" fill="#f4f4f5"><path d="M9 13l2.5-3a3.6 3.6 0 00-5 0zM3 6.5a9 9 0 0112 0l-1.6 1.9a6.4 6.4 0 00-8.8 0zM0 3.4a13.5 13.5 0 0118 0l-1.6 1.9a11 11 0 00-14.8 0z"/></svg>
+      <span class="batt"><i></i></span></span></div>
+    <div class="body">
+      <div class="h-title">Progress</div>
+      <div class="card" style="padding:16px;margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:16px">Total volume</b><span class="d up">▲ 4% wk</span></div>
+        <div style="display:flex;align-items:flex-end;gap:2px;height:56px;margin-top:12px">
+          <div style="flex:1;height:40%;background:var(--bg-elev-2);border-radius:3px"></div>
+          <div style="flex:1;height:55%;background:var(--bg-elev-2);border-radius:3px"></div>
+          <div style="flex:1;height:48%;background:var(--bg-elev-2);border-radius:3px"></div>
+          <div style="flex:1;height:70%;background:var(--bg-elev-2);border-radius:3px"></div>
+          <div style="flex:1;height:62%;background:var(--bg-elev-2);border-radius:3px"></div>
+          <div style="flex:1;height:82%;background:var(--bg-elev-2);border-radius:3px"></div>
+          <div style="flex:1;height:100%;background:var(--accent);border-radius:3px"></div>
+        </div>
+        <div style="color:var(--text-3);font-size:12px;margin-top:8px">142k lb·reps this week · across all sessions</div>
+      </div>
+      <div class="lbl" style="padding-left:6px">By split · tap for exercise charts</div>
+      <div class="split"><div class="meta"><b>Push</b><span>5 exercises</span></div>
+        <svg class="spark" viewBox="0 0 64 26"><polyline points="2,20 14,18 26,14 38,15 50,8 62,4" fill="none" stroke="#7ed957" stroke-width="2"/></svg><span class="d up">▲3%</span></div>
+      <div class="split"><div class="meta"><b>Pull</b><span>5 exercises</span></div>
+        <svg class="spark" viewBox="0 0 64 26"><polyline points="2,10 14,12 26,9 38,11 50,10 62,9" fill="none" stroke="#a1a1aa" stroke-width="2"/></svg><span class="d" style="color:var(--text-2);background:var(--bg-elev-2)">flat</span></div>
+      <div class="split"><div class="meta"><b>Legs 1</b><span>5 exercises</span></div>
+        <svg class="spark" viewBox="0 0 64 26"><polyline points="2,22 14,17 26,16 38,10 50,9 62,3" fill="none" stroke="#7ed957" stroke-width="2"/></svg><span class="d up">▲6%</span></div>
+      <div class="split"><div class="meta"><b>Push 2</b><span>5 exercises</span></div>
+        <svg class="spark" viewBox="0 0 64 26"><polyline points="2,8 14,10 26,13 38,12 50,16 62,18" fill="none" stroke="#ef5350" stroke-width="2"/></svg><span class="d down">▼2%</span></div>
+      <div class="split"><div class="meta"><b>Legs 2</b><span>6 exercises</span></div>
+        <svg class="spark" viewBox="0 0 64 26"><polyline points="2,18 14,16 26,12 38,13 50,7 62,6" fill="none" stroke="#7ed957" stroke-width="2"/></svg><span class="d up">▲4%</span></div>
+    </div>
+    <div class="tabbar">
+      <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Home</div>
+      <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Splits</div>
+      <div class="tab active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8"/></svg>Progress</div>
+      <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>History</div>
+      <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1l2-1.5-2-3.5-2.3 1a7 7 0 00-1.7-1L16.5 3h-4l-.4 2.5a7 7 0 00-1.7 1l-2.3-1-2 3.5 2 1.5a7 7 0 000 2l-2 1.5 2 3.5 2.3-1a7 7 0 001.7 1l.4 2.5h4l.4-2.5a7 7 0 001.7-1l2.3 1 2-3.5-2-1.5c.1-.3.1-.7.1-1z"/></svg>Settings</div>
+    </div>
+  </div></div>
+  <div class="frame-label"><b>2 · Progress</b>Volume card with sparkline + week total · every split row previews its trend (sparkline + %)</div>
+</div>
+
+<!-- ============ 5. SETTINGS ============ -->
+<div class="frame-wrap">
+  <div class="phone"><div class="screen">
+    <div class="statusbar"><span class="time">9:25</span><span class="icons">
+      <svg width="18" height="12" viewBox="0 0 18 12"><g fill="#f4f4f5"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="5" y="4" width="3" height="8" rx="1"/><rect x="10" y="2" width="3" height="10" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></g></svg>
+      <svg width="18" height="13" viewBox="0 0 18 13" fill="#f4f4f5"><path d="M9 13l2.5-3a3.6 3.6 0 00-5 0zM3 6.5a9 9 0 0112 0l-1.6 1.9a6.4 6.4 0 00-8.8 0zM0 3.4a13.5 13.5 0 0118 0l-1.6 1.9a11 11 0 00-14.8 0z"/></svg>
+      <span class="batt"><i></i></span></span></div>
+    <div class="body">
+      <div class="h-title">Settings</div>
+      <div class="lbl" style="padding-top:4px">Units</div>
+      <div class="srow"><div class="t"><b>Weight unit</b><span>Log and show weights in kg or lbs</span></div><span class="chip">kg</span><span class="chip on">lbs</span></div>
+      <div class="lbl">Workout</div>
+      <div class="srow" style="flex-direction:column;align-items:stretch;gap:12px">
+        <div><b style="font-size:16px">Default rest between sets</b><div style="color:var(--text-2);font-size:12.5px;margin-top:3px">Countdown starts after each logged set</div></div>
+        <div style="display:flex;gap:8px"><span class="chip">60</span><span class="chip">90</span><span class="chip on">120</span><span class="chip">180</span><span class="chip" style="min-width:auto;flex:1">Custom</span></div>
+      </div>
+      <div class="lbl">Training cycle</div>
+      <div class="srow"><div class="t"><b>Edit training cycle</b><span>Day 5 of 8 · Legs 2</span></div><span style="color:var(--text-3);font-size:22px">›</span></div>
+      <div class="srow"><div class="t"><b>Auto-advance after workout</b><span>Move to next cycle day when finished</span></div><div class="sw"><i></i></div></div>
+      <div class="lbl">Data</div>
+      <div class="srow"><div class="t"><b>Export data</b><span>Back up splits, history &amp; settings</span></div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="2"><path d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7"/><path d="M12 3v13M7 8l5-5 5 5"/></svg></div>
+      <div class="srow"><div class="t"><b>Import data</b><span>Restore from a backup file</span></div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="2"><path d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7"/><path d="M12 16V3M7 11l5 5 5-5"/></svg></div>
+      <div class="lbl" style="color:var(--danger)">Danger zone</div>
+      <div class="srow danger-row"><div class="t"><b style="color:var(--danger)">Reset to Day 1</b><span>Restart the cycle — asks to confirm</span></div><span style="color:var(--danger);font-size:22px">›</span></div>
+      <div style="height:16px"></div>
+    </div>
+    <div class="tabbar">
+      <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Home</div>
+      <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Splits</div>
+      <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8"/></svg>Progress</div>
+      <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>History</div>
+      <div class="tab active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1l2-1.5-2-3.5-2.3 1a7 7 0 00-1.7-1L16.5 3h-4l-.4 2.5a7 7 0 00-1.7 1l-2.3-1-2 3.5 2 1.5a7 7 0 000 2l-2 1.5 2 3.5 2.3-1a7 7 0 001.7 1l.4 2.5h4l.4-2.5a7 7 0 001.7-1l2.3 1 2-3.5-2-1.5c.1-.3.1-.7.1-1z"/></svg>Settings</div>
+    </div>
+  </div></div>
+  <div class="frame-label"><b>5 · Settings</b>≥66px rows · custom rest value · Import added · destructive isolated in a Danger zone w/ confirm</div>
+</div>
+
+</div>
+</body>
+</html>

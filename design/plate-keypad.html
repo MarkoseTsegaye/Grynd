@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Grynd — Plate-loaded docked entry</title>
+<style>
+  :root{
+    /* Reconciled tokens (src/shared/theme/colors.ts) */
+    --bg:#0A0A0A; --bg-elev:#141414; --bg-elev-2:#1F1F1F; --line:#1F1F1F;
+    --accent:#E8FF47; --accent-dim:#B8CC2E; --on-accent:#0A0A0A;
+    --text:#F0EDE8; --text-2:#8A8580; --text-3:#3D3B38;
+    --up:#3ECF6A; --danger:#FF4C4C;
+    --r:12px; --r-sm:8px;
+    --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+    --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:#050506}
+  body{font-family:var(--sans);color:var(--text);padding:40px 24px 80px;-webkit-font-smoothing:antialiased}
+  .head{max-width:1100px;margin:0 auto 30px;color:var(--text-2)}
+  .head h1{color:var(--text);font-size:25px;letter-spacing:-.02em}
+  .head h1 span{color:var(--accent)}
+  .head p{margin-top:8px;font-size:14px;max-width:76ch;line-height:1.55}
+  .head code{background:var(--bg-elev);padding:1px 6px;border-radius:5px;font-family:var(--mono);font-size:12px;color:var(--text)}
+
+  .gallery{display:flex;flex-wrap:wrap;gap:40px 34px;justify-content:center;align-items:flex-start;max-width:1200px;margin:0 auto}
+  .frame-wrap{display:flex;flex-direction:column;align-items:center;gap:12px}
+  .frame-label{font-size:12px;letter-spacing:.05em;color:var(--text-3);text-align:center;max-width:340px}
+  .frame-label b{color:var(--accent);display:block;font-size:13px;text-transform:none;margin-bottom:3px}
+
+  .phone{width:340px;height:740px;background:var(--bg);border-radius:46px;border:10px solid #1a1a1c;box-shadow:0 0 0 2px #000,0 30px 60px rgba(0,0,0,.6);position:relative;overflow:hidden;display:flex;flex-direction:column}
+  .screen{flex:1;display:flex;flex-direction:column;padding:0 16px}
+  .statusbar{height:44px;flex:0 0 44px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 10px 6px;font-size:14px;font-weight:600}
+  .batt{width:24px;height:12px;border:1.5px solid var(--text);border-radius:3px;position:relative;display:inline-flex;align-items:center;padding:1.5px}
+  .batt::after{content:"";position:absolute;right:-3px;top:3px;width:2px;height:5px;background:var(--text);border-radius:0 1px 1px 0}
+  .batt i{display:block;height:100%;width:70%;background:var(--up);border-radius:1px}
+  .icons{display:flex;align-items:center;gap:5px}
+
+  .aw-head{display:flex;align-items:center;justify-content:space-between;padding:2px 2px 0}
+  .icon-btn{width:36px;height:36px;border-radius:10px;background:var(--bg-elev);display:flex;align-items:center;justify-content:center;color:var(--text-2);font-size:18px}
+  .dots{display:flex;gap:6px;align-items:center}
+  .dots i{width:6px;height:6px;border-radius:50%;background:var(--bg-elev-2)}
+  .dots i.on{background:var(--accent);width:18px;border-radius:3px}
+
+  .exhead{display:flex;align-items:center;gap:8px;margin:10px 2px 6px}
+  .exhead .t{flex:1;font-weight:700;font-size:20px;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .badge{background:var(--bg-elev);border-radius:7px;padding:3px 8px;color:var(--text-2);font-family:var(--mono);font-size:13px}
+  .sub-ic{color:var(--accent);font-size:18px}
+  .lastline{display:flex;gap:8px;align-items:baseline;margin:0 2px 8px;font-size:13px}
+  .lastline .d{color:var(--text-3)}
+  .lastline .v{color:var(--text-2);font-family:var(--mono)}
+
+  .setlist{flex:1;overflow:hidden;padding-top:2px}
+  .setrow{background:var(--bg-elev-2);border-radius:8px;padding:8px 12px;margin-bottom:8px;display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:14px}
+  .setrow .n{color:var(--text-3)} .setrow .u{color:var(--text-3);font-size:12px}
+  .up{color:var(--up);font-weight:700}
+
+  .dock{padding-top:6px}
+  .fieldrow{display:flex;gap:8px;margin-bottom:8px}
+  .field{flex:1;border-radius:12px;padding:9px 14px;border:2px solid transparent;background:var(--bg-elev)}
+  .field.on{background:var(--bg-elev-2);border-color:var(--accent)}
+  .field .fl{font-size:11px;letter-spacing:.06em;color:var(--text-2);font-weight:600}
+  .field .fv{font-size:26px;font-weight:800;letter-spacing:-.02em;line-height:1.15;font-family:var(--mono)}
+  .field.on .fv{color:var(--accent)}
+  .field .fsub{font-size:11px;color:var(--text-3);margin-top:1px}
+  .field .u{font-size:13px;color:var(--text-3);font-weight:600;font-family:var(--sans)}
+
+  .quickbar{display:flex;gap:8px;margin-bottom:8px}
+  .qb{flex:1;height:40px;border-radius:11px;background:var(--bg-elev);display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:700;color:var(--text-2)}
+  .qb.on{background:rgba(255,76,76,.14);color:var(--danger);box-shadow:inset 0 0 0 1px rgba(255,76,76,.5)}
+
+  /* loaded-side viz (machine peg — no bar) */
+  .bar-wrap{display:flex;align-items:center;justify-content:center;gap:0;height:68px;margin-bottom:8px;background:var(--bg-elev);border-radius:12px;position:relative}
+  .peg{width:40px;height:8px;background:linear-gradient(180deg,#55555a,#333338);border-radius:2px}
+  .plate{width:12px;border-radius:2px;background:linear-gradient(180deg,#3a3a3d,#242427);border:1px solid #444}
+  .plate.p45{height:52px;background:linear-gradient(180deg,#4a5a2a,#2f3a18);border-color:#5c6f2a}
+  .plate.p25{height:40px;background:linear-gradient(180deg,#2a4a3a,#183a2a);border-color:#2a5c42}
+  .plate.p10{height:30px}
+  .sleeve{display:flex;align-items:center;gap:3px}
+  .bar-total{position:absolute;top:8px;right:12px;font-family:var(--mono);font-size:11px;color:var(--accent)}
+  .bar-cap{position:absolute;bottom:7px;left:0;right:0;text-align:center;font-size:10px;color:var(--text-3);letter-spacing:.04em}
+
+  .perside{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}
+  .perside .lbl{font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin-right:2px}
+  .pchip{display:inline-flex;align-items:center;gap:5px;background:var(--bg-elev-2);border-radius:8px;padding:4px 8px;font-family:var(--mono);font-size:13px}
+  .pchip b{color:var(--accent)}
+  .pchip .x{color:var(--text-3);font-size:14px}
+  .clear{color:var(--text-3);font-size:12px;margin-left:auto}
+
+  .pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px}
+  .key{height:46px;border-radius:11px;background:var(--bg-elev);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:22px;font-weight:600}
+  .key.fn{font-size:15px;color:var(--text-2);font-family:var(--sans)}
+  .plate-key{height:50px;border-radius:12px;background:var(--bg-elev);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;position:relative}
+  .plate-key .w{font-family:var(--mono);font-size:20px;font-weight:700}
+  .plate-key .side{font-size:9px;color:var(--text-3);letter-spacing:.03em}
+  .plate-key.added{box-shadow:inset 0 0 0 2px var(--accent)}
+  .plate-key .cnt{position:absolute;top:5px;right:8px;font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:700}
+  .remove-row{height:40px;border-radius:11px;background:transparent;box-shadow:inset 0 0 0 1px var(--line);color:var(--text-2);display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;font-weight:700;margin-bottom:8px}
+
+  .btn-log{background:var(--accent);color:var(--on-accent);border-radius:12px;height:50px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:18px;font-weight:800;margin-bottom:14px}
+  .btn-log.off{opacity:.4}
+
+  .note{max-width:1100px;margin:34px auto 0;background:var(--bg-elev);border:1px solid var(--line);border-radius:12px;padding:18px 20px;color:var(--text-2);font-size:14px;line-height:1.6}
+  .note h3{color:var(--text);font-size:15px;margin-bottom:8px}
+  .note code{font-family:var(--mono);font-size:12.5px;color:var(--text);background:var(--bg-elev-2);padding:1px 5px;border-radius:4px}
+  .note b{color:var(--text)}
+  .note .warn{color:var(--accent)}
+</style>
+</head>
+<body>
+
+<div class="head">
+  <h1><span>Grynd</span> — Plate-loaded docked entry</h1>
+  <p>Same skeleton as the regular <code>QuickLogBar</code> keypad — two fields, quick flags, a pad, and <b>Log set</b> — but the pad is <b>context-sensitive</b>: plate buttons when the <b>weight</b> field is active, the number keypad when <b>reps</b> is active. <b>No bar weight, no doubling</b> — it logs exactly the per-side sum you load. Multiples of a plate are allowed. Replaces the old bottom-sheet plate picker for exercises marked <code>plateLoaded</code>.</p>
+</div>
+
+<div class="gallery">
+
+<!-- ============ STATE A: plate pad active ============ -->
+<div class="frame-wrap">
+  <div class="phone"><div class="screen">
+    <div class="statusbar"><span>9:25</span><span class="icons">
+      <svg width="18" height="12" viewBox="0 0 18 12"><g fill="#F0EDE8"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="5" y="4" width="3" height="8" rx="1"/><rect x="10" y="2" width="3" height="10" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></g></svg>
+      <span class="batt"><i></i></span></span></div>
+    <div class="aw-head">
+      <div class="icon-btn">✕</div>
+      <div class="dots"><i></i><i></i><i class="on"></i><i></i><i></i></div>
+      <div class="icon-btn">⋯</div>
+    </div>
+    <div class="exhead">
+      <span style="color:var(--text-3)">‹</span>
+      <span class="t">Pendulum Squat</span>
+      <span class="badge">1 set</span>
+      <span class="sub-ic">⇄</span>
+      <span style="color:var(--text-3)">›</span>
+    </div>
+    <div class="lastline"><span class="d">Last Aug 6</span><span class="v">115×8 · 115×6</span></div>
+
+    <div class="setlist">
+      <div class="setrow"><span class="n">Set 1&nbsp;—</span> <b>115</b> <span class="u">lb</span> × <b>8</b> <span class="u">reps</span> <span class="up">^^</span></div>
+    </div>
+
+    <div class="dock">
+      <div class="fieldrow">
+        <div class="field on">
+          <div class="fl">WEIGHT · PER SIDE</div>
+          <div class="fv">115 <span class="u">lb</span></div>
+          <div class="fsub">3 plates loaded · no bar</div>
+        </div>
+        <div class="field">
+          <div class="fl">REPS</div>
+          <div class="fv">8</div>
+        </div>
+      </div>
+
+      <!-- loaded-side viz (machine peg, one side) -->
+      <div class="bar-wrap">
+        <div class="bar-total">115 lb loaded</div>
+        <div class="peg"></div>
+        <div class="sleeve">
+          <div class="plate p45"></div><div class="plate p45"></div><div class="plate p25"></div>
+        </div>
+        <div class="bar-cap">one side · mirror on the other</div>
+      </div>
+
+      <!-- per-side summary -->
+      <div class="perside">
+        <span class="lbl">Loaded</span>
+        <span class="pchip"><b>45</b><span class="x">×2</span></span>
+        <span class="pchip"><b>25</b><span class="x">×1</span></span>
+        <span class="clear">Clear</span>
+      </div>
+
+      <!-- plate pad (LBS_PLATES + 2.5) -->
+      <div class="pad">
+        <div class="plate-key added"><span class="cnt">2</span><span class="w">45</span><span class="side">+ per side</span></div>
+        <div class="plate-key"><span class="w">35</span><span class="side">+ per side</span></div>
+        <div class="plate-key added"><span class="cnt">1</span><span class="w">25</span><span class="side">+ per side</span></div>
+        <div class="plate-key"><span class="w">10</span><span class="side">+ per side</span></div>
+        <div class="plate-key"><span class="w">5</span><span class="side">+ per side</span></div>
+        <div class="plate-key"><span class="w">2.5</span><span class="side">+ per side</span></div>
+      </div>
+      <div class="remove-row">⌫ Remove last plate</div>
+
+      <div class="quickbar">
+        <div class="qb">🔥 To failure</div>
+        <div class="qb">lbs · kg</div>
+        <div class="qb">RPE · Note</div>
+      </div>
+
+      <div class="btn-log">⊕ Log set</div>
+    </div>
+  </div></div>
+  <div class="frame-label"><b>A · Plate pad active</b>Tap a plate to add it (again for multiples → <b>45×2</b>). Weight = the per-side sum, <b>no bar, no ×2</b>. Backspace removes the last plate.</div>
+</div>
+
+<!-- ============ STATE B: reps pad active ============ -->
+<div class="frame-wrap">
+  <div class="phone"><div class="screen">
+    <div class="statusbar"><span>9:25</span><span class="icons">
+      <svg width="18" height="12" viewBox="0 0 18 12"><g fill="#F0EDE8"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="5" y="4" width="3" height="8" rx="1"/><rect x="10" y="2" width="3" height="10" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></g></svg>
+      <span class="batt"><i></i></span></span></div>
+    <div class="aw-head">
+      <div class="icon-btn">✕</div>
+      <div class="dots"><i></i><i></i><i class="on"></i><i></i><i></i></div>
+      <div class="icon-btn">⋯</div>
+    </div>
+    <div class="exhead">
+      <span style="color:var(--text-3)">‹</span>
+      <span class="t">Pendulum Squat</span>
+      <span class="badge">1 set</span>
+      <span class="sub-ic">⇄</span>
+      <span style="color:var(--text-3)">›</span>
+    </div>
+    <div class="lastline"><span class="d">Last Aug 6</span><span class="v">115×8 · 115×6</span></div>
+
+    <div class="setlist">
+      <div class="setrow"><span class="n">Set 1&nbsp;—</span> <b>115</b> <span class="u">lb</span> × <b>8</b> <span class="u">reps</span> <span class="up">^^</span></div>
+    </div>
+
+    <div class="dock">
+      <div class="fieldrow">
+        <div class="field">
+          <div class="fl">WEIGHT · PER SIDE</div>
+          <div class="fv">115 <span class="u">lb</span></div>
+          <div class="fsub">3 plates loaded · no bar</div>
+        </div>
+        <div class="field on">
+          <div class="fl">REPS</div>
+          <div class="fv">8</div>
+        </div>
+      </div>
+
+      <!-- number keypad (weight stays pinned from plates) -->
+      <div class="pad">
+        <div class="key">1</div><div class="key">2</div><div class="key">3</div>
+        <div class="key">4</div><div class="key">5</div><div class="key">6</div>
+        <div class="key">7</div><div class="key">8</div><div class="key">9</div>
+        <div class="key fn">·</div><div class="key">0</div><div class="key fn">⌫</div>
+      </div>
+
+      <div class="quickbar">
+        <div class="qb on">🔥 To failure</div>
+        <div class="qb">lbs · kg</div>
+        <div class="qb">RPE · Note</div>
+      </div>
+
+      <div class="btn-log">⊕ Log set</div>
+    </div>
+  </div></div>
+  <div class="frame-label"><b>B · Reps pad active</b>Tap the REPS field → the plate pad swaps for the number keypad (with a decimal key). Weight stays pinned from the plates.</div>
+</div>
+
+</div>
+
+<div class="note">
+  <h3>How it maps to the app</h3>
+  <p>
+    • <b>Weight logged = sum of plates on one side.</b> <span class="warn">No 45&nbsp;lb bar, no ×2</span> — this drops the barbell math for machines. Implementation: log <code>weightKg = Σ(perSide)</code> directly instead of <code>computePlateWeightKg()</code> (bar + 2×). Straight-barbell exercises, if ever needed, would be a separate mode.<br>
+    • <b>Plate set adds 2.5:</b> <code>LBS_PLATES = [2.5, 5, 10, 25, 35, 45]</code>. (kg micro-plate — 1.25 or 2.5 — is a quick follow-up if you want it.)<br>
+    • <b>Multiples allowed:</b> tapping a plate increments its per-side count (<code>addPlate</code> already does this) → 45×2, 45×3…; ⌫ / Clear use <code>removePlate</code>.<br>
+    • <b>Pad switches on field focus</b> — plate pad for weight, number pad for reps.<br>
+    • Reuses existing <code>plates / addPlate / removePlate</code> state in <code>useWorkout</code>; the bottom-sheet picker becomes a docked pad, auto-selected for <code>plateLoaded</code> exercises.<br>
+    • <b>Decimal for non-plate weights</b> (out of scope, requested): the regular keypad's <code>·</code> key already feeds a decimal weight — verified in-app.
+  </p>
+</div>
+
+</body>
+</html>

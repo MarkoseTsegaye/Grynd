@@ -1,0 +1,18 @@
+<svg width="1080" height="2340" viewBox="0 0 1080 2340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Grynd splash screen">
+  <rect width="1080" height="2340" fill="#0a0a0b"/>
+  <g transform="translate(540 1080)">
+    <!-- barbell mark -->
+    <g stroke="#d8f24e" stroke-linecap="round" fill="none" transform="translate(0 -40)">
+      <line x1="-130" y1="0" x2="130" y2="0" stroke-width="20"/>
+      <line x1="-130" y1="-42" x2="-130" y2="42" stroke-width="26"/>
+      <line x1="-172" y1="-30" x2="-172" y2="30" stroke-width="26"/>
+      <line x1="130" y1="-42" x2="130" y2="42" stroke-width="26"/>
+      <line x1="172" y1="-30" x2="172" y2="30" stroke-width="26"/>
+    </g>
+    <!-- wordmark -->
+    <text x="0" y="150" text-anchor="middle" font-family="-apple-system, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif"
+          font-size="128" font-weight="800" letter-spacing="-4" fill="#f4f4f5">Grynd</text>
+    <text x="0" y="210" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Roboto, sans-serif"
+          font-size="30" letter-spacing="10" fill="#6b6b72">TRAIN · LOG · PROGRESS</text>
+  </g>
+</svg>
