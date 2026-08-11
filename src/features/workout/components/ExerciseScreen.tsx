@@ -10,7 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Icon } from '../../../shared/components/Icon';
 import { formatShortDate } from '../../../shared/lib/date';
 import { usePrefsStore } from '../../../shared/store/prefsStore';
-import { formatSetWeightDisplay } from '../../../shared/lib/weight';
+import { formatSetWeightParts } from '../../../shared/lib/weight';
 import { textRoles } from '../../../shared/theme/typography';
 
 interface Props {
@@ -108,7 +108,7 @@ export function ExerciseScreen({
   const prevDate = hasPrev ? formatShortDate(previousExercise!.sets[0].loggedAt) : null;
   const prevSummary = hasPrev
     ? previousExercise!.sets
-        .map((s) => `${formatSetWeightDisplay(s, weightUnit).weightText}×${s.reps}`)
+        .map((s) => `${formatSetWeightParts(s, weightUnit).weightText}×${s.reps}`)
         .join('   ·   ')
     : '';
 

@@ -84,3 +84,31 @@ export function formatSetWeightDisplay(
     unitLabel: weightUnit,
   };
 }
+
+/** Compact plate breakdown for a secondary chip: "45×2+25", never the primary number. */
+export function formatPlateBreakdown(perSide: Record<number, number>): string {
+  return Object.entries(perSide)
+    .map(([weight, count]) => ({ weight: Number(weight), count }))
+    .filter((entry) => entry.count > 0)
+    .sort((a, b) => b.weight - a.weight)
+    .map(({ weight, count }) => (count === 1 ? `${weight}` : `${weight}×${count}`))
+    .join('+');
+}
+
+/**
+ * Set weight split into a readable primary number plus an optional plate
+ * breakdown. Unlike formatSetWeightDisplay this always keeps the total as the
+ * headline, so a plate set reads "70 lb" with "45+25" demoted to a chip
+ * instead of the unparseable "45 × 1, 25 × 1 × 8 reps".
+ */
+export function formatSetWeightParts(
+  set: SetWeightDisplayInput,
+  weightUnit: 'kg' | 'lbs',
+): { weightText: string; unitLabel: string; plateBreakdown: string | null } {
+  const breakdown = set.plates ? formatPlateBreakdown(set.plates.perSide) : '';
+  return {
+    weightText: formatWeight(set.weightKg, weightUnit),
+    unitLabel: weightUnit,
+    plateBreakdown: breakdown === '' ? null : breakdown,
+  };
+}

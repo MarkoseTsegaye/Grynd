@@ -2,7 +2,7 @@ import React from 'react';
 import { TouchableOpacity, Text, View } from 'react-native';
 import { Icon } from '../../../shared/components/Icon';
 import { usePrefsStore } from '../../../shared/store/prefsStore';
-import { formatSetWeightDisplay } from '../../../shared/lib/weight';
+import { formatSetWeightParts } from '../../../shared/lib/weight';
 import { textRoles } from '../../../shared/theme/typography';
 import type { LoggedSet } from '../types';
 import { compareSets } from '../../history/lib/compareSetPerformance';
@@ -39,8 +39,8 @@ function EffortBadge({ effort }: { effort: NonNullable<LoggedSet['effort']> }) {
 
 export function SetChip({ setNumber, set, previousSet, onPress, onDelete }: Props) {
   const { weightUnit } = usePrefsStore();
-  const { weightText, unitLabel } = formatSetWeightDisplay(set, weightUnit);
-  const weightAccessibility = unitLabel ? `${weightText} ${unitLabel}` : weightText;
+  const { weightText, unitLabel, plateBreakdown } = formatSetWeightParts(set, weightUnit);
+  const weightAccessibility = `${weightText} ${unitLabel}${plateBreakdown ? ` (${plateBreakdown} per side)` : ''}`;
   const sideLabel = set.side === 'left' ? 'left' : set.side === 'right' ? 'right' : null;
   const comparison = previousSet ? compareSets(previousSet, set) : null;
 
@@ -60,13 +60,16 @@ export function SetChip({ setNumber, set, previousSet, onPress, onDelete }: Prop
           </Text>
         ) : null}
         <Text className={`text-text-primary ${textRoles.metricBold}`}>{weightText}</Text>
-        {unitLabel ? (
-          <Text className={`text-text-secondary ${textRoles.metric}`}> {unitLabel} × </Text>
-        ) : (
-          <Text className={`text-text-secondary ${textRoles.metric}`}> × </Text>
-        )}
+        <Text className={`text-text-secondary ${textRoles.metric}`}> {unitLabel} × </Text>
         <Text className={`text-text-primary ${textRoles.metricBold}`}>{set.reps}</Text>
         <Text className={`text-text-secondary ${textRoles.metric}`}> reps</Text>
+        {plateBreakdown ? (
+          <View className="rounded-md px-1.5 py-0.5 bg-surface-1">
+            <Text className={`text-text-secondary ${textRoles.metric}`} style={{ fontSize: 12 }}>
+              {plateBreakdown}
+            </Text>
+          </View>
+        ) : null}
         {previousSet && comparison && (
           <SetProgressIndicator
             setNumber={setNumber}
