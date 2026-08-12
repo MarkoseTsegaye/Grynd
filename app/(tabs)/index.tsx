@@ -13,7 +13,8 @@ import {
   isIncompleteActiveSession,
 } from '../../src/features/workout';
 import { Icon } from '../../src/shared/components/Icon';
-import { getUpcomingDaysThroughNextRest } from '../../src/features/splits/lib/cyclePreview';
+import { CycleStrip } from '../../src/features/splits/components/CycleStrip';
+import { buildCycleStrip } from '../../src/features/splits/lib/cycleStrip';
 import { textRoles } from '../../src/shared/theme/typography';
 
 export default function HomeScreen() {
@@ -48,7 +49,7 @@ export default function HomeScreen() {
     ? splits.find((s) => s.id === todayDay.splitId)
     : null;
 
-  const nextDays = getUpcomingDaysThroughNextRest(days, currentIndex, splits);
+  const stripDays = buildCycleStrip(days, currentIndex, splits);
 
   const cycleLength = days.length;
   const dayNumber = cycleLength > 0 ? currentIndex + 1 : null;
@@ -195,26 +196,16 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* Next days pill row */}
-        {nextDays.length > 0 && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            className="px-5 mb-6"
-            contentContainerStyle={{ gap: 8 }}
-          >
-            {nextDays.map(({ day, split, label, idx }) => (
-              <View
-                key={`${idx}-${day.id}`}
-                className="rounded-lg px-3 py-2 items-center min-w-16 bg-surface-2"
-              >
-                <Text className={`${textRoles.captionBold} text-text-secondary`}>{label}</Text>
-                <Text className={`${textRoles.caption} mt-0.5 text-text-secondary`} numberOfLines={1}>
-                  {day.type === 'split' ? (split?.name ?? 'Split').slice(0, 8) : 'Rest'}
-                </Text>
-              </View>
-            ))}
-          </ScrollView>
+        {/* Whole cycle at a glance — replaces the row that only ran to the
+            next rest day and never showed where you were in the cycle. */}
+        {stripDays.length > 0 && (
+          <View className="px-5 mb-6">
+            <CycleStrip
+              days={stripDays}
+              totalDays={cycleLength}
+              onPress={() => router.push('/cycle')}
+            />
+          </View>
         )}
 
         {/* All Splits section */}
@@ -228,6 +219,7 @@ export default function HomeScreen() {
                 key={split.id}
                 split={split}
                 exerciseCount={getExercisesForSplit(split.id).length}
+                isToday={todaySplit?.id === split.id}
                 onPress={() => startWorkoutForSplit(split.id)}
               />
             ))}
