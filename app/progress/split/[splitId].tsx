@@ -1,7 +1,12 @@
-import React, { useEffect } from 'react';
-import { View, Text, TouchableOpacity, FlatList } from 'react-native';
+import React, { useEffect, useMemo } from 'react';
+import { View, Text, FlatList } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSplitsStore } from '../../../src/features/splits';
+import { useHistory } from '../../../src/features/history';
+import { ExerciseProgressRow } from '../../../src/features/progress/components/ExerciseProgressRow';
+import { buildFirstSetSeries } from '../../../src/features/progress/lib/firstSetProgress';
+import { getMetricValue } from '../../../src/features/progress/lib/chartMetric';
+import { getSeriesTrend } from '../../../src/features/progress/lib/sparkline';
 import { Icon } from '../../../src/shared/components/Icon';
 import { textRoles } from '../../../src/shared/theme/typography';
 
@@ -9,21 +14,38 @@ export default function ProgressSplitExercisesScreen() {
   const { splitId } = useLocalSearchParams<{ splitId: string }>();
   const router = useRouter();
   const { isLoaded, loadData, getSplitById, getExercisesForSplit } = useSplitsStore();
+  const { sessions, isLoaded: historyLoaded } = useHistory();
 
   useEffect(() => {
     if (!isLoaded) void loadData();
   }, [isLoaded, loadData]);
 
-  if (!isLoaded) {
+  const split = isLoaded ? getSplitById(splitId) : null;
+  const exercises = useMemo(
+    () => (isLoaded ? getExercisesForSplit(splitId) : []),
+    [isLoaded, getExercisesForSplit, splitId],
+  );
+
+  // Preview each row with its est. 1RM series so the list says which lifts are
+  // actually moving, rather than looking identical to the Splits list.
+  const previews = useMemo(() => {
+    const map: Record<string, { values: number[]; trend: ReturnType<typeof getSeriesTrend> }> = {};
+    for (const exercise of exercises) {
+      const values = buildFirstSetSeries(sessions, exercise.id, 'all').map((point) =>
+        getMetricValue(point, 'e1rm'),
+      );
+      map[exercise.id] = { values, trend: getSeriesTrend(values) };
+    }
+    return map;
+  }, [exercises, sessions]);
+
+  if (!isLoaded || !historyLoaded) {
     return (
       <View className="flex-1 bg-surface-0 items-center justify-center">
         <Text className={`text-text-secondary ${textRoles.body}`}>Loading...</Text>
       </View>
     );
   }
-
-  const split = getSplitById(splitId);
-  const exercises = getExercisesForSplit(splitId);
 
   if (!split) {
     return (
@@ -45,7 +67,7 @@ export default function ProgressSplitExercisesScreen() {
           <View className="mb-6">
             <Text className={`text-text-primary ${textRoles.listTitle}`}>{split.name}</Text>
             <Text className={`text-text-secondary ${textRoles.bodySmall} mt-1`}>
-              Choose an exercise to see first-set progress.
+              Trend is estimated 1RM across all logged sessions.
             </Text>
           </View>
         }
@@ -57,25 +79,22 @@ export default function ProgressSplitExercisesScreen() {
             </Text>
           </View>
         }
-        renderItem={({ item: exercise }) => (
-          <TouchableOpacity
-            className="flex-row items-center justify-between bg-surface-1 rounded-lg px-4 py-4 mb-3"
-            onPress={() =>
-              router.push({
-                pathname: '/progress/exercise/[exerciseId]',
-                params: { exerciseId: exercise.id, splitId },
-              })
-            }
-            accessibilityLabel={`View progress for ${exercise.name}`}
-            accessibilityRole="button"
-            activeOpacity={0.7}
-          >
-            <Text className={`text-text-primary ${textRoles.listItemTitle} flex-1 pr-3`}>
-              {exercise.name}
-            </Text>
-            <Icon name="chevron-right" size={22} color="text-secondary" />
-          </TouchableOpacity>
-        )}
+        renderItem={({ item: exercise }) => {
+          const preview = previews[exercise.id] ?? { values: [], trend: null };
+          return (
+            <ExerciseProgressRow
+              name={exercise.name}
+              values={preview.values}
+              trend={preview.trend}
+              onPress={() =>
+                router.push({
+                  pathname: '/progress/exercise/[exerciseId]',
+                  params: { exerciseId: exercise.id, splitId },
+                })
+              }
+            />
+          );
+        }}
       />
     </View>
   );

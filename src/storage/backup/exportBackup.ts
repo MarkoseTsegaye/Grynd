@@ -3,10 +3,7 @@ import { getSplits, getExercises } from '../adapters/splits';
 import { getSessions } from '../adapters/sessions';
 import { getWorkoutCycle } from '../adapters/cycle';
 import { STORAGE_KEYS } from '../keys';
-import {
-  DEFAULT_REST_SECONDS,
-  REST_DURATION_OPTIONS,
-} from '../../shared/store/prefsStore';
+import { parseRestSeconds } from '../../shared/lib/restDuration';
 import {
   BACKUP_APP,
   BACKUP_VERSION,
@@ -14,13 +11,6 @@ import {
   type GryndBackupV1,
   type GryndBackupPrefs,
 } from './types';
-
-function parseDefaultRestSeconds(raw: string | null): number {
-  const parsed = parseInt(raw ?? '', 10);
-  return (REST_DURATION_OPTIONS as readonly number[]).includes(parsed)
-    ? parsed
-    : DEFAULT_REST_SECONDS;
-}
 
 async function readBackupPrefs(): Promise<GryndBackupPrefs> {
   const [weightRaw, autoAdvanceRaw, restRaw] = await Promise.all([
@@ -32,7 +22,7 @@ async function readBackupPrefs(): Promise<GryndBackupPrefs> {
   return {
     weightUnit: weightRaw === 'lbs' ? 'lbs' : 'kg',
     autoAdvanceCycle: autoAdvanceRaw !== 'false',
-    defaultRestSeconds: parseDefaultRestSeconds(restRaw),
+    defaultRestSeconds: parseRestSeconds(restRaw),
   };
 }
 

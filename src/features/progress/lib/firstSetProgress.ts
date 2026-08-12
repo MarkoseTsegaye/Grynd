@@ -89,6 +89,41 @@ export function buildFirstSetSeries(
     });
 }
 
+export interface RangeAvailability {
+  id: ProgressRangeId;
+  label: string;
+  count: number;
+  hasData: boolean;
+}
+
+/** How many sessions each range would show, so empty ranges can be subdued. */
+export function getRangeAvailability(
+  sessions: WorkoutSession[],
+  exerciseId: string,
+  now: number = Date.now(),
+): RangeAvailability[] {
+  return PROGRESS_RANGE_OPTIONS.map((option) => {
+    const count = buildFirstSetSeries(sessions, exerciseId, option.id, now).length;
+    return { id: option.id, label: option.label, count, hasData: count > 0 };
+  });
+}
+
+/**
+ * Smallest range that actually shows a trend, so the chart doesn't open on an
+ * empty or single-point window. Falls back to the widest range with any data,
+ * then to the default.
+ */
+export function pickDefaultRange(
+  availability: RangeAvailability[],
+  minPoints = 3,
+): ProgressRangeId {
+  const meaningful = availability.find((range) => range.count >= minPoints);
+  if (meaningful) return meaningful.id;
+
+  const withData = [...availability].reverse().find((range) => range.hasData);
+  return withData?.id ?? 'all';
+}
+
 export function getFirstSetTrend(points: FirstSetPoint[]): FirstSetTrend | null {
   if (points.length < 2) return null;
 

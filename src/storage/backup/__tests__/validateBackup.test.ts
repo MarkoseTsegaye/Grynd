@@ -91,6 +91,27 @@ describe('validateBackup round-trip', () => {
     expect(result.ok).toBe(true);
   });
 
+  it('accepts a custom rest duration, not just a preset', () => {
+    // Requiring preset membership made any backup carrying a custom rest
+    // value fail validation outright — the file became unimportable.
+    const result = validateBackup(
+      makeBackup({
+        prefs: { weightUnit: 'lbs', autoAdvanceCycle: true, defaultRestSeconds: 105 },
+      }),
+    );
+    if (!result.ok) throw new Error(result.error);
+    expect(result.backup.data.prefs.defaultRestSeconds).toBe(105);
+  });
+
+  it('still rejects a rest duration outside the allowed range', () => {
+    const result = validateBackup(
+      makeBackup({
+        prefs: { weightUnit: 'lbs', autoAdvanceCycle: true, defaultRestSeconds: 99999 },
+      }),
+    );
+    expect(result.ok).toBe(false);
+  });
+
   it('rejects a file from another app', () => {
     const bad = makeBackup() as Record<string, unknown>;
     bad.app = 'something-else';
