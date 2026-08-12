@@ -1,0 +1,442 @@
+<meta charset="utf-8">
+<title>Grynd — Splits Rework</title>
+<style>
+  :root{
+    --bg:#0A0A0A; --bg-elev:#141414; --bg-elev-2:#1F1F1F;
+    --text:#F0EDE8; --text-2:#8A8580; --text-3:#3D3B38;
+    --accent:#E8FF47; --accent-dim:#B8CC2E; --on-accent:#0A0A0A;
+    --up:#3ECF6A; --danger:#FF4C4C; --warn:#FFB020;
+    --line:#1F1F1F;
+    --sans:'Inter',-apple-system,system-ui,sans-serif;
+    --mono:'JetBrains Mono','SF Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#050505;color:var(--text);font-family:var(--sans);padding:28px 20px 60px;-webkit-font-smoothing:antialiased}
+
+  .head{max-width:1150px;margin:0 auto 8px}
+  .head h1{font-size:26px;font-weight:800;letter-spacing:-.02em}
+  .head h1 span{color:var(--accent)}
+  .head p{color:var(--text-2);font-size:14px;line-height:1.6;margin-top:8px;max-width:780px}
+  code{font-family:var(--mono);font-size:12px;background:var(--bg-elev-2);padding:2px 6px;border-radius:5px;color:var(--text)}
+
+  .fixes{max-width:1150px;margin:20px auto 26px;display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px}
+  .fix{background:var(--bg-elev);border-radius:12px;padding:13px 15px;border-left:3px solid var(--accent)}
+  .fix b{font-size:13px;display:block;margin-bottom:5px}
+  .fix span{color:var(--text-2);font-size:12.5px;line-height:1.5;display:block}
+  .fix.bad{border-left-color:var(--danger)} .fix.bad b{color:var(--danger)}
+
+  .gallery{display:flex;gap:26px;flex-wrap:wrap;justify-content:center;max-width:1500px;margin:0 auto}
+  .frame-wrap{width:390px}
+  .phone{width:390px;height:812px;background:var(--bg);border-radius:38px;padding:10px;box-shadow:0 0 0 2px #262626, 0 22px 60px rgba(0,0,0,.85)}
+  .screen{width:100%;height:100%;background:var(--bg);border-radius:29px;overflow:hidden;display:flex;flex-direction:column;position:relative}
+  .frame-label{margin-top:12px;font-size:12.5px;color:var(--text-2);line-height:1.55}
+  .frame-label b{color:var(--text);display:block;font-size:13.5px;margin-bottom:3px}
+
+  .statusbar{flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;padding:13px 24px 4px;font-size:14px;font-weight:600}
+  .batt{width:24px;height:12px;border:1.5px solid var(--text);border-radius:3px;position:relative;display:inline-flex;align-items:center;padding:1.5px}
+  .batt::after{content:"";position:absolute;right:-3px;top:3px;width:2px;height:5px;background:var(--text);border-radius:0 1px 1px 0}
+  .batt i{display:block;height:100%;width:70%;background:var(--up);border-radius:1px}
+
+  .body{flex:1;overflow:hidden;padding:0 16px;display:flex;flex-direction:column}
+  .h-title{font-size:32px;font-weight:800;letter-spacing:-.03em;padding:4px 4px 2px}
+  .h-sub{color:var(--text-2);font-size:13px;padding:0 4px 14px}
+
+  /* stack header */
+  .navbar{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line);flex:0 0 auto}
+  .navbar .back{color:var(--text-2);display:flex;align-items:center}
+  .navbar .back svg{width:20px;height:20px}
+  .navbar .ttl{flex:1;font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .navbar .act{color:var(--accent);font-size:14px;font-weight:700}
+  .navbar .icon{color:var(--text-2);display:flex}
+  .navbar .icon svg{width:19px;height:19px}
+
+  /* split row */
+  .srow{display:flex;align-items:center;gap:12px;background:var(--bg-elev);border-radius:14px;padding:12px 14px;margin-bottom:10px;position:relative}
+  .srow .grip{color:#2E2C2A;display:flex;align-items:center;flex:0 0 auto;margin-left:-4px}
+  .srow .grip svg{width:16px;height:16px}
+  .srow .glyph{width:40px;height:40px;border-radius:11px;background:var(--bg-elev-2);display:flex;align-items:center;justify-content:center;color:var(--text-2);flex:0 0 auto}
+  .srow .glyph svg{width:20px;height:20px}
+  .srow.today .glyph{color:var(--accent);background:rgba(232,255,71,.1)}
+  .srow .meta{flex:1;min-width:0}
+  .srow .meta .nm{display:flex;align-items:center;gap:7px}
+  .srow .meta b{font-size:16px;font-weight:700}
+  .srow .meta .sub{display:block;color:var(--text-2);font-size:12px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .srow .chev{color:var(--text-3);display:flex}
+  .srow .chev svg{width:18px;height:18px}
+  .srow.today{box-shadow:inset 3px 0 0 var(--accent)}
+
+  .tag{font-size:9.5px;font-weight:800;letter-spacing:.06em;padding:2px 6px;border-radius:5px}
+  .tag.today{background:var(--accent);color:var(--on-accent)}
+  .tag.cycle{background:var(--bg-elev-2);color:var(--text-2)}
+  .tag.unused{background:transparent;color:var(--warn);border:1px solid rgba(255,176,32,.4)}
+
+  .rowacts{display:flex;align-items:center;gap:14px;color:var(--text-3);flex:0 0 auto}
+  .rowacts svg{width:18px;height:18px}
+  .rowacts.one svg{width:16px;height:16px}
+
+  /* swipe reveal */
+  .swipe{position:relative;overflow:hidden;border-radius:14px;margin-bottom:10px}
+  .swipe .actions{position:absolute;right:0;top:0;bottom:0;display:flex;align-items:stretch}
+  .swipe .actions .a{width:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:10px;font-weight:700}
+  .swipe .actions .edit{background:var(--bg-elev-2);color:var(--text)}
+  .swipe .actions .del{background:var(--danger);color:#2A0606}
+  .swipe .actions svg{width:17px;height:17px}
+  .swipe .srow{margin-bottom:0;transform:translateX(-128px)}
+
+  /* FAB */
+  .fab{position:absolute;right:18px;bottom:20px;height:52px;border-radius:26px;background:var(--accent);color:var(--on-accent);display:flex;align-items:center;gap:8px;padding:0 20px;font-size:15px;font-weight:800;box-shadow:0 8px 24px rgba(0,0,0,.6)}
+  .fab svg{width:19px;height:19px}
+
+  /* exercise row in editor */
+  .erow{display:flex;align-items:center;gap:11px;background:var(--bg-elev);border-radius:12px;padding:11px 13px;margin-bottom:8px}
+  .erow .grip{color:#2E2C2A;display:flex;flex:0 0 auto;margin-left:-3px}
+  .erow .grip svg{width:15px;height:15px}
+  .erow .num{font-family:var(--mono);font-size:12px;color:var(--text-3);width:14px;flex:0 0 auto;font-weight:700}
+  .erow .meta{flex:1;min-width:0}
+  .erow .meta b{font-size:15px;font-weight:600;display:block}
+  .erow .tags{display:flex;gap:5px;margin-top:4px;flex-wrap:wrap;align-items:center}
+  .erow .last{color:var(--text-3);font-family:var(--mono);font-size:11px}
+  .etag{font-size:9.5px;font-weight:700;letter-spacing:.04em;padding:2px 6px;border-radius:5px;background:var(--bg-elev-2);color:var(--text-2);display:inline-flex;align-items:center;gap:3px}
+  .etag svg{width:10px;height:10px}
+  .etag.plate{color:var(--accent);background:rgba(232,255,71,.1)}
+  .etag.uni{color:#7FD4FF;background:rgba(127,212,255,.1)}
+
+  /* add exercise: collapsed + expanded */
+  .addrow{display:flex;align-items:center;justify-content:center;gap:8px;border:1px dashed var(--text-3);border-radius:12px;padding:13px;color:var(--text-2);font-size:14px;font-weight:700;margin-bottom:10px}
+  .addrow svg{width:17px;height:17px}
+
+  .addcard{background:var(--bg-elev);border-radius:14px;padding:12px;margin-bottom:12px;box-shadow:inset 0 0 0 1px rgba(232,255,71,.25)}
+  .addcard .lbl{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-3);font-weight:700;margin-bottom:6px}
+  .input{background:var(--bg);border-radius:10px;padding:11px 13px;font-size:15px;color:var(--text);display:flex;align-items:center}
+  .input.on{box-shadow:inset 0 0 0 1.5px var(--accent)}
+  .input .caret{display:inline-block;width:1.5px;height:16px;background:var(--accent);margin-left:1px}
+  .input .ph{color:var(--text-3)}
+
+  .seg{display:flex;gap:6px;background:var(--bg);border-radius:10px;padding:4px}
+  .seg .s{flex:1;text-align:center;padding:9px 4px;border-radius:8px;font-size:12.5px;font-weight:700;color:var(--text-2);display:flex;flex-direction:column;align-items:center;gap:2px}
+  .seg .s.on{background:var(--bg-elev-2);color:var(--text);box-shadow:inset 0 0 0 1px rgba(232,255,71,.5)}
+  .seg .s.on b{color:var(--accent)}
+  .seg .s span{font-size:9.5px;color:var(--text-3);font-weight:600}
+  .seg .s.on span{color:var(--text-2)}
+  .hint{font-size:11px;color:var(--text-3);margin-top:6px;line-height:1.45}
+
+  .btn{border-radius:11px;height:46px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;font-weight:800}
+  .btn.primary{background:var(--accent);color:var(--on-accent)}
+  .btn.ghost{background:var(--bg-elev-2);color:var(--text)}
+  .btn.danger-ghost{background:transparent;color:var(--danger);box-shadow:inset 0 0 0 1px rgba(255,76,76,.4)}
+  .btn svg{width:18px;height:18px}
+  .btnrow{display:flex;gap:8px}
+  .btnrow .btn{flex:1}
+
+  /* sheet */
+  .scrim{position:absolute;inset:0;background:rgba(0,0,0,.7);border-radius:29px}
+  .sheet{position:absolute;left:0;right:0;bottom:0;background:var(--bg-elev);border-radius:20px 20px 0 0;padding:10px 18px 26px}
+  .sheet .grab{width:38px;height:4px;border-radius:2px;background:var(--text-3);margin:0 auto 14px}
+  .sheet h3{font-size:17px;font-weight:800;margin-bottom:3px}
+  .sheet p{color:var(--text-2);font-size:13px;line-height:1.45;margin-bottom:14px}
+
+  .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 24px;gap:10px}
+  .empty .ic{width:56px;height:56px;border-radius:16px;background:var(--bg-elev);display:flex;align-items:center;justify-content:center;color:var(--text-3)}
+  .empty .ic svg{width:26px;height:26px}
+  .empty b{font-size:16px}
+  .empty span{color:var(--text-2);font-size:13px;line-height:1.5}
+
+  .tabbar{flex:0 0 auto;display:flex;justify-content:space-around;padding:8px 4px 18px;border-top:1px solid var(--line)}
+  .tab{display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--text-3);font-size:10px;min-width:52px}
+  .tab svg{width:21px;height:21px}
+  .tab.active{color:var(--accent)}
+
+  .callout{position:absolute;background:var(--accent);color:var(--on-accent);font-size:10.5px;font-weight:800;padding:4px 9px;border-radius:7px;z-index:5;box-shadow:0 4px 14px rgba(0,0,0,.6)}
+</style>
+
+<div class="head">
+  <h1><span>Grynd</span> — Splits section rework</h1>
+  <p>
+    The splits list, the split editor, and the sheets they open. The editor is the weak point:
+    its add-form occupies the top third of the screen permanently, its two attribute controls
+    both offer a button labelled <b style="color:var(--text)">“Regular”</b>, and both defaults
+    are painted in full accent — so the untouched defaults shout louder than the actual
+    primary action.
+  </p>
+</div>
+
+<div class="fixes">
+  <div class="fix bad"><b>Two buttons named “Regular”</b><span>Unilateral/Regular stacked above Plate&nbsp;loaded/Regular. Identical labels, and you can only tell them apart by reading the button to the left. Replaced with labelled segmented controls whose options name themselves.</span></div>
+  <div class="fix bad"><b>Accent on every default</b><span>Both “Regular” defaults render in full accent lime — the primary CTA colour — while the real action (add) is a small square. Only a deliberate, non-default choice is tinted now.</span></div>
+  <div class="fix"><b>Add form on demand</b><span>Collapsed to one dashed “Add exercise” row; the form appears when you tap it. The list is the screen, not the form.</span></div>
+  <div class="fix"><b>Rows that say something</b><span>Splits carry last-performed and cycle usage; exercises carry their attributes and last working set, so both lists preview rather than just label.</span></div>
+  <div class="fix bad"><b>Bare ✕ deletes instantly</b><span>The editor removes an exercise with no confirmation, via a raw glyph that doesn’t match the trash icon used one screen earlier. Now swipe-to-reveal with a confirm.</span></div>
+  <div class="fix"><b>Rename exists but is unreachable</b><span><code>renameSplit</code> is in the store with no UI. The editor title becomes an editable field.</span></div>
+</div>
+
+<div class="gallery">
+
+<!-- ============ A · SPLITS LIST ============ -->
+<div class="frame-wrap">
+  <div class="phone"><div class="screen">
+    <div class="statusbar"><span>9:41</span><span class="batt"><i></i></span></div>
+    <div class="body">
+      <div class="h-title">Splits</div>
+      <div class="h-sub">3 splits · 8-day cycle</div>
+
+      <div class="srow today">
+        <span class="grip"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></span>
+        <span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 11V7a3 3 0 016 0v4M5 11h11a3 3 0 013 3v2a4 4 0 01-4 4H9a4 4 0 01-4-4z"/></svg></span>
+        <span class="meta">
+          <span class="nm"><b>Push</b><span class="tag today">TODAY</span></span>
+          <span class="sub">5 exercises · Yesterday · days 1, 4</span>
+        </span>
+        <span class="rowacts">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>
+        </span>
+      </div>
+
+      <div class="srow">
+        <span class="grip"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></span>
+        <span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16M7 8l-3 4 3 4M17 8l3 4-3 4"/></svg></span>
+        <span class="meta">
+          <span class="nm"><b>Pull</b><span class="tag cycle">DAYS 2, 7</span></span>
+          <span class="sub">6 exercises · 3 days ago</span>
+        </span>
+        <span class="rowacts">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>
+        </span>
+      </div>
+
+      <div class="srow">
+        <span class="grip"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></span>
+        <span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="2.4"/><path d="M12 8v6M9 20l3-6 3 6"/></svg></span>
+        <span class="meta">
+          <span class="nm"><b>Legs</b><span class="tag cycle">DAY 5</span></span>
+          <span class="sub">4 exercises · Last week</span>
+        </span>
+        <span class="rowacts">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>
+        </span>
+      </div>
+
+      <div class="srow">
+        <span class="grip"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></span>
+        <span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6h12v12H6z"/></svg></span>
+        <span class="meta">
+          <span class="nm"><b>Arms</b><span class="tag unused">NOT IN CYCLE</span></span>
+          <span class="sub">3 exercises · Never performed</span>
+        </span>
+        <span class="rowacts">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>
+        </span>
+      </div>
+    </div>
+
+    <div class="fab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M12 5v14M5 12h14"/></svg>New split</div>
+
+    <div class="tabbar">
+      <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Home</div>
+      <div class="tab active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Splits</div>
+      <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8"/></svg>Progress</div>
+      <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>History</div>
+      <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1l2-1.5-2-3.5-2.3 1a7 7 0 00-1.7-1L16.5 3h-4l-.4 2.5a7 7 0 00-1.7 1l-2.3-1-2 3.5 2 1.5a7 7 0 000 2l-2 1.5 2 3.5 2.3-1a7 7 0 001.7 1l.4 2.5h4l.4-2.5a7 7 0 001.7-1l2.3 1 2-3.5-2-1.5c.1-.3.1-.7.1-1z"/></svg>Settings</div>
+    </div>
+
+    <div class="callout" style="top:392px;right:22px">cycle usage · unused flagged</div>
+  </div></div>
+  <div class="frame-label"><b>A · Splits list</b>Grip moves inside the card so rows stop looking detached. Each row carries exercise count, last performed, and which cycle days use it — an unused split is flagged rather than silently ignored. Tap opens the editor; the CTA becomes a FAB instead of a full-width bar.</div>
+</div>
+
+<!-- ============ B · SPLIT EDITOR ============ -->
+<div class="frame-wrap">
+  <div class="phone"><div class="screen">
+    <div class="statusbar"><span>9:42</span><span class="batt"><i></i></span></div>
+    <div class="navbar">
+      <span class="back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18l-6-6 6-6"/></svg></span>
+      <span class="ttl">Push</span>
+      <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v.01M12 12v.01M12 19v.01"/></svg></span>
+    </div>
+    <div class="body" style="padding-top:12px">
+      <div style="display:flex;align-items:center;gap:8px;padding:0 2px 2px">
+        <div style="font-size:26px;font-weight:800;letter-spacing:-.02em">Push</div>
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="2" style="width:16px;height:16px"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
+      </div>
+      <div class="h-sub" style="padding-bottom:12px">5 exercises · used on days 1 and 4</div>
+
+      <div class="addrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>Add exercise</div>
+
+      <div class="erow">
+        <span class="grip"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></span>
+        <span class="num">1</span>
+        <span class="meta">
+          <b>Incline Dumbbell Press</b>
+          <span class="tags"><span class="last">last · 60 lb × 6</span></span>
+        </span>
+        <span class="rowacts one"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg></span>
+      </div>
+
+      <div class="erow">
+        <span class="grip"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></span>
+        <span class="num">2</span>
+        <span class="meta">
+          <b>Pendulum Squat</b>
+          <span class="tags">
+            <span class="etag plate"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9"/></svg>Plates</span>
+            <span class="last">last · 115 lb × 8</span>
+          </span>
+        </span>
+        <span class="rowacts one"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg></span>
+      </div>
+
+      <div class="erow">
+        <span class="grip"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></span>
+        <span class="num">3</span>
+        <span class="meta">
+          <b>Single Tricep Pushdown</b>
+          <span class="tags">
+            <span class="etag uni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M7 4v16M17 4v16"/></svg>L / R</span>
+            <span class="last">last · 22 lb × 6</span>
+          </span>
+        </span>
+        <span class="rowacts one"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg></span>
+      </div>
+
+      <div class="erow">
+        <span class="grip"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></span>
+        <span class="num">4</span>
+        <span class="meta">
+          <b>Cable Lateral Raise</b>
+          <span class="tags"><span class="last">last · 15 lb × 12</span></span>
+        </span>
+        <span class="rowacts one"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg></span>
+      </div>
+    </div>
+  </div></div>
+  <div class="frame-label"><b>B · Split editor</b>The list is the screen. Add collapses to one dashed row, the title becomes editable (<code>renameSplit</code> finally reachable), and each exercise shows its attributes and last working set. Destructive actions move behind a swipe with a confirm instead of a bare ✕.</div>
+</div>
+
+<!-- ============ C · ADDING AN EXERCISE ============ -->
+<div class="frame-wrap">
+  <div class="phone"><div class="screen">
+    <div class="statusbar"><span>9:43</span><span class="batt"><i></i></span></div>
+    <div class="navbar">
+      <span class="back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18l-6-6 6-6"/></svg></span>
+      <span class="ttl">Push</span>
+      <span class="act">Done</span>
+    </div>
+    <div class="body" style="padding-top:12px">
+      <div class="addcard">
+        <div class="lbl">New exercise</div>
+        <div class="input on" style="margin-bottom:12px">Incline Dumbbell Press<span class="caret"></span></div>
+
+        <div class="lbl">How it’s performed</div>
+        <div class="seg" style="margin-bottom:10px">
+          <div class="s on"><b>Both sides</b><span>one weight</span></div>
+          <div class="s"><b>Left / right</b><span>log each side</span></div>
+        </div>
+
+        <div class="lbl">How weight is set</div>
+        <div class="seg">
+          <div class="s on"><b>Straight</b><span>type the weight</span></div>
+          <div class="s"><b>Plate-loaded</b><span>tap plates per side</span></div>
+        </div>
+        <div class="hint">Plate-loaded opens the plate pad while logging and records the per-side load — no bar weight added.</div>
+
+        <div class="btnrow" style="margin-top:12px">
+          <div class="btn ghost">Cancel</div>
+          <div class="btn primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M12 5v14M5 12h14"/></svg>Add</div>
+        </div>
+      </div>
+
+      <div class="erow" style="opacity:.5">
+        <span class="num">1</span>
+        <span class="meta"><b>Pendulum Squat</b><span class="tags"><span class="etag plate">Plates</span></span></span>
+      </div>
+      <div class="erow" style="opacity:.5">
+        <span class="num">2</span>
+        <span class="meta"><b>Single Tricep Pushdown</b><span class="tags"><span class="etag uni">L / R</span></span></span>
+      </div>
+    </div>
+    <div class="callout" style="top:432px;left:20px">every option names itself</div>
+  </div></div>
+  <div class="frame-label"><b>C · Adding an exercise</b>Each control is labelled by what it decides, and every option names itself — replacing two identically-labelled “Regular” buttons. Only the chosen option is tinted, so an untouched default no longer competes with the CTA. The hint states what plate-loaded actually changes.</div>
+</div>
+
+<!-- ============ D · EDIT / DELETE SHEET ============ -->
+<div class="frame-wrap">
+  <div class="phone"><div class="screen">
+    <div class="statusbar"><span>9:44</span><span class="batt"><i></i></span></div>
+    <div class="navbar">
+      <span class="back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18l-6-6 6-6"/></svg></span>
+      <span class="ttl">Push</span>
+    </div>
+    <div class="body" style="padding-top:12px">
+      <div class="addrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>Add exercise</div>
+      <div class="erow"><span class="num">1</span><span class="meta"><b>Incline Dumbbell Press</b></span></div>
+      <div class="erow"><span class="num">2</span><span class="meta"><b>Pendulum Squat</b></span></div>
+    </div>
+
+    <div class="scrim"></div>
+    <div class="sheet">
+      <div class="grab"></div>
+      <h3>Pendulum Squat</h3>
+      <p>Changes apply to future sets. Sets already logged keep the values they were logged with.</p>
+
+      <div class="lbl" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-3);font-weight:700;margin-bottom:6px">Name</div>
+      <div class="input" style="margin-bottom:12px">Pendulum Squat</div>
+
+      <div class="lbl" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-3);font-weight:700;margin-bottom:6px">How it’s performed</div>
+      <div class="seg" style="margin-bottom:10px">
+        <div class="s on"><b>Both sides</b><span>one weight</span></div>
+        <div class="s"><b>Left / right</b><span>log each side</span></div>
+      </div>
+
+      <div class="lbl" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-3);font-weight:700;margin-bottom:6px">How weight is set</div>
+      <div class="seg" style="margin-bottom:14px">
+        <div class="s"><b>Straight</b><span>type the weight</span></div>
+        <div class="s on"><b>Plate-loaded</b><span>tap plates per side</span></div>
+      </div>
+
+      <div class="btn primary" style="margin-bottom:8px">Save changes</div>
+      <div class="btn danger-ghost"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>Remove from split</div>
+    </div>
+  </div></div>
+  <div class="frame-label"><b>D · Edit exercise</b>Same two controls as the add form, so the vocabulary never changes between creating and editing. Removal lives here as a clearly secondary, clearly destructive action — and says what it does to already-logged sets, which today it never explains.</div>
+</div>
+
+<!-- ============ E · EMPTY STATES ============ -->
+<div class="frame-wrap">
+  <div class="phone"><div class="screen">
+    <div class="statusbar"><span>9:45</span><span class="batt"><i></i></span></div>
+    <div class="navbar">
+      <span class="back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18l-6-6 6-6"/></svg></span>
+      <span class="ttl">Arms</span>
+    </div>
+    <div class="body" style="padding-top:12px">
+      <div style="display:flex;align-items:center;gap:8px;padding:0 2px 2px">
+        <div style="font-size:26px;font-weight:800;letter-spacing:-.02em">Arms</div>
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="2" style="width:16px;height:16px"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
+      </div>
+      <div class="h-sub" style="padding-bottom:12px">No exercises yet</div>
+
+      <div class="empty" style="flex:0 0 auto;padding:26px 24px 22px;background:var(--bg-elev);border-radius:16px;margin-bottom:12px">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 11V7a3 3 0 016 0v4M5 11h11a3 3 0 013 3v2a4 4 0 01-4 4H9a4 4 0 01-4-4z"/></svg></div>
+        <b>Nothing in this split yet</b>
+        <span>Add the exercises you’ll do, in the order you’ll do them. You can reorder any time by dragging.</span>
+        <div class="btn primary" style="width:100%;margin-top:6px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M12 5v14M5 12h14"/></svg>Add first exercise</div>
+      </div>
+
+      <div style="background:var(--bg-elev);border-radius:14px;padding:12px 14px;display:flex;gap:10px;align-items:flex-start">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--warn)" stroke-width="2" style="width:18px;height:18px;flex:0 0 auto;margin-top:1px"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16v.01"/></svg>
+        <div>
+          <div style="font-size:13.5px;font-weight:700;margin-bottom:2px">Not in your cycle</div>
+          <div style="color:var(--text-2);font-size:12px;line-height:1.45">This split won’t come up on any day. Add it to the training cycle to see it on Home.</div>
+          <div style="color:var(--accent);font-size:12.5px;font-weight:700;margin-top:7px">Add to cycle ›</div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+  <div class="frame-label"><b>E · Empty + orphaned split</b>Today an empty split says only “No exercises yet.” This states what to do and why the order matters. A split absent from the cycle is called out with the fix, instead of quietly never appearing on Home.</div>
+</div>
+
+</div>

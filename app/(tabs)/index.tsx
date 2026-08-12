@@ -15,6 +15,9 @@ import {
 import { Icon } from '../../src/shared/components/Icon';
 import { CycleStrip } from '../../src/features/splits/components/CycleStrip';
 import { buildCycleStrip } from '../../src/features/splits/lib/cycleStrip';
+import { getSplitActivity } from '../../src/features/splits/lib/splitActivity';
+import { getSplitGlyph } from '../../src/features/splits/lib/splitGlyph';
+import { useHistory } from '../../src/features/history';
 import { textRoles } from '../../src/shared/theme/typography';
 
 export default function HomeScreen() {
@@ -22,6 +25,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { splits, isLoaded } = useSplitsList();
   const { getExercisesForSplit } = useSplitsStore();
+  const { sessions } = useHistory();
   const { cycle, isLoaded: cycleLoaded, loadCycle, advanceCycle } = useCycleStore();
   const {
     loadActiveSession,
@@ -138,7 +142,11 @@ export default function HomeScreen() {
           ) : todayDay.type === 'split' ? (
             <>
               <View className="flex-row items-center gap-2 mb-1">
-                <Icon name="dumbbell" size={20} color="text-secondary" />
+                <Icon
+                  name={getSplitGlyph(todaySplit?.name ?? '')}
+                  size={20}
+                  color="text-secondary"
+                />
                 <Text className={`text-text-primary ${textRoles.listTitle}`} numberOfLines={1}>
                   {todaySplit?.name ?? 'Unknown'}
                 </Text>
@@ -220,6 +228,7 @@ export default function HomeScreen() {
                 split={split}
                 exerciseCount={getExercisesForSplit(split.id).length}
                 isToday={todaySplit?.id === split.id}
+                lastPerformedLabel={getSplitActivity(sessions, split.id).label}
                 onPress={() => startWorkoutForSplit(split.id)}
               />
             ))}

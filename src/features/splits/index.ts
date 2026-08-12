@@ -4,7 +4,7 @@ export { useCreateSplit } from './hooks/useCreateSplit';
 export { useManageSplit } from './hooks/useManageSplit';
 export { SplitCard } from './components/SplitCard';
 export { ExerciseRow } from './components/ExerciseRow';
-export { ExerciseAttributeToggles } from './components/ExerciseAttributeToggles';
+export { ExerciseAttributeControls } from './components/ExerciseAttributeControls';
 export { EditExerciseSheet } from './components/EditExerciseSheet';
 export { useCycleStore } from './store/cycleStore';
 export type { Split, Exercise, ExerciseAttributes, CycleDay, WorkoutCycle } from './types';

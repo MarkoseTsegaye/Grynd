@@ -1,9 +1,21 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { View, Text, TouchableOpacity, FlatList, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useSplitsList } from '../../src/features/splits';
 import { useSplitsStore } from '../../src/features/splits';
+import { useHistory } from '../../src/features/history';
+import { usePrefsStore } from '../../src/shared/store/prefsStore';
+import { Sparkline } from '../../src/features/progress/components/Sparkline';
+import {
+  buildVolumeSeries,
+  formatVolumeAbbreviated,
+  getVolumeInLastDays,
+} from '../../src/features/progress/lib/sessionVolume';
+import { getSeriesTrend } from '../../src/features/progress/lib/sparkline';
+import { getSplitActivity } from '../../src/features/splits/lib/splitActivity';
+import { getSplitGlyph } from '../../src/features/splits/lib/splitGlyph';
+import { kgToLbs } from '../../src/shared/lib/weight';
 import { Icon } from '../../src/shared/components/Icon';
 import { textRoles } from '../../src/shared/theme/typography';
 
@@ -12,12 +24,33 @@ export default function ProgressTabScreen() {
   const insets = useSafeAreaInsets();
   const { splits, isLoaded } = useSplitsList();
   const { getExercisesForSplit, loadData } = useSplitsStore();
+  const { sessions, isLoaded: historyLoaded } = useHistory();
+  const { weightUnit } = usePrefsStore();
 
   useEffect(() => {
     if (!isLoaded) void loadData();
   }, [isLoaded, loadData]);
 
-  if (!isLoaded) {
+  const toDisplay = (kg: number) => (weightUnit === 'lbs' ? kgToLbs(kg) : kg);
+
+  // The volume card used to state what it would show without showing any of
+  // it. Preview the series and the recent total so it earns its place.
+  const volume = useMemo(() => {
+    const series = buildVolumeSeries(sessions).map((point) => point.volume);
+    return {
+      values: series,
+      trend: getSeriesTrend(series),
+      recentTotal: formatVolumeAbbreviated(toDisplay(getVolumeInLastDays(sessions, 7))),
+    };
+  }, [sessions, weightUnit]);
+
+  const activityBySplit = useMemo(() => {
+    const map: Record<string, string | null> = {};
+    for (const split of splits) map[split.id] = getSplitActivity(sessions, split.id).label;
+    return map;
+  }, [splits, sessions]);
+
+  if (!isLoaded || !historyLoaded) {
     return <View className="flex-1 bg-surface-0" />;
   }
 
@@ -49,10 +82,15 @@ export default function ProgressTabScreen() {
                   Workout volume
                 </Text>
                 <Text className={`text-text-secondary ${textRoles.caption} mt-0.5`}>
-                  Total kg·reps across all sessions
+                  {volume.values.length > 0
+                    ? `${volume.recentTotal} ${weightUnit === 'lbs' ? 'lb' : 'kg'}·reps in the last 7 days`
+                    : `Total ${weightUnit === 'lbs' ? 'lb' : 'kg'}·reps across all sessions`}
                 </Text>
               </View>
             </View>
+            {volume.values.length > 1 && (
+              <Sparkline values={volume.values} tone={volume.trend?.direction ?? 'flat'} />
+            )}
             <Icon name="chevron-right" size={22} color="text-secondary" />
           </TouchableOpacity>
         }
@@ -71,14 +109,21 @@ export default function ProgressTabScreen() {
             <TouchableOpacity
               className="flex-row items-center justify-between bg-surface-1 rounded-lg px-4 py-4 mb-3"
               onPress={() => router.push(`/progress/split/${split.id}`)}
-              accessibilityLabel={`${split.name}, ${count} exercises`}
+              accessibilityLabel={`${split.name}, ${count} exercises${activityBySplit[split.id] ? `, last performed ${activityBySplit[split.id]}` : ', never performed'}`}
               accessibilityRole="button"
               activeOpacity={0.7}
             >
+              <View
+                className="bg-surface-2 rounded-lg items-center justify-center mr-3"
+                style={{ width: 34, height: 34 }}
+              >
+                <Icon name={getSplitGlyph(split.name)} size={18} color="text-secondary" />
+              </View>
               <View className="flex-1 pr-3">
                 <Text className={`text-text-primary ${textRoles.listItemTitle}`}>{split.name}</Text>
                 <Text className={`text-text-secondary ${textRoles.caption} mt-0.5`}>
                   {count} {count === 1 ? 'exercise' : 'exercises'}
+                  {activityBySplit[split.id] ? ` · ${activityBySplit[split.id]}` : ''}
                 </Text>
               </View>
               <Icon name="chevron-right" size={22} color="text-secondary" />
