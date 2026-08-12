@@ -1,4 +1,4 @@
-import { REST_DURATION_OPTIONS } from '../../shared/store/prefsStore';
+import { isValidRestSeconds } from '../../shared/lib/restDuration';
 import {
   BACKUP_APP,
   BACKUP_VERSION,
@@ -30,8 +30,9 @@ function validatePrefs(value: unknown): GryndBackupPrefs | null {
 
   if (typeof value.autoAdvanceCycle !== 'boolean') return null;
 
-  if (typeof value.defaultRestSeconds !== 'number') return null;
-  if (!(REST_DURATION_OPTIONS as readonly number[]).includes(value.defaultRestSeconds)) return null;
+  // Any duration in range, not just a preset — requiring preset membership
+  // made a backup containing a custom rest value fail validation outright.
+  if (!isValidRestSeconds(value.defaultRestSeconds)) return null;
 
   return {
     weightUnit,

@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import { View, Text, TouchableOpacity, Switch, ScrollView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { showDialog } from '../../src/shared/lib/dialog';
@@ -6,10 +6,16 @@ import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCycleStore } from '../../src/features/splits/store/cycleStore';
 import { useSplitsStore } from '../../src/features/splits';
+import { usePrefsStore } from '../../src/shared/store/prefsStore';
 import {
-  usePrefsStore,
-  REST_DURATION_OPTIONS,
-} from '../../src/shared/store/prefsStore';
+  REST_PRESETS,
+  REST_STEP_SECONDS,
+  MAX_REST_SECONDS,
+  MIN_REST_SECONDS,
+  formatRestDuration,
+  isRestPreset,
+  stepRestSeconds,
+} from '../../src/shared/lib/restDuration';
 import { Icon } from '../../src/shared/components/Icon';
 import { colors } from '../../src/shared/theme/colors';
 import { textRoles } from '../../src/shared/theme/typography';
@@ -67,6 +73,10 @@ export default function SettingsScreen() {
   const days = cycle?.days ?? [];
   const canReset = days.length > 0;
   const cycleSummary = getCycleSummary(cycle, splits);
+  // Sticky: stepping a custom value onto a preset (105 -> 120) should not yank
+  // the stepper away mid-adjustment. Tapping a preset chip closes it.
+  const [customRestOpen, setCustomRestOpen] = useState(false);
+  const usingCustomRest = customRestOpen || !isRestPreset(defaultRestSeconds);
 
   const handleReset = useCallback(() => {
     if (!canReset) return;
@@ -141,24 +151,96 @@ export default function SettingsScreen() {
               Countdown starts after every logged set
             </Text>
             <View className="flex-row flex-wrap gap-2">
-              {REST_DURATION_OPTIONS.map((seconds) => (
+              {REST_PRESETS.map((seconds) => (
                 <TouchableOpacity
                   key={seconds}
-                  className={`px-3 py-1.5 rounded ${defaultRestSeconds === seconds ? 'bg-accent' : 'bg-surface-2'}`}
-                  onPress={() =>
-                    defaultRestSeconds !== seconds && setDefaultRestSeconds(seconds)
-                  }
+                  className={`px-3 py-1.5 rounded ${!usingCustomRest && defaultRestSeconds === seconds ? 'bg-accent' : 'bg-surface-2'}`}
+                  onPress={() => {
+                    setCustomRestOpen(false);
+                    if (defaultRestSeconds !== seconds) setDefaultRestSeconds(seconds);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: !usingCustomRest && defaultRestSeconds === seconds }}
                   accessibilityLabel={`Default rest, ${seconds} seconds`}
                   activeOpacity={0.7}
                 >
                   <Text
-                    className={`font-sans ${textRoles.bodySmall} ${defaultRestSeconds === seconds ? 'text-surface-0' : 'text-text-secondary'}`}
+                    className={`font-sans ${textRoles.bodySmall} ${!usingCustomRest && defaultRestSeconds === seconds ? 'text-surface-0' : 'text-text-secondary'}`}
                   >
                     {seconds}s
                   </Text>
                 </TouchableOpacity>
               ))}
+              <TouchableOpacity
+                className={`px-3 py-1.5 rounded ${usingCustomRest ? 'bg-accent' : 'bg-surface-2'}`}
+                onPress={() => {
+                  // Start from the current value so switching to custom does
+                  // not jump the timer to some unrelated default.
+                  if (!usingCustomRest) {
+                    setDefaultRestSeconds(stepRestSeconds(defaultRestSeconds, REST_STEP_SECONDS));
+                  }
+                  setCustomRestOpen(true);
+                }}
+                accessibilityRole="button"
+                accessibilityState={{ selected: usingCustomRest }}
+                accessibilityLabel={
+                  usingCustomRest
+                    ? `Custom rest, ${defaultRestSeconds} seconds`
+                    : 'Use a custom rest duration'
+                }
+                activeOpacity={0.7}
+              >
+                <Text
+                  className={`font-sans ${textRoles.bodySmall} ${usingCustomRest ? 'text-surface-0' : 'text-text-secondary'}`}
+                >
+                  {usingCustomRest ? formatRestDuration(defaultRestSeconds) : 'Custom'}
+                </Text>
+              </TouchableOpacity>
             </View>
+
+            {usingCustomRest && (
+              <View className="flex-row items-center justify-between bg-surface-0 rounded-lg mt-3 px-2 py-2">
+                <TouchableOpacity
+                  className="bg-surface-2 rounded-md px-4 py-2"
+                  onPress={() =>
+                    setDefaultRestSeconds(stepRestSeconds(defaultRestSeconds, -REST_STEP_SECONDS))
+                  }
+                  disabled={defaultRestSeconds <= MIN_REST_SECONDS}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Decrease rest by ${REST_STEP_SECONDS} seconds`}
+                  accessibilityState={{ disabled: defaultRestSeconds <= MIN_REST_SECONDS }}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    className={`${textRoles.buttonLabelSmall} ${defaultRestSeconds <= MIN_REST_SECONDS ? 'text-text-disabled' : 'text-text-primary'}`}
+                  >
+                    −{REST_STEP_SECONDS}s
+                  </Text>
+                </TouchableOpacity>
+
+                <Text className={`text-accent ${textRoles.metricBody}`}>
+                  {formatRestDuration(defaultRestSeconds)}
+                </Text>
+
+                <TouchableOpacity
+                  className="bg-surface-2 rounded-md px-4 py-2"
+                  onPress={() =>
+                    setDefaultRestSeconds(stepRestSeconds(defaultRestSeconds, REST_STEP_SECONDS))
+                  }
+                  disabled={defaultRestSeconds >= MAX_REST_SECONDS}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Increase rest by ${REST_STEP_SECONDS} seconds`}
+                  accessibilityState={{ disabled: defaultRestSeconds >= MAX_REST_SECONDS }}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    className={`${textRoles.buttonLabelSmall} ${defaultRestSeconds >= MAX_REST_SECONDS ? 'text-text-disabled' : 'text-text-primary'}`}
+                  >
+                    +{REST_STEP_SECONDS}s
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
 
           <Text className={`text-text-secondary ${textRoles.sectionLabel} mb-3`}>
@@ -194,23 +276,30 @@ export default function SettingsScreen() {
             />
           </View>
 
+          <DataBackupSection />
+
+          {/* Destructive actions live in their own section rather than sitting
+              inline with ordinary rows distinguished only by red text. */}
+          <Text className={`text-danger ${textRoles.sectionLabel} mb-3`}>Danger zone</Text>
+
           <TouchableOpacity
-            className={`bg-surface-1 rounded-lg px-4 py-4 flex-row items-center ${!canReset ? 'opacity-40' : ''}`}
+            className={`bg-surface-1 rounded-lg px-4 py-4 flex-row items-center mb-8 ${!canReset ? 'opacity-40' : ''}`}
+            style={{ borderWidth: 1, borderColor: 'rgba(255, 76, 76, 0.35)' }}
             onPress={handleReset}
             disabled={!canReset}
-            accessibilityLabel="Reset to day 1"
+            accessibilityRole="button"
+            accessibilityLabel="Reset cycle to day 1"
             accessibilityState={{ disabled: !canReset }}
             activeOpacity={0.7}
           >
-            <View className="flex-1">
+            <Icon name="restart" size={20} color="danger" />
+            <View className="flex-1 ml-3">
               <Text className={`text-danger ${textRoles.cardTitle}`}>Reset to Day 1</Text>
               <Text className={`text-text-secondary ${textRoles.bodySmall} mt-0.5`}>
                 {canReset ? 'Start the cycle over from day 1' : 'Configure a cycle first'}
               </Text>
             </View>
           </TouchableOpacity>
-
-          <DataBackupSection />
         </View>
       </ScrollView>
     </View>

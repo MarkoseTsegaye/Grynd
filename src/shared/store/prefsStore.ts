@@ -2,6 +2,15 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEYS } from '../../storage/keys';
+import {
+  DEFAULT_REST_SECONDS,
+  REST_PRESETS,
+  normalizeRestSeconds,
+  parseRestSeconds,
+} from '../lib/restDuration';
+
+// Re-exported so existing consumers keep one import site for these.
+export { DEFAULT_REST_SECONDS, REST_PRESETS };
 
 type WeightUnit = 'kg' | 'lbs';
 
@@ -11,13 +20,6 @@ export type BackupPrefs = {
   defaultRestSeconds: number;
 };
 
-export const REST_DURATION_OPTIONS = [60, 90, 120, 180] as const;
-export const DEFAULT_REST_SECONDS = 90;
-
-function parseDefaultRestSeconds(raw: string | null): number {
-  const parsed = parseInt(raw ?? '', 10);
-  return (REST_DURATION_OPTIONS as readonly number[]).includes(parsed) ? parsed : DEFAULT_REST_SECONDS;
-}
 
 interface PrefsState {
   weightUnit: WeightUnit;
@@ -49,7 +51,7 @@ export const usePrefsStore = create<PrefsState>()(
           set({
             weightUnit: weightRaw === 'lbs' ? 'lbs' : 'kg',
             autoAdvanceCycle: autoAdvanceRaw !== 'false',
-            defaultRestSeconds: parseDefaultRestSeconds(restRaw),
+            defaultRestSeconds: parseRestSeconds(restRaw),
             isLoaded: true,
           });
         } catch {
@@ -76,9 +78,10 @@ export const usePrefsStore = create<PrefsState>()(
       },
 
       setDefaultRestSeconds: async (seconds) => {
-        set({ defaultRestSeconds: seconds });
+        const normalized = normalizeRestSeconds(seconds);
+        set({ defaultRestSeconds: normalized });
         try {
-          await AsyncStorage.setItem(STORAGE_KEYS.DEFAULT_REST_SECONDS, String(seconds));
+          await AsyncStorage.setItem(STORAGE_KEYS.DEFAULT_REST_SECONDS, String(normalized));
         } catch {
           // ignore
         }
@@ -87,7 +90,7 @@ export const usePrefsStore = create<PrefsState>()(
       importPrefs: async (prefs) => {
         const weightUnit: WeightUnit = prefs.weightUnit === 'lbs' ? 'lbs' : 'kg';
         const autoAdvanceCycle = prefs.autoAdvanceCycle;
-        const defaultRestSeconds = prefs.defaultRestSeconds;
+        const defaultRestSeconds = normalizeRestSeconds(prefs.defaultRestSeconds);
 
         set({ weightUnit, autoAdvanceCycle, defaultRestSeconds });
         try {
