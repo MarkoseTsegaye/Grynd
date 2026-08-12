@@ -70,6 +70,10 @@
   .tag.cycle{background:var(--bg-elev-2);color:var(--text-2)}
   .tag.unused{background:transparent;color:var(--warn);border:1px solid rgba(255,176,32,.4)}
 
+  .rowacts{display:flex;align-items:center;gap:14px;color:var(--text-3);flex:0 0 auto}
+  .rowacts svg{width:18px;height:18px}
+  .rowacts.one svg{width:16px;height:16px}
+
   /* swipe reveal */
   .swipe{position:relative;overflow:hidden;border-radius:14px;margin-bottom:10px}
   .swipe .actions{position:absolute;right:0;top:0;bottom:0;display:flex;align-items:stretch}
@@ -182,7 +186,10 @@
           <span class="nm"><b>Push</b><span class="tag today">TODAY</span></span>
           <span class="sub">5 exercises · Yesterday · days 1, 4</span>
         </span>
-        <span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></span>
+        <span class="rowacts">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>
+        </span>
       </div>
 
       <div class="srow">
@@ -192,7 +199,10 @@
           <span class="nm"><b>Pull</b><span class="tag cycle">DAYS 2, 7</span></span>
           <span class="sub">6 exercises · 3 days ago</span>
         </span>
-        <span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></span>
+        <span class="rowacts">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>
+        </span>
       </div>
 
       <div class="srow">
@@ -202,7 +212,10 @@
           <span class="nm"><b>Legs</b><span class="tag cycle">DAY 5</span></span>
           <span class="sub">4 exercises · Last week</span>
         </span>
-        <span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></span>
+        <span class="rowacts">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>
+        </span>
       </div>
 
       <div class="srow">
@@ -212,7 +225,10 @@
           <span class="nm"><b>Arms</b><span class="tag unused">NOT IN CYCLE</span></span>
           <span class="sub">3 exercises · Never performed</span>
         </span>
-        <span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></span>
+        <span class="rowacts">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>
+        </span>
       </div>
     </div>
 
@@ -256,7 +272,7 @@
           <b>Incline Dumbbell Press</b>
           <span class="tags"><span class="last">last · 60 lb × 6</span></span>
         </span>
-        <span class="chev" style="color:var(--text-3);display:flex"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><path d="M9 18l6-6-6-6"/></svg></span>
+        <span class="rowacts one"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg></span>
       </div>
 
       <div class="erow">
@@ -269,7 +285,7 @@
             <span class="last">last · 115 lb × 8</span>
           </span>
         </span>
-        <span class="chev" style="color:var(--text-3);display:flex"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><path d="M9 18l6-6-6-6"/></svg></span>
+        <span class="rowacts one"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg></span>
       </div>
 
       <div class="erow">
@@ -282,26 +298,19 @@
             <span class="last">last · 22 lb × 6</span>
           </span>
         </span>
-        <span class="chev" style="color:var(--text-3);display:flex"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><path d="M9 18l6-6-6-6"/></svg></span>
+        <span class="rowacts one"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg></span>
       </div>
 
-      <!-- swiped row -->
-      <div class="swipe">
-        <div class="actions">
-          <div class="a edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>Edit</div>
-          <div class="a del"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>Delete</div>
-        </div>
-        <div class="erow">
-          <span class="grip"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></span>
-          <span class="num">4</span>
-          <span class="meta">
-            <b>Cable Lateral Raise</b>
-            <span class="tags"><span class="last">last · 15 lb × 12</span></span>
-          </span>
-        </div>
+      <div class="erow">
+        <span class="grip"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></span>
+        <span class="num">4</span>
+        <span class="meta">
+          <b>Cable Lateral Raise</b>
+          <span class="tags"><span class="last">last · 15 lb × 12</span></span>
+        </span>
+        <span class="rowacts one"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg></span>
       </div>
     </div>
-    <div class="callout" style="top:487px;right:20px">swipe · confirm</div>
   </div></div>
   <div class="frame-label"><b>B · Split editor</b>The list is the screen. Add collapses to one dashed row, the title becomes editable (<code>renameSplit</code> finally reachable), and each exercise shows its attributes and last working set. Destructive actions move behind a swipe with a confirm instead of a bare ✕.</div>
 </div>
