@@ -19,6 +19,13 @@ interface Props {
   isToday?: boolean;
   /** Home tab: "Yesterday" / "3 days ago" / null when never performed. */
   lastPerformedLabel?: string | null;
+  /** Splits tab: "days 1, 4", or null when the cycle never runs this split. */
+  cycleLabel?: string | null;
+  /** Splits tab: flag a split the cycle will never surface. */
+  showNotInCycle?: boolean;
+  /** Splits tab: starts a reorder drag. Rendered inside the card so the row
+   *  reads as one object rather than a handle floating in the gutter. */
+  onDrag?: () => void;
 }
 
 export function SplitCard({
@@ -29,6 +36,9 @@ export function SplitCard({
   onDelete,
   isToday,
   lastPerformedLabel,
+  cycleLabel,
+  showNotInCycle,
+  onDrag,
 }: Props) {
   const isStartMode = !!onPress && !onManage;
 
@@ -43,6 +53,17 @@ export function SplitCard({
       style={isToday ? { borderLeftWidth: 3, borderLeftColor: colors.accent } : undefined}
     >
       <View className="flex-row items-center justify-between">
+        {onDrag && (
+          <TouchableOpacity
+            onLongPress={onDrag}
+            delayLongPress={150}
+            className="pr-2 py-2 -ml-1"
+            accessibilityLabel={`Drag to reorder ${split.name}`}
+            activeOpacity={0.6}
+          >
+            <Icon name="drag-vertical" size={18} color="text-disabled" />
+          </TouchableOpacity>
+        )}
         <View
           className="bg-surface-2 rounded-lg items-center justify-center mr-3"
           style={{ width: 38, height: 38 }}
@@ -61,6 +82,26 @@ export function SplitCard({
               <View className="bg-accent rounded px-1.5 py-0.5">
                 <Text className={`text-surface-0 ${textRoles.captionBold}`} style={{ fontSize: 10 }}>
                   TODAY
+                </Text>
+              </View>
+            )}
+            {!isToday && cycleLabel && (
+              <View className="bg-surface-2 rounded px-1.5 py-0.5">
+                <Text
+                  className={`text-text-secondary ${textRoles.captionBold}`}
+                  style={{ fontSize: 10 }}
+                >
+                  {cycleLabel.toUpperCase()}
+                </Text>
+              </View>
+            )}
+            {showNotInCycle && (
+              <View
+                className="rounded px-1.5 py-0.5"
+                style={{ borderWidth: 1, borderColor: 'rgba(255, 176, 32, 0.45)' }}
+              >
+                <Text className={`text-warning ${textRoles.captionBold}`} style={{ fontSize: 10 }}>
+                  NOT IN CYCLE
                 </Text>
               </View>
             )}

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -10,6 +10,10 @@ import { useSplitsList, SplitCard } from '../../src/features/splits';
 import { useSplitsStore } from '../../src/features/splits';
 import { useCreateSplit } from '../../src/features/splits';
 import { Icon } from '../../src/shared/components/Icon';
+import { useCycleStore } from '../../src/features/splits/store/cycleStore';
+import { useHistory } from '../../src/features/history';
+import { getCycleUsage } from '../../src/features/splits/lib/cycleUsage';
+import { getSplitActivity } from '../../src/features/splits/lib/splitActivity';
 import type { Split } from '../../src/features/splits/types';
 import { textRoles } from '../../src/shared/theme/typography';
 
@@ -21,6 +25,13 @@ export default function SplitsScreen() {
   const insets = useSafeAreaInsets();
   const { splits, isLoaded } = useSplitsList();
   const { getExercisesForSplit, reorderSplits, deleteSplit } = useSplitsStore();
+  const { cycle, isLoaded: cycleLoaded, loadCycle } = useCycleStore();
+  const { sessions } = useHistory();
+
+  // Without this the cycle is null here and every split reads "not in cycle".
+  useEffect(() => {
+    if (!cycleLoaded) void loadCycle();
+  }, [cycleLoaded, loadCycle]);
   const { name, setName, canSubmit, isSubmitting, validationError, handleSubmit } = useCreateSplit(
     (id) => router.push(`/splits/${id}`),
   );
@@ -71,18 +82,17 @@ export default function SplitsScreen() {
   function renderItem({ item: split, drag, isActive }: { item: Split; drag: () => void; isActive: boolean }) {
     return (
       <ScaleDecorator>
-        <View className={`flex-row items-center mb-3 ${isActive ? 'opacity-80' : ''}`}>
-          <TouchableOpacity onLongPress={drag} delayLongPress={150} className="px-1 py-4" accessibilityLabel="Drag to reorder split">
-            <Icon name="drag-vertical" size={24} color="text-secondary" />
-          </TouchableOpacity>
-          <View className="flex-1">
-            <SplitCard
-              split={split}
-              exerciseCount={getExercisesForSplit(split.id).length}
-              onManage={() => router.push(`/splits/${split.id}`)}
-              onDelete={() => openDeleteSheet(split)}
-            />
-          </View>
+        <View className={isActive ? 'opacity-80' : ''}>
+          <SplitCard
+            split={split}
+            exerciseCount={getExercisesForSplit(split.id).length}
+            lastPerformedLabel={getSplitActivity(sessions, split.id).label}
+            cycleLabel={getCycleUsage(cycle?.days ?? [], split.id).label}
+            showNotInCycle={!getCycleUsage(cycle?.days ?? [], split.id).inCycle}
+            onDrag={drag}
+            onManage={() => router.push(`/splits/${split.id}`)}
+            onDelete={() => openDeleteSheet(split)}
+          />
         </View>
       </ScaleDecorator>
     );
