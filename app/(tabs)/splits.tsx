@@ -21,7 +21,7 @@ export default function SplitsScreen() {
   const insets = useSafeAreaInsets();
   const { splits, isLoaded } = useSplitsList();
   const { getExercisesForSplit, reorderSplits, deleteSplit } = useSplitsStore();
-  const { name, setName, canSubmit, isSubmitting, handleSubmit } = useCreateSplit(
+  const { name, setName, canSubmit, isSubmitting, validationError, handleSubmit } = useCreateSplit(
     (id) => router.push(`/splits/${id}`),
   );
   const [showForm, setShowForm] = useState(false);
@@ -108,8 +108,14 @@ export default function SplitsScreen() {
             returnKeyType="done"
             onSubmitEditing={async () => { await handleSubmit(); setShowForm(false); }}
             autoFocus
+            maxLength={40}
             accessibilityLabel="Split name input"
           />
+          {validationError && (
+            <Text className={`text-danger ${textRoles.caption} mb-2 -mt-1`}>
+              {validationError}
+            </Text>
+          )}
           <TouchableOpacity
             className={`bg-accent rounded-lg py-3 items-center ${!canSubmit ? 'opacity-40' : ''}`}
             onPress={async () => { await handleSubmit(); setShowForm(false); }}

@@ -3,6 +3,7 @@ import {
   buildVolumeSeries,
   getLatestVolumeTrend,
   getSessionVolume,
+  getVolumeInLastDays,
 } from '../sessionVolume';
 import type { LoggedSet, WorkoutSession } from '../../../workout/types';
 
@@ -76,5 +77,39 @@ describe('getLatestVolumeTrend', () => {
       { date: 2, volume: 100, label: 'b' },
     ]);
     expect(trend?.direction).toBe('neutral');
+  });
+});
+
+describe('getVolumeInLastDays', () => {
+  const NOW = 1_000_000_000_000;
+  const DAY = 24 * 60 * 60 * 1000;
+
+  it('sums only sessions inside the window', () => {
+    const sessions = [
+      makeSession({ id: 'recent', completedAt: NOW - 2 * DAY }),
+      makeSession({ id: 'old', completedAt: NOW - 30 * DAY }),
+    ];
+    // each makeSession is 100kg x 5 reps = 500
+    expect(getVolumeInLastDays(sessions, 7, NOW)).toBe(500);
+  });
+
+  it('includes several sessions in the window', () => {
+    const sessions = [
+      makeSession({ id: 'a', completedAt: NOW - 1 * DAY }),
+      makeSession({ id: 'b', completedAt: NOW - 6 * DAY }),
+    ];
+    expect(getVolumeInLastDays(sessions, 7, NOW)).toBe(1000);
+  });
+
+  it('ignores unfinished sessions', () => {
+    expect(getVolumeInLastDays([makeSession({ id: 'x', completedAt: null })], 7, NOW)).toBe(0);
+  });
+
+  it('ignores sessions dated in the future', () => {
+    expect(getVolumeInLastDays([makeSession({ id: 'f', completedAt: NOW + DAY })], 7, NOW)).toBe(0);
+  });
+
+  it('is zero with no history', () => {
+    expect(getVolumeInLastDays([], 7, NOW)).toBe(0);
   });
 });

@@ -16,9 +16,19 @@ interface Props {
   onDelete?: () => void;
   /** Home tab: this split is the current cycle day. */
   isToday?: boolean;
+  /** Home tab: "Yesterday" / "3 days ago" / null when never performed. */
+  lastPerformedLabel?: string | null;
 }
 
-export function SplitCard({ split, exerciseCount, onPress, onManage, onDelete, isToday }: Props) {
+export function SplitCard({
+  split,
+  exerciseCount,
+  onPress,
+  onManage,
+  onDelete,
+  isToday,
+  lastPerformedLabel,
+}: Props) {
   const isStartMode = !!onPress && !onManage;
 
   const inner = (
@@ -50,6 +60,7 @@ export function SplitCard({ split, exerciseCount, onPress, onManage, onDelete, i
           </View>
           <Text className={`text-text-secondary ${textRoles.caption} mt-0.5`}>
             {exerciseCount} {exerciseCount === 1 ? 'exercise' : 'exercises'}
+            {lastPerformedLabel ? ` · ${lastPerformedLabel}` : ''}
           </Text>
         </View>
         {isStartMode ? (
@@ -84,7 +95,9 @@ export function SplitCard({ split, exerciseCount, onPress, onManage, onDelete, i
     return (
       <TouchableOpacity
         onPress={onPress}
-        accessibilityLabel={`Start ${split.name} workout${isToday ? ", today's split" : ''}`}
+        accessibilityLabel={`Start ${split.name} workout${isToday ? ", today's split" : ''}${
+          lastPerformedLabel ? `, last performed ${lastPerformedLabel}` : ', never performed'
+        }`}
         activeOpacity={0.7}
       >
         {inner}

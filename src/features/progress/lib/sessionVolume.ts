@@ -52,6 +52,28 @@ export function getLatestVolumeTrend(series: VolumePoint[]): VolumeTrend | null 
   return { direction, deltaPercent, current, previous };
 }
 
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/**
+ * Volume over a trailing window, for the "recent work" figure on the volume
+ * card. Rolling days rather than a calendar week: a Monday-reset number reads
+ * as a collapse every Monday morning, which is not what the card is for.
+ */
+export function getVolumeInLastDays(
+  sessions: WorkoutSession[],
+  days = 7,
+  now: number = Date.now(),
+): number {
+  const since = now - days * MS_PER_DAY;
+
+  return sessions.reduce((total, session) => {
+    const completedAt = session.completedAt;
+    if (completedAt === null || completedAt === undefined) return total;
+    if (completedAt < since || completedAt > now) return total;
+    return total + getSessionVolume(session);
+  }, 0);
+}
+
 export function formatVolumeAbbreviated(volume: number): string {
   if (volume >= 1_000_000) return `${(volume / 1_000_000).toFixed(1)}M`;
   if (volume >= 1_000) return `${(volume / 1_000).toFixed(1)}k`;
