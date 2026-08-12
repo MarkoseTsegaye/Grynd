@@ -5,15 +5,19 @@ import { usePrefsStore } from '../../../shared/store/prefsStore';
 import {
   buildFirstSetSeries,
   getFirstSetTrend,
+  getRangeAvailability,
   isPersonalBest,
+  pickDefaultRange,
   type ProgressRangeId,
 } from '../lib/firstSetProgress';
+import type { ChartMetricId } from '../lib/chartMetric';
 
 export function useExerciseProgress(exerciseId: string) {
   const { sessions, isLoaded: historyLoaded } = useHistory();
   const { exercises, splits, isLoaded: splitsLoaded, loadData } = useSplitsStore();
   const { weightUnit, isLoaded: prefsLoaded, loadPrefs } = usePrefsStore();
-  const [rangeId, setRangeId] = useState<ProgressRangeId>('2m');
+  const [rangeId, setRangeId] = useState<ProgressRangeId | null>(null);
+  const [metric, setMetric] = useState<ChartMetricId>('weight');
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   useEffect(() => {
@@ -29,9 +33,19 @@ export function useExerciseProgress(exerciseId: string) {
     [exercises, exerciseId],
   );
 
+  const rangeAvailability = useMemo(
+    () => getRangeAvailability(sessions, exerciseId),
+    [sessions, exerciseId],
+  );
+
+  // Open on the smallest range that actually shows a trend rather than a fixed
+  // 2 mo window that can land on an empty chart. Once the user picks a range
+  // themselves, their choice sticks.
+  const effectiveRangeId = rangeId ?? pickDefaultRange(rangeAvailability);
+
   const points = useMemo(
-    () => buildFirstSetSeries(sessions, exerciseId, rangeId),
-    [sessions, exerciseId, rangeId],
+    () => buildFirstSetSeries(sessions, exerciseId, effectiveRangeId),
+    [sessions, exerciseId, effectiveRangeId],
   );
 
   useEffect(() => {
@@ -59,8 +73,11 @@ export function useExerciseProgress(exerciseId: string) {
     selectedPoint,
     trend,
     personalBest,
-    rangeId,
+    rangeId: effectiveRangeId,
     setRangeId,
+    rangeAvailability,
+    metric,
+    setMetric,
     weightUnit,
   };
 }

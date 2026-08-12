@@ -4,12 +4,11 @@ import { useLocalSearchParams } from 'expo-router';
 import { useExerciseProgress } from '../../../src/features/progress/hooks/useExerciseProgress';
 import { FirstSetSummary } from '../../../src/features/progress/components/FirstSetSummary';
 import { FirstSetLineChart } from '../../../src/features/progress/components/FirstSetLineChart';
-import { PROGRESS_RANGE_OPTIONS } from '../../../src/features/progress/lib/firstSetProgress';
+import { CHART_METRIC_OPTIONS } from '../../../src/features/progress/lib/chartMetric';
 import { Icon } from '../../../src/shared/components/Icon';
 import { textRoles } from '../../../src/shared/theme/typography';
 
 export default function ExerciseProgressScreen() {
-  const { exerciseId } = useLocalSearchParams<{ exerciseId: string }>();
   const {
     isLoaded,
     exercise,
@@ -21,8 +20,11 @@ export default function ExerciseProgressScreen() {
     personalBest,
     rangeId,
     setRangeId,
+    rangeAvailability,
+    metric,
+    setMetric,
     weightUnit,
-  } = useExerciseProgress(exerciseId);
+  } = useExerciseProgress(useLocalSearchParams<{ exerciseId: string }>().exerciseId);
 
   if (!isLoaded) {
     return <View className="flex-1 bg-surface-0" />;
@@ -44,27 +46,57 @@ export default function ExerciseProgressScreen() {
       contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 32 }}
     >
       <Text className={`text-text-primary ${textRoles.listTitle} mb-1`}>{exercise.name}</Text>
-      <Text className={`text-text-secondary ${textRoles.bodySmall} mb-6`}>
+      <Text className={`text-text-secondary ${textRoles.bodySmall} mb-5`}>
         First set over time
       </Text>
 
-      <View className="flex-row flex-wrap gap-2 mb-6">
-        {PROGRESS_RANGE_OPTIONS.map((option) => {
-          const selected = rangeId === option.id;
+      {/* Metric — plotting est. 1RM is what makes a rep-only gain visible */}
+      <View className="flex-row bg-surface-1 rounded-lg p-1 mb-3">
+        {CHART_METRIC_OPTIONS.map((option) => {
+          const selected = metric === option.id;
           return (
             <TouchableOpacity
               key={option.id}
-              className={`px-3 py-1.5 rounded ${selected ? 'bg-accent' : 'bg-surface-2'}`}
-              onPress={() => setRangeId(option.id)}
+              className={`flex-1 h-9 rounded-md items-center justify-center ${selected ? 'bg-accent' : ''}`}
+              onPress={() => setMetric(option.id)}
               accessibilityRole="button"
               accessibilityState={{ selected }}
-              accessibilityLabel={`Show last ${option.label}`}
+              accessibilityLabel={`Plot ${option.label}`}
+              activeOpacity={0.7}
+            >
+              <Text
+                className={`${textRoles.toggleLabel} ${selected ? 'text-surface-0' : 'text-text-secondary'}`}
+              >
+                {option.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {/* Ranges — empty ones are subdued and unpickable rather than silently blank */}
+      <View className="flex-row flex-wrap gap-2 mb-6">
+        {rangeAvailability.map((range) => {
+          const selected = rangeId === range.id;
+          return (
+            <TouchableOpacity
+              key={range.id}
+              className={`px-3 py-1.5 rounded ${selected ? 'bg-accent' : 'bg-surface-2'} ${range.hasData ? '' : 'opacity-40'}`}
+              onPress={() => setRangeId(range.id)}
+              disabled={!range.hasData}
+              accessibilityRole="button"
+              accessibilityState={{ selected, disabled: !range.hasData }}
+              accessibilityLabel={
+                range.hasData
+                  ? `Show last ${range.label}, ${range.count} ${range.count === 1 ? 'session' : 'sessions'}`
+                  : `Last ${range.label}, no sessions`
+              }
               activeOpacity={0.7}
             >
               <Text
                 className={`${selected ? 'text-surface-0' : 'text-text-secondary'} ${textRoles.toggleLabel}`}
               >
-                {option.label}
+                {range.label}
               </Text>
             </TouchableOpacity>
           );
@@ -91,10 +123,11 @@ export default function ExerciseProgressScreen() {
           ) : null}
 
           <Text className={`text-text-secondary ${textRoles.sectionLabel} mb-3`}>
-            WEIGHT OVER TIME
+            {metric === 'e1rm' ? 'ESTIMATED 1RM OVER TIME' : 'WEIGHT OVER TIME'}
           </Text>
           <FirstSetLineChart
             points={points}
+            metric={metric}
             weightUnit={weightUnit}
             selectedIndex={selectedIndex}
             onSelectIndex={setSelectedIndex}

@@ -3,16 +3,18 @@ import { View, Text, LayoutChangeEvent, Pressable } from 'react-native';
 import Svg, { Circle, Line, Polyline } from 'react-native-svg';
 import { colors } from '../../../shared/theme/colors';
 import { textRoles } from '../../../shared/theme/typography';
-import { formatWeight } from '../../../shared/lib/weight';
+import { formatWeight, weightKgToDisplay } from '../../../shared/lib/weight';
+import { getMetricDomain, getMetricValue, type ChartMetricId } from '../lib/chartMetric';
 import type { FirstSetPoint } from '../lib/firstSetProgress';
 
 const CHART_HEIGHT = 220;
-const PADDING = { top: 16, right: 12, bottom: 28, left: 44 };
-const MIN_RADIUS = 5;
-const MAX_RADIUS = 11;
+const PADDING = { top: 20, right: 12, bottom: 28, left: 44 };
+const MIN_RADIUS = 4;
+const MAX_RADIUS = 9;
 
 interface Props {
   points: FirstSetPoint[];
+  metric: ChartMetricId;
   weightUnit: 'kg' | 'lbs';
   selectedIndex: number;
   onSelectIndex: (index: number) => void;
@@ -32,6 +34,7 @@ function radiusForReps(reps: number, minReps: number, maxReps: number): number {
 
 export function FirstSetLineChart({
   points,
+  metric,
   weightUnit,
   selectedIndex,
   onSelectIndex,
@@ -47,44 +50,48 @@ export function FirstSetLineChart({
 
     const plotWidth = width - PADDING.left - PADDING.right;
     const plotHeight = CHART_HEIGHT - PADDING.top - PADDING.bottom;
-    const weights = points.map((p) => p.weightKg);
-    const maxWeight = Math.max(...weights, 1);
-    const minWeight = Math.min(...weights);
-    const weightRange = Math.max(maxWeight - minWeight, 1);
-    // Pad flat series so a constant weight still has vertical room for bigger/smaller dots.
-    const pad = weightRange === 1 && maxWeight === minWeight ? Math.max(maxWeight * 0.05, 1) : 0;
-    const yMin = minWeight - pad;
-    const yMax = maxWeight + pad;
+
+    // Snap in the unit the axis is labelled in — snapping in kg and then
+    // converting produced axes like "176.4 / 198.4 / 220.5", which defeats the
+    // point. A flat series still gets vertical room instead of a zero band.
+    const values = points.map((point) =>
+      weightKgToDisplay(getMetricValue(point, metric), weightUnit),
+    );
+    const { min: yMin, max: yMax, ticks } = getMetricDomain(values);
     const yRange = Math.max(yMax - yMin, 1);
 
     const minReps = Math.min(...points.map((p) => p.reps));
     const maxReps = Math.max(...points.map((p) => p.reps));
 
     const coords = points.map((point, index) => {
+      const value = values[index];
       const x =
         points.length === 1
           ? PADDING.left + plotWidth / 2
           : PADDING.left + (index / (points.length - 1)) * plotWidth;
-      const y = PADDING.top + plotHeight - ((point.weightKg - yMin) / yRange) * plotHeight;
-      return {
-        ...point,
-        x,
-        y,
-        r: radiusForReps(point.reps, minReps, maxReps),
-      };
+      const y = PADDING.top + plotHeight - ((value - yMin) / yRange) * plotHeight;
+      return { ...point, value, x, y, r: radiusForReps(point.reps, minReps, maxReps) };
     });
 
-    const polylinePoints = coords.map((point) => `${point.x},${point.y}`).join(' ');
-    const yTicks = [yMin, yMin + yRange / 2, yMax];
+    return {
+      coords,
+      polylinePoints: coords.map((point) => `${point.x},${point.y}`).join(' '),
+      ticks,
+      plotWidth,
+      plotHeight,
+      yMin,
+      yRange,
+    };
+  }, [points, metric, weightUnit, width]);
 
-    return { coords, polylinePoints, yTicks, plotWidth, plotHeight, yMin, yRange };
-  }, [points, width]);
+  const metricLabel = metric === 'e1rm' ? 'estimated one rep max' : 'weight';
 
   const accessibilityLabel = useMemo(() => {
     const latest = points[points.length - 1];
     if (!latest) return 'First set progress chart';
-    return `First set progress with ${points.length} sessions. Latest ${latest.reps} reps at ${formatWeight(latest.weightKg, weightUnit)} ${weightUnit} on ${latest.label}. Point size reflects reps.`;
-  }, [points, weightUnit]);
+    const latestValue = getMetricValue(latest, metric);
+    return `First set ${metricLabel} across ${points.length} sessions. Latest ${formatWeight(latestValue, weightUnit)} ${weightUnit} from ${latest.reps} reps at ${formatWeight(latest.weightKg, weightUnit)} ${weightUnit} on ${latest.label}.`;
+  }, [points, metric, metricLabel, weightUnit]);
 
   return (
     <View
@@ -96,7 +103,7 @@ export function FirstSetLineChart({
       {width > 0 && chart ? (
         <>
           <Svg width={width} height={CHART_HEIGHT}>
-            {chart.yTicks.map((tick, index) => {
+            {chart.ticks.map((tick, index) => {
               const y =
                 PADDING.top +
                 chart.plotHeight -
@@ -136,11 +143,38 @@ export function FirstSetLineChart({
                   fill={selected ? colors.accent : colors['accent-dim']}
                   stroke={selected ? colors['text-primary'] : 'transparent'}
                   strokeWidth={selected ? 2 : 0}
-                  onPress={() => onSelectIndex(index)}
+                  // Taps are handled by the Pressable overlays below: they give
+                  // a 36pt target and a real accessibility label. Putting
+                  // onPress here too made react-native-svg leak RN responder
+                  // props onto DOM nodes, logging an error per point on web.
                 />
               );
             })}
           </Svg>
+
+          {/* Reps on the selected point — "dot size = reps" alone was
+              undiscoverable and impossible to compare precisely. */}
+          {chart.coords[selectedIndex] ? (
+            <View
+              className="absolute bg-surface-2 rounded px-1.5 py-0.5"
+              pointerEvents="none"
+              style={{
+                left: Math.min(
+                  Math.max(chart.coords[selectedIndex].x - 26, 2),
+                  Math.max(width - 62, 2),
+                ),
+                top: Math.max(chart.coords[selectedIndex].y - 26, 2),
+              }}
+            >
+              <Text
+                className={`text-text-primary ${textRoles.metric}`}
+                style={{ fontSize: 11 }}
+                numberOfLines={1}
+              >
+                {chart.coords[selectedIndex].reps} reps
+              </Text>
+            </View>
+          ) : null}
 
           {/* Larger hit targets over points */}
           {chart.coords.map((point, index) => (
@@ -168,19 +202,20 @@ export function FirstSetLineChart({
               height: CHART_HEIGHT - PADDING.bottom - PADDING.top,
             }}
           >
-            {[...chart.yTicks].reverse().map((tick, index) => (
+            {[...chart.ticks].reverse().map((tick, index) => (
               <Text
                 key={`y-${index}`}
                 className={`text-text-secondary ${textRoles.caption} text-right`}
                 style={{
                   position: 'absolute',
+                  fontSize: 11,
                   top:
-                    (index / Math.max(chart.yTicks.length - 1, 1)) *
+                    (index / Math.max(chart.ticks.length - 1, 1)) *
                     (CHART_HEIGHT - PADDING.bottom - PADDING.top - 12),
                   right: 0,
                 }}
               >
-                {formatWeight(tick, weightUnit)}
+                {tick}
               </Text>
             ))}
           </View>
@@ -207,7 +242,9 @@ export function FirstSetLineChart({
           </View>
 
           <Text className={`text-text-disabled ${textRoles.caption} mt-3 px-1`}>
-            Dot size = reps on the first set
+            {metric === 'e1rm'
+              ? 'Estimated 1RM from the first set — rises when reps rise at the same weight'
+              : 'Weight on the first set · dot size = reps · tap a point to inspect'}
           </Text>
         </>
       ) : null}
