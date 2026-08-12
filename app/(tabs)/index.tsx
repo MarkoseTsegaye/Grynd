@@ -16,6 +16,7 @@ import { Icon } from '../../src/shared/components/Icon';
 import { CycleStrip } from '../../src/features/splits/components/CycleStrip';
 import { buildCycleStrip } from '../../src/features/splits/lib/cycleStrip';
 import { getSplitActivity } from '../../src/features/splits/lib/splitActivity';
+import { getSplitGlyph } from '../../src/features/splits/lib/splitGlyph';
 import { useHistory } from '../../src/features/history';
 import { textRoles } from '../../src/shared/theme/typography';
 
@@ -141,7 +142,11 @@ export default function HomeScreen() {
           ) : todayDay.type === 'split' ? (
             <>
               <View className="flex-row items-center gap-2 mb-1">
-                <Icon name="dumbbell" size={20} color="text-secondary" />
+                <Icon
+                  name={getSplitGlyph(todaySplit?.name ?? '')}
+                  size={20}
+                  color="text-secondary"
+                />
                 <Text className={`text-text-primary ${textRoles.listTitle}`} numberOfLines={1}>
                   {todaySplit?.name ?? 'Unknown'}
                 </Text>

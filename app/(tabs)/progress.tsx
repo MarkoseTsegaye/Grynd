@@ -14,6 +14,7 @@ import {
 } from '../../src/features/progress/lib/sessionVolume';
 import { getSeriesTrend } from '../../src/features/progress/lib/sparkline';
 import { getSplitActivity } from '../../src/features/splits/lib/splitActivity';
+import { getSplitGlyph } from '../../src/features/splits/lib/splitGlyph';
 import { kgToLbs } from '../../src/shared/lib/weight';
 import { Icon } from '../../src/shared/components/Icon';
 import { textRoles } from '../../src/shared/theme/typography';
@@ -112,6 +113,12 @@ export default function ProgressTabScreen() {
               accessibilityRole="button"
               activeOpacity={0.7}
             >
+              <View
+                className="bg-surface-2 rounded-lg items-center justify-center mr-3"
+                style={{ width: 34, height: 34 }}
+              >
+                <Icon name={getSplitGlyph(split.name)} size={18} color="text-secondary" />
+              </View>
               <View className="flex-1 pr-3">
                 <Text className={`text-text-primary ${textRoles.listItemTitle}`}>{split.name}</Text>
                 <Text className={`text-text-secondary ${textRoles.caption} mt-0.5`}>

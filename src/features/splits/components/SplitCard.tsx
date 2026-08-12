@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Icon } from '../../../shared/components/Icon';
 import { colors } from '../../../shared/theme/colors';
+import { getSplitGlyph } from '../lib/splitGlyph';
 import { textRoles } from '../../../shared/theme/typography';
 import type { Split } from '../types';
 
@@ -42,6 +43,12 @@ export function SplitCard({
       style={isToday ? { borderLeftWidth: 3, borderLeftColor: colors.accent } : undefined}
     >
       <View className="flex-row items-center justify-between">
+        <View
+          className="bg-surface-2 rounded-lg items-center justify-center mr-3"
+          style={{ width: 38, height: 38 }}
+        >
+          <Icon name={getSplitGlyph(split.name)} size={20} color={isToday ? 'accent' : 'text-secondary'} />
+        </View>
         <View className="flex-1 mr-3">
           <View className="flex-row items-center gap-2">
             <Text
