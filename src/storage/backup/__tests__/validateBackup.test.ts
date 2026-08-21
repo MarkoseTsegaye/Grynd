@@ -125,4 +125,49 @@ describe('validateBackup round-trip', () => {
     const result = validateBackup(bad);
     expect(result.ok).toBe(false);
   });
+
+  it('accepts a pre-weight-tracking backup (missing `weight` field) and defaults to empty', () => {
+    const backup = makeBackup() as Record<string, unknown>;
+    // A backup exported before body-weight tracking existed omits `weight`
+    // entirely from `data`. It must still import cleanly.
+    delete (backup.data as Record<string, unknown>).weight;
+    const result = validateBackup(backup);
+    if (!result.ok) throw new Error(result.error);
+    expect(result.backup.data.weight).toEqual([]);
+  });
+
+  it('accepts weight entries and preserves optional calories', () => {
+    const result = validateBackup(
+      makeBackup({
+        weight: [
+          {
+            id: 'w1',
+            dateKey: '2026-08-01',
+            loggedAt: 1_722_470_400_000,
+            weightLbs: 180.5,
+          },
+          {
+            id: 'w2',
+            dateKey: '2026-08-02',
+            loggedAt: 1_722_556_800_000,
+            weightLbs: 181,
+            calories: 3000,
+          },
+        ],
+      } as never),
+    );
+    if (!result.ok) throw new Error(result.error);
+    expect(result.backup.data.weight).toHaveLength(2);
+    expect(result.backup.data.weight?.[0].calories).toBeUndefined();
+    expect(result.backup.data.weight?.[1].calories).toBe(3000);
+  });
+
+  it('rejects a malformed weight entry rather than silently dropping it', () => {
+    const result = validateBackup(
+      makeBackup({
+        weight: [{ id: 'w1', dateKey: '2026-08-01', loggedAt: 1, weightLbs: 'heavy' }],
+      } as never),
+    );
+    expect(result.ok).toBe(false);
+  });
 });

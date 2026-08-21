@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getSplits, getExercises } from '../adapters/splits';
 import { getSessions } from '../adapters/sessions';
 import { getWorkoutCycle } from '../adapters/cycle';
+import { getWeightEntries } from '../adapters/weight';
 import { STORAGE_KEYS } from '../keys';
 import { parseRestSeconds } from '../../shared/lib/restDuration';
 import {
@@ -27,12 +28,13 @@ async function readBackupPrefs(): Promise<GryndBackupPrefs> {
 }
 
 export async function exportBackup(): Promise<GryndBackupV1> {
-  const [splits, exercises, sessions, cycle, prefs] = await Promise.all([
+  const [splits, exercises, sessions, cycle, prefs, weight] = await Promise.all([
     getSplits(),
     getExercises(),
     getSessions(),
     getWorkoutCycle(),
     readBackupPrefs(),
+    getWeightEntries(),
   ]);
 
   return {
@@ -45,6 +47,7 @@ export async function exportBackup(): Promise<GryndBackupV1> {
       sessions,
       cycle: cycle ?? DEFAULT_BACKUP_CYCLE,
       prefs,
+      weight,
     },
   };
 }
