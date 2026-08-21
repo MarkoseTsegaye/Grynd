@@ -13,6 +13,43 @@ export function formatDisplayDate(date: Date | number): string {
   }).format(value);
 }
 
+/**
+ * `YYYY-MM-DD` in the local calendar. Stable per-day bucket key for
+ * once-a-day records (body weight, calorie intake) where two entries on the
+ * same wall-clock day should collapse to one, regardless of the exact
+ * timestamp they were logged at.
+ */
+export function toDateKey(input: Date | number): string {
+  const d = typeof input === 'number' ? new Date(input) : input;
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+export function dateKeyToday(now: Date | number = Date.now()): string {
+  return toDateKey(now);
+}
+
+/**
+ * Parse a `YYYY-MM-DD` key back to a Date at local midnight. Returns null
+ * for malformed input rather than throwing so callers can guard cheaply.
+ */
+export function parseDateKey(key: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  const d = new Date(year, month - 1, day);
+  // Reject overflow like 2026-02-31 (Date silently rolls into March otherwise).
+  if (d.getFullYear() !== year || d.getMonth() !== month - 1 || d.getDate() !== day) {
+    return null;
+  }
+  return d;
+}
+
 function getLocalCalendarParts(date: Date | number): { year: number; month: number; day: number } {
   const d = new Date(date);
   return { year: d.getFullYear(), month: d.getMonth(), day: d.getDate() };

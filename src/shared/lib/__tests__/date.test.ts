@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  dateKeyToday,
   dateToCompletedAtMs,
   formatDisplayDate,
   isFutureCalendarDay,
+  parseDateKey,
+  toDateKey,
 } from '../date';
 
 function localDate(year: number, month: number, day: number, hour = 12): Date {
@@ -69,5 +72,50 @@ describe('dateToCompletedAtMs', () => {
     const startedAt = endOfLocalDay(selected) + 500;
     const now = localDate(2026, 6, 29, 12).getTime();
     expect(dateToCompletedAtMs(selected, startedAt, now)).toBe(startedAt);
+  });
+});
+
+describe('toDateKey', () => {
+  it('zero-pads month and day', () => {
+    expect(toDateKey(localDate(2026, 3, 7))).toBe('2026-03-07');
+  });
+
+  it('uses local calendar day regardless of the input clock time', () => {
+    expect(toDateKey(localDate(2026, 6, 28, 0))).toBe('2026-06-28');
+    expect(toDateKey(localDate(2026, 6, 28, 23))).toBe('2026-06-28');
+  });
+
+  it('accepts a millisecond timestamp', () => {
+    expect(toDateKey(localDate(2026, 12, 1, 9).getTime())).toBe('2026-12-01');
+  });
+});
+
+describe('dateKeyToday', () => {
+  it('matches toDateKey(now)', () => {
+    const now = localDate(2026, 8, 9, 15).getTime();
+    expect(dateKeyToday(now)).toBe(toDateKey(now));
+  });
+});
+
+describe('parseDateKey', () => {
+  it('round-trips through toDateKey at local midnight', () => {
+    const key = '2026-06-28';
+    const parsed = parseDateKey(key);
+    expect(parsed).not.toBeNull();
+    expect(toDateKey(parsed as Date)).toBe(key);
+    expect((parsed as Date).getHours()).toBe(0);
+  });
+
+  it('returns null for malformed input', () => {
+    expect(parseDateKey('2026-6-28')).toBeNull();
+    expect(parseDateKey('2026/06/28')).toBeNull();
+    expect(parseDateKey('not-a-date')).toBeNull();
+    expect(parseDateKey('')).toBeNull();
+  });
+
+  it('returns null for calendar overflow', () => {
+    expect(parseDateKey('2026-02-31')).toBeNull();
+    expect(parseDateKey('2026-13-01')).toBeNull();
+    expect(parseDateKey('2026-00-15')).toBeNull();
   });
 });

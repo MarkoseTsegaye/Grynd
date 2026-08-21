@@ -103,6 +103,22 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="weight"
+        options={{
+          title: 'Weight',
+          tabBarLabel: 'Weight',
+          // scale-bathroom has no outlined variant in MDI; the accent color
+          // swap on focus is enough to signal state.
+          tabBarIcon: ({ focused }) => (
+            <MaterialCommunityIcons
+              name="scale-bathroom"
+              size={24}
+              color={focused ? colors.accent : colors['text-secondary']}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="history"
         options={{
           title: 'History',

@@ -1,4 +1,5 @@
 import { isValidRestSeconds } from '../../shared/lib/restDuration';
+import type { WeightEntry } from '../../features/weight/types';
 import {
   BACKUP_APP,
   BACKUP_VERSION,
@@ -39,6 +40,43 @@ function validatePrefs(value: unknown): GryndBackupPrefs | null {
     autoAdvanceCycle: value.autoAdvanceCycle,
     defaultRestSeconds: value.defaultRestSeconds,
   };
+}
+
+/**
+ * Weight entries were added after v1 shipped. Returns:
+ *   - `[]` when the field is missing (older backup — accepted as zero entries)
+ *   - `WeightEntry[]` when present and every element parses cleanly
+ *   - `null` when the field is present but any element is malformed (reject)
+ */
+function validateWeightEntries(value: unknown): WeightEntry[] | null {
+  if (value === undefined) return [];
+  if (!isArray(value)) return null;
+
+  const entries: WeightEntry[] = [];
+  for (const raw of value) {
+    if (!isRecord(raw)) return null;
+    if (!isNonEmptyString(raw.id)) return null;
+    if (!isNonEmptyString(raw.dateKey)) return null;
+    if (typeof raw.loggedAt !== 'number') return null;
+    if (typeof raw.weightLbs !== 'number' || !Number.isFinite(raw.weightLbs)) return null;
+
+    const calories =
+      raw.calories === undefined
+        ? undefined
+        : typeof raw.calories === 'number' && Number.isFinite(raw.calories)
+          ? raw.calories
+          : null;
+    if (calories === null) return null;
+
+    entries.push({
+      id: raw.id,
+      dateKey: raw.dateKey,
+      loggedAt: raw.loggedAt,
+      weightLbs: raw.weightLbs,
+      ...(calories !== undefined ? { calories } : {}),
+    });
+  }
+  return entries;
 }
 
 function validateCycle(value: unknown): GryndBackup['data']['cycle'] | null {
@@ -113,6 +151,11 @@ export function validateBackup(value: unknown): BackupValidationResult {
     return { ok: false, error: 'The backup file has invalid cycle data.' };
   }
 
+  const weight = validateWeightEntries(data.weight);
+  if (weight === null) {
+    return { ok: false, error: 'The backup file has invalid weight entries.' };
+  }
+
   return {
     ok: true,
     backup: {
@@ -125,6 +168,7 @@ export function validateBackup(value: unknown): BackupValidationResult {
         sessions: data.sessions as GryndBackup['data']['sessions'],
         cycle,
         prefs,
+        weight,
       },
     },
   };

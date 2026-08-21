@@ -1,11 +1,12 @@
 import { saveSplits, saveExercises } from '../adapters/splits';
 import { clearActiveSession, saveSessions } from '../adapters/sessions';
 import { saveWorkoutCycle } from '../adapters/cycle';
+import { saveWeightEntries } from '../adapters/weight';
 import { usePrefsStore } from '../../shared/store/prefsStore';
 import type { GryndBackup } from './types';
 
 export async function importBackup(backup: GryndBackup): Promise<void> {
-  const { splits, exercises, sessions, cycle, prefs } = backup.data;
+  const { splits, exercises, sessions, cycle, prefs, weight } = backup.data;
 
   await clearActiveSession();
   await saveSplits(splits);
@@ -13,4 +14,5 @@ export async function importBackup(backup: GryndBackup): Promise<void> {
   await saveSessions(sessions);
   await saveWorkoutCycle(cycle);
   await usePrefsStore.getState().importPrefs(prefs);
+  await saveWeightEntries(weight ?? []);
 }

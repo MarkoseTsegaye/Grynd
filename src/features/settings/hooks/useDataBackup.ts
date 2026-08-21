@@ -9,6 +9,7 @@ import { useCycleStore } from '../../splits/store/cycleStore';
 import { useHistoryStore } from '../../history/store/historyStore';
 import { usePrefsStore } from '../../../shared/store/prefsStore';
 import { useWorkoutStore } from '../../workout/store/workoutStore';
+import { useWeightStore } from '../../weight/store/weightStore';
 
 function getBackupFilename(exportedAt: string): string {
   const dateStr = exportedAt.slice(0, 10);
@@ -215,11 +216,18 @@ export function useDataBackup() {
   const loadSessions = useHistoryStore((state) => state.loadSessions);
   const loadCycle = useCycleStore((state) => state.loadCycle);
   const loadPrefs = usePrefsStore((state) => state.loadPrefs);
+  const loadWeightEntries = useWeightStore((state) => state.loadEntries);
 
   const reloadStores = useCallback(async () => {
     useWorkoutStore.setState({ session: null, currentExerciseIndex: 0 });
-    await Promise.all([loadData(), loadSessions(), loadCycle(), loadPrefs()]);
-  }, [loadData, loadSessions, loadCycle, loadPrefs]);
+    await Promise.all([
+      loadData(),
+      loadSessions(),
+      loadCycle(),
+      loadPrefs(),
+      loadWeightEntries(),
+    ]);
+  }, [loadData, loadSessions, loadCycle, loadPrefs, loadWeightEntries]);
 
   const handleExport = useCallback(async () => {
     if (isExporting || isImporting) return;
