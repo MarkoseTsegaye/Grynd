@@ -17,6 +17,8 @@ interface Props {
   currentExerciseIndex: number;
   onSelectExercise: (index: number) => void;
   onChange: (index: number) => void;
+  /** Optional — omit to hide the "Add exercise" footer. */
+  onAddExercise?: () => void;
 }
 
 type RowState = 'current' | 'completed' | 'upcoming';
@@ -38,6 +40,7 @@ export function ExerciseOverviewSheet({
   currentExerciseIndex,
   onSelectExercise,
   onChange,
+  onAddExercise,
 }: Props) {
   const insets = useSafeAreaInsets();
   const snapPoints = useMemo(() => ['50%', '85%'], []);
@@ -137,7 +140,25 @@ export function ExerciseOverviewSheet({
           data={exercises}
           keyExtractor={(item) => item.exerciseId}
           renderItem={renderItem}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
+          ListFooterComponent={
+            onAddExercise ? (
+              <TouchableOpacity
+                className="flex-row items-center justify-center gap-2 bg-surface-2 rounded-lg py-3 mt-2"
+                onPress={() => {
+                  // Dismiss overview so the add sheet has room to present cleanly.
+                  sheetRef.current?.dismiss();
+                  onAddExercise();
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Add an exercise to this workout"
+                activeOpacity={0.7}
+              >
+                <Icon name="plus" size={18} color="accent" />
+                <Text className={`text-accent ${textRoles.bodySmall}`}>Add exercise</Text>
+              </TouchableOpacity>
+            ) : null
+          }
         />
       </View>
     </BottomSheetModal>

@@ -136,7 +136,7 @@ describe('validateBackup round-trip', () => {
     expect(result.backup.data.weight).toEqual([]);
   });
 
-  it('accepts weight entries and preserves optional calories', () => {
+  it('accepts weight entries', () => {
     const result = validateBackup(
       makeBackup({
         weight: [
@@ -151,15 +151,36 @@ describe('validateBackup round-trip', () => {
             dateKey: '2026-08-02',
             loggedAt: 1_722_556_800_000,
             weightLbs: 181,
-            calories: 3000,
           },
         ],
       } as never),
     );
     if (!result.ok) throw new Error(result.error);
     expect(result.backup.data.weight).toHaveLength(2);
-    expect(result.backup.data.weight?.[0].calories).toBeUndefined();
-    expect(result.backup.data.weight?.[1].calories).toBe(3000);
+    expect(result.backup.data.weight?.[0].weightLbs).toBe(180.5);
+  });
+
+  it('silently drops legacy `calories` field on weight entries (feature removed)', () => {
+    // Exports from a brief September 2026 window carried calories per entry.
+    // The import must still succeed; the field is discarded rather than
+    // rejecting an otherwise-good backup.
+    const result = validateBackup(
+      makeBackup({
+        weight: [
+          {
+            id: 'w1',
+            dateKey: '2026-09-05',
+            loggedAt: 1_725_508_800_000,
+            weightLbs: 179,
+            calories: 3000,
+          },
+        ],
+      } as never),
+    );
+    if (!result.ok) throw new Error(result.error);
+    expect(result.backup.data.weight).toHaveLength(1);
+    // The `calories` key must not survive to the validated shape.
+    expect((result.backup.data.weight?.[0] as unknown as Record<string, unknown>).calories).toBeUndefined();
   });
 
   it('rejects a malformed weight entry rather than silently dropping it', () => {

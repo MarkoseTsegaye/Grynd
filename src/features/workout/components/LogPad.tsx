@@ -133,7 +133,7 @@ export function LogPad({
   if (collapsed) {
     return (
       <View className="bg-surface-1 rounded-2xl px-3 pb-3 pt-1">
-        <GrabHandle label="log" collapsed onPress={onToggleCollapsed} />
+        <GrabHandle label="Log a set" collapsed onPress={onToggleCollapsed} />
         <TouchableOpacity
           className="flex-row items-center gap-3"
           onPress={onToggleCollapsed}
@@ -163,7 +163,7 @@ export function LogPad({
   return (
     <View className="bg-surface-1 rounded-2xl px-3 pb-3 pt-1">
       <GrabHandle
-        label={isEditing ? 'cancel' : 'hide'}
+        label={isEditing ? 'Cancel edit' : 'Hide pad'}
         collapsed={false}
         onPress={isEditing ? onCancelEdit : onToggleCollapsed}
       />
@@ -407,19 +407,19 @@ function GrabHandle({
 }) {
   return (
     <TouchableOpacity
-      className="items-center justify-center"
-      style={{ height: 26 }}
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={collapsed ? 'Expand log pad' : 'Hide log pad'}
-      activeOpacity={0.6}
+      accessibilityLabel={collapsed ? 'Expand log pad' : label}
+      activeOpacity={0.7}
+      hitSlop={{ top: 10, left: 10, right: 10, bottom: 4 }}
+      className="items-center justify-center rounded-lg bg-surface-2 mb-2"
+      style={{ height: 30 }}
     >
-      <View className="bg-surface-2 rounded-full" style={{ width: 38, height: 4 }} />
-      <View className="absolute right-0 top-1 flex-row items-center gap-1">
-        <Text className={`text-text-disabled ${textRoles.caption}`} style={{ fontSize: 11 }}>
-          {label}
-        </Text>
-        <Icon name={collapsed ? 'chevron-up' : 'chevron-down'} size={16} color="text-disabled" />
+      {/* Grabber pill kept as a secondary visual affordance. */}
+      <View className="bg-text-disabled/40 rounded-full mb-1" style={{ width: 30, height: 3 }} />
+      <View className="flex-row items-center gap-1">
+        <Icon name={collapsed ? 'chevron-up' : 'chevron-down'} size={14} color="text-secondary" />
+        <Text className={`text-text-secondary ${textRoles.bodySmall}`}>{label}</Text>
       </View>
     </TouchableOpacity>
   );

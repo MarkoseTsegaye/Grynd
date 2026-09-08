@@ -4,8 +4,10 @@ import {
   buildWeightSeries,
   filterPointsByRange,
   getLatestWeightLbs,
+  getWeeklyAverages,
   getWeeklyDelta,
   rollingAverageLbs,
+  type WeeklyAverage,
   type WeeklyDelta,
   type WeightPoint,
   type WeightRangeId,
@@ -30,6 +32,8 @@ export type WeightChartState =
       currentLbs: number | null;
       rolling7dayAvgLbs: number | null;
       weeklyDelta: WeeklyDelta | null;
+      /** Latest-first 7-day rolling weekly averages; empty weeks dropped. */
+      weeklyAverages: WeeklyAverage[];
       rangeId: WeightRangeId;
       setRangeId: (id: WeightRangeId) => void;
     };
@@ -62,6 +66,7 @@ export function useWeightChartData(): WeightChartState {
       currentLbs: getLatestWeightLbs(entries),
       rolling7dayAvgLbs: rollingAverageLbs(entries, Date.now(), 7),
       weeklyDelta: getWeeklyDelta(entries),
+      weeklyAverages: getWeeklyAverages(entries, 8),
       rangeId,
       setRangeId,
     };

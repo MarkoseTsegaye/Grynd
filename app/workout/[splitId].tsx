@@ -15,7 +15,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { BottomSheetModal, BottomSheetView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
-import { useWorkout, ExerciseScreen, ExerciseOverviewSheet, SubstituteExerciseSheet } from '../../src/features/workout';
+import {
+  useWorkout,
+  ExerciseScreen,
+  ExerciseOverviewSheet,
+  SubstituteExerciseSheet,
+  AddExerciseSheet,
+} from '../../src/features/workout';
 import { FinishWorkoutSheet } from '../../src/features/workout/components/FinishWorkoutSheet';
 import { useWorkoutStore } from '../../src/features/workout';
 import { useSplitsStore } from '../../src/features/splits';
@@ -39,7 +45,7 @@ type BootstrapState = 'loading' | 'ready' | 'error' | 'empty';
 export default function WorkoutScreen() {
   const { splitId } = useLocalSearchParams<{ splitId: string }>();
   const router = useRouter();
-  const { startWorkout, abandonWorkout, leaveWorkout, loadActiveSession, resumeWorkoutEntry } =
+  const { startWorkout, abandonWorkout, leaveWorkout, loadActiveSession, resumeWorkoutEntry, addAdHocExercise } =
     useWorkoutStore();
   const { loadData } = useSplitsStore();
   const [bootstrapState, setBootstrapState] = useState<BootstrapState>('loading');
@@ -48,6 +54,7 @@ export default function WorkoutScreen() {
 
   const overviewSheetRef = useRef<BottomSheetModal>(null);
   const substituteSheetRef = useRef<BottomSheetModal>(null);
+  const addExerciseSheetRef = useRef<BottomSheetModal>(null);
   const finishSheetRef = useRef<BottomSheetModal>(null);
 
   const {
@@ -107,6 +114,27 @@ export default function WorkoutScreen() {
       handleGoToExercise(index);
     },
     [handleGoToExercise],
+  );
+
+  const handleOpenAddExercise = useCallback(() => {
+    // Present after the overview sheet's dismiss animation to avoid stacked
+    // sheet weirdness; requestAnimationFrame is enough on both platforms.
+    requestAnimationFrame(() => addExerciseSheetRef.current?.present());
+  }, []);
+
+  const handleAddExerciseSelected = useCallback(
+    async (exercise: { id: string; name: string; unilateral?: boolean; plateLoaded?: boolean }) => {
+      const insertedIndex = await addAdHocExercise({
+        masterExerciseId: exercise.id,
+        name: exercise.name,
+        unilateral: exercise.unilateral,
+        plateLoaded: exercise.plateLoaded,
+      });
+      if (insertedIndex >= 0) {
+        handleGoToExercise(insertedIndex);
+      }
+    },
+    [addAdHocExercise, handleGoToExercise],
   );
 
   // Cancel sheet
@@ -597,6 +625,7 @@ export default function WorkoutScreen() {
           currentExerciseIndex={currentExerciseIndex}
           onSelectExercise={handleSelectExercise}
           onChange={handleOverviewSheetChange}
+          onAddExercise={handleOpenAddExercise}
         />
       )}
 
@@ -605,6 +634,11 @@ export default function WorkoutScreen() {
         onChange={handleSubstituteSheetChange}
         onConfirm={handleConfirmSubstitute}
         onClose={() => {}}
+      />
+
+      <AddExerciseSheet
+        sheetRef={addExerciseSheetRef}
+        onSelect={handleAddExerciseSelected}
       />
 
       {session && (
