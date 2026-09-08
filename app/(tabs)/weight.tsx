@@ -13,11 +13,11 @@ import { Icon } from '../../src/shared/components/Icon';
 import { textRoles } from '../../src/shared/theme/typography';
 import { formatDisplayDate, parseDateKey } from '../../src/shared/lib/date';
 import {
-  CaloriesOverlay,
   LogWeightSheet,
   useWeightChartData,
   useWeightStore,
   WEIGHT_RANGE_OPTIONS,
+  WeeklyAveragesList,
   WeightLineChart,
   WeightSummary,
   type WeightRangeId,
@@ -36,7 +36,6 @@ export default function WeightTabScreen() {
   const deleteEntry = useWeightStore((s) => s.deleteEntry);
   const sheetRef = useRef<BottomSheetModal>(null);
   const [editingEntry, setEditingEntry] = useState<WeightEntry | null>(null);
-  const [showCalories, setShowCalories] = useState(false);
 
   const openLogSheet = useCallback((entry: WeightEntry | null) => {
     setEditingEntry(entry);
@@ -88,8 +87,8 @@ export default function WeightTabScreen() {
           sheetRef={sheetRef}
           entry={editingEntry}
           onDismiss={() => setEditingEntry(null)}
-          onSubmit={async ({ dateKey, weightLbs, calories }) => {
-            await upsertEntry({ dateKey, weightLbs, calories });
+          onSubmit={async ({ dateKey, weightLbs }) => {
+            await upsertEntry({ dateKey, weightLbs });
           }}
         />
       </View>
@@ -138,6 +137,10 @@ export default function WeightTabScreen() {
           weeklyDelta={state.weeklyDelta}
         />
 
+        {state.weeklyAverages.length > 0 ? (
+          <WeeklyAveragesList averages={state.weeklyAverages} />
+        ) : null}
+
         {state.visiblePoints.length > 0 ? (
           <WeightLineChart
             points={state.visiblePoints}
@@ -154,30 +157,8 @@ export default function WeightTabScreen() {
           </View>
         )}
 
-        {/* Calories toggle + overlay */}
-        <TouchableOpacity
-          className="flex-row items-center justify-between mt-4 mb-1 px-1"
-          onPress={() => setShowCalories((s) => !s)}
-          accessibilityRole="switch"
-          accessibilityState={{ checked: showCalories }}
-          accessibilityLabel={showCalories ? 'Hide calories' : 'Show calories'}
-          activeOpacity={0.7}
-        >
-          <Text className={`text-text-secondary ${textRoles.bodySmall}`}>Show calories</Text>
-          <Icon
-            name={showCalories ? 'toggle-switch' : 'toggle-switch-off'}
-            size={28}
-            color={showCalories ? 'accent' : 'text-disabled'}
-          />
-        </TouchableOpacity>
-        {showCalories && state.visiblePoints.length > 0 ? (
-          <CaloriesOverlay points={state.visiblePoints} />
-        ) : null}
-
         {/* Recent list */}
-        <Text
-          className={`text-text-secondary ${textRoles.sectionLabel} mt-6 mb-3`}
-        >
+        <Text className={`text-text-secondary ${textRoles.sectionLabel} mt-6 mb-3`}>
           Recent
         </Text>
         <FlatList
@@ -199,11 +180,6 @@ export default function WeightTabScreen() {
                     return parsed ? formatDisplayDate(parsed) : item.dateKey;
                   })()}
                 </Text>
-                {item.calories !== undefined ? (
-                  <Text className={`text-text-secondary ${textRoles.caption} mt-0.5`}>
-                    {item.calories} kcal
-                  </Text>
-                ) : null}
               </View>
               <Text className={`text-text-primary ${textRoles.metricLarge}`}>
                 {formatLbs(item.weightLbs)}
@@ -219,8 +195,8 @@ export default function WeightTabScreen() {
         sheetRef={sheetRef}
         entry={editingEntry}
         onDismiss={() => setEditingEntry(null)}
-        onSubmit={async ({ dateKey, weightLbs, calories }) => {
-          await upsertEntry({ dateKey, weightLbs, calories });
+        onSubmit={async ({ dateKey, weightLbs }) => {
+          await upsertEntry({ dateKey, weightLbs });
         }}
         onDelete={async (id) => {
           await deleteEntry(id);

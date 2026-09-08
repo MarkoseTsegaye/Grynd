@@ -6,6 +6,7 @@ import {
   filterPointsByRange,
   getEntryForDateKey,
   getLatestWeightLbs,
+  getWeeklyAverages,
   getWeeklyDelta,
   rangeStartMs,
   rollingAverageLbs,
@@ -22,7 +23,6 @@ function makeEntry(
     month: number;
     day: number;
     weightLbs: number;
-    calories?: number;
     id?: string;
   },
 ): WeightEntry {
@@ -32,7 +32,6 @@ function makeEntry(
     dateKey: toDateKey(date),
     loggedAt: date.getTime(),
     weightLbs: input.weightLbs,
-    ...(input.calories !== undefined ? { calories: input.calories } : {}),
   };
 }
 
@@ -61,16 +60,15 @@ describe('getEntryForDateKey', () => {
 });
 
 describe('buildWeightSeries', () => {
-  it('returns points sorted by date with a label and no undefined calories key', () => {
+  it('returns points sorted by date with a formatted label', () => {
     const entries = [
-      makeEntry({ year: 2026, month: 8, day: 2, weightLbs: 181, calories: 3000 }),
+      makeEntry({ year: 2026, month: 8, day: 2, weightLbs: 181 }),
       makeEntry({ year: 2026, month: 8, day: 1, weightLbs: 180 }),
     ];
     const series = buildWeightSeries(entries);
     expect(series.map((p) => p.dateKey)).toEqual(['2026-08-01', '2026-08-02']);
     expect(series[0].label).toBe('Aug 1');
-    expect('calories' in series[0]).toBe(false);
-    expect(series[1].calories).toBe(3000);
+    expect(series[1].weightLbs).toBe(181);
   });
 });
 
@@ -185,5 +183,52 @@ describe('getLatestWeightLbs', () => {
       makeEntry({ year: 2026, month: 8, day: 2, weightLbs: 181 }),
     ];
     expect(getLatestWeightLbs(entries)).toBe(182);
+  });
+});
+
+describe('getWeeklyAverages', () => {
+  const referenceMs = localDate(2026, 8, 30, 12).getTime();
+
+  it('returns [] when there are no entries', () => {
+    expect(getWeeklyAverages([], 4, referenceMs)).toEqual([]);
+  });
+
+  it('returns latest-first buckets with the correct averages and entry counts', () => {
+    // Week ending Aug 30 has 3 entries (avg 181), week ending Aug 23 has 2 entries (avg 178).
+    const entries = [
+      makeEntry({ year: 2026, month: 8, day: 24, weightLbs: 180 }),
+      makeEntry({ year: 2026, month: 8, day: 27, weightLbs: 181 }),
+      makeEntry({ year: 2026, month: 8, day: 30, weightLbs: 182 }),
+      makeEntry({ year: 2026, month: 8, day: 18, weightLbs: 177 }),
+      makeEntry({ year: 2026, month: 8, day: 21, weightLbs: 179 }),
+    ];
+    const weeks = getWeeklyAverages(entries, 4, referenceMs);
+    expect(weeks).toHaveLength(2);
+    expect(weeks[0].avgLbs).toBeCloseTo(181, 5);
+    expect(weeks[0].entryCount).toBe(3);
+    expect(weeks[1].avgLbs).toBeCloseTo(178, 5);
+    expect(weeks[1].entryCount).toBe(2);
+  });
+
+  it('drops weeks with zero entries (not rendered as gaps)', () => {
+    // Only one entry three weeks back → all more recent buckets get skipped.
+    const entries = [
+      makeEntry({ year: 2026, month: 8, day: 10, weightLbs: 175 }),
+    ];
+    const weeks = getWeeklyAverages(entries, 8, referenceMs);
+    expect(weeks).toHaveLength(1);
+    expect(weeks[0].entryCount).toBe(1);
+    expect(weeks[0].avgLbs).toBe(175);
+    expect(weeks[0].deltaLbs).toBeNull();
+  });
+
+  it('computes deltaLbs as this week minus previous week (older comes later in the array)', () => {
+    const entries = [
+      makeEntry({ year: 2026, month: 8, day: 18, weightLbs: 178 }),
+      makeEntry({ year: 2026, month: 8, day: 25, weightLbs: 181 }),
+    ];
+    const weeks = getWeeklyAverages(entries, 4, referenceMs);
+    expect(weeks[0].deltaLbs).toBeCloseTo(3, 5); // 181 (current) − 178 (older) = +3
+    expect(weeks[1].deltaLbs).toBeNull();
   });
 });

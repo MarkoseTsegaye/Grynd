@@ -174,41 +174,77 @@ function LoggedRow({
       </View>
 
       {hasMeta && (
-        <View
-          className="flex-row items-center flex-wrap gap-1.5 pb-2"
-          style={{ paddingLeft: COL_NUM + 12 }}
-        >
-          {plateBreakdown && (
-            <View className="rounded bg-surface-2 px-1.5 py-0.5">
-              <Text className={`text-text-secondary ${textRoles.metric}`} style={{ fontSize: 11 }}>
-                {plateBreakdown}
-              </Text>
-            </View>
-          )}
-          {toFailure && (
-            <View className="rounded border border-danger/50 px-1.5 py-0.5">
-              <Text className={`text-danger ${textRoles.caption}`} style={{ fontSize: 10 }}>
-                FAILURE
-              </Text>
-            </View>
-          )}
-          {rirLabel && (
-            <View className="rounded bg-surface-2 px-1.5 py-0.5">
-              <Text className={`text-text-secondary ${textRoles.caption}`} style={{ fontSize: 10 }}>
-                {rirLabel}
-              </Text>
-            </View>
-          )}
-          {!!set.notes && (
-            <Text
-              className={`flex-1 text-text-secondary ${textRoles.caption} italic`}
-              style={{ fontSize: 11 }}
-              numberOfLines={1}
-            >
-              {set.notes}
-            </Text>
-          )}
+        <SetMetaChips
+          plateBreakdown={plateBreakdown}
+          toFailure={toFailure}
+          rirLabel={rirLabel}
+          notes={set.notes}
+          muted={false}
+        />
+      )}
+    </View>
+  );
+}
+
+/**
+ * The metadata row (plates, failure flag, RIR, notes) rendered under both
+ * logged sets and ghost rows. Passing `muted` swaps the color tokens so the
+ * ghost variant reads as secondary information rather than competing with
+ * the logged rows.
+ */
+function SetMetaChips({
+  plateBreakdown,
+  toFailure,
+  rirLabel,
+  notes,
+  muted,
+}: {
+  plateBreakdown: string | null | undefined;
+  toFailure: boolean;
+  rirLabel: string | null | undefined;
+  notes: string | undefined;
+  muted: boolean;
+}) {
+  const chipBg = muted ? 'bg-surface-2/50' : 'bg-surface-2';
+  const chipText = muted ? 'text-text-disabled' : 'text-text-secondary';
+  const failureText = muted ? 'text-danger/60' : 'text-danger';
+  const failureBorder = muted ? 'border-danger/30' : 'border-danger/50';
+  const notesText = muted ? 'text-text-disabled/70' : 'text-text-secondary';
+
+  return (
+    <View
+      className="flex-row items-center flex-wrap gap-1.5 pb-2"
+      style={{ paddingLeft: COL_NUM + 12 }}
+    >
+      {plateBreakdown && (
+        <View className={`rounded ${chipBg} px-1.5 py-0.5`}>
+          <Text className={`${chipText} ${textRoles.metric}`} style={{ fontSize: 11 }}>
+            {plateBreakdown}
+          </Text>
         </View>
+      )}
+      {toFailure && (
+        <View className={`rounded border ${failureBorder} px-1.5 py-0.5`}>
+          <Text className={`${failureText} ${textRoles.caption}`} style={{ fontSize: 10 }}>
+            FAILURE
+          </Text>
+        </View>
+      )}
+      {rirLabel && (
+        <View className={`rounded ${chipBg} px-1.5 py-0.5`}>
+          <Text className={`${chipText} ${textRoles.caption}`} style={{ fontSize: 10 }}>
+            {rirLabel}
+          </Text>
+        </View>
+      )}
+      {!!notes && (
+        <Text
+          className={`flex-1 ${notesText} ${textRoles.caption} italic`}
+          style={{ fontSize: 11 }}
+          numberOfLines={1}
+        >
+          {notes}
+        </Text>
       )}
     </View>
   );
@@ -223,36 +259,53 @@ function GhostRow({
   set: LoggedSet;
   weightUnit: 'kg' | 'lbs';
 }) {
-  const { weightText, unitLabel } = formatSetWeightParts(set, weightUnit);
+  const { weightText, unitLabel, plateBreakdown } = formatSetWeightParts(set, weightUnit);
+  const { toFailure, rirLabel } = getEffortLabels(set.effort);
+  const sideLabel = set.side === 'left' ? 'L' : set.side === 'right' ? 'R' : null;
+  const hasMeta = !!plateBreakdown || toFailure || !!rirLabel || !!set.notes;
 
   return (
-    <View
-      className="flex-row items-center gap-2 px-1 py-2"
-      accessibilityLabel={`Set ${setNumber} target from last session, ${weightText} ${unitLabel} by ${set.reps} reps`}
-    >
-      <Text
-        className={`text-text-disabled/50 ${textRoles.metricBold}`}
-        style={{ width: COL_NUM, fontSize: 12 }}
+    <View>
+      <View
+        className="flex-row items-center gap-2 px-1 py-2"
+        accessibilityLabel={`Set ${setNumber} target from last session, ${weightText} ${unitLabel} by ${set.reps} reps`}
       >
-        {setNumber}
-      </Text>
-      <View className="flex-1 flex-row items-baseline gap-1">
-        <Text className={`text-text-disabled ${textRoles.metricBody}`}>{weightText}</Text>
-        <Text className={`text-text-disabled/60 ${textRoles.caption}`} style={{ fontSize: 11 }}>
-          {unitLabel}
+        <Text
+          className={`text-text-disabled/50 ${textRoles.metricBold}`}
+          style={{ width: COL_NUM, fontSize: 12 }}
+        >
+          {setNumber}
         </Text>
+        <View className="flex-1 flex-row items-baseline gap-1">
+          {sideLabel && (
+            <Text className={`text-accent/60 ${textRoles.metricBold}`}>{sideLabel}</Text>
+          )}
+          <Text className={`text-text-disabled ${textRoles.metricBody}`}>{weightText}</Text>
+          <Text className={`text-text-disabled/60 ${textRoles.caption}`} style={{ fontSize: 11 }}>
+            {unitLabel}
+          </Text>
+        </View>
+        <View className="flex-row items-baseline justify-end gap-1" style={{ width: COL_REPS }}>
+          <Text className={`text-text-disabled ${textRoles.metricBody}`}>{set.reps}</Text>
+          <Text className={`text-text-disabled/60 ${textRoles.caption}`} style={{ fontSize: 11 }}>
+            ×
+          </Text>
+        </View>
+        <View className="items-end" style={{ width: COL_DELTA }}>
+          <Text className={`text-text-disabled/70 ${textRoles.caption}`} style={{ fontSize: 9 }}>
+            LAST
+          </Text>
+        </View>
       </View>
-      <View className="flex-row items-baseline justify-end gap-1" style={{ width: COL_REPS }}>
-        <Text className={`text-text-disabled ${textRoles.metricBody}`}>{set.reps}</Text>
-        <Text className={`text-text-disabled/60 ${textRoles.caption}`} style={{ fontSize: 11 }}>
-          ×
-        </Text>
-      </View>
-      <View className="items-end" style={{ width: COL_DELTA }}>
-        <Text className={`text-text-disabled/70 ${textRoles.caption}`} style={{ fontSize: 9 }}>
-          LAST
-        </Text>
-      </View>
+      {hasMeta && (
+        <SetMetaChips
+          plateBreakdown={plateBreakdown}
+          toFailure={toFailure}
+          rirLabel={rirLabel}
+          notes={set.notes}
+          muted
+        />
+      )}
     </View>
   );
 }

@@ -46,6 +46,21 @@ interface WorkoutState {
   deleteSet: (exerciseId: string, setIndex: number) => Promise<void>;
   goToExercise: (index: number) => void;
   substituteExercise: (index: number, substituteName: string) => Promise<void>;
+  /**
+   * Append a new exercise to the current session. If `masterExerciseId` is
+   * provided, the entry references an existing library exercise (the store
+   * caller has already resolved it). If a bare `name` is passed instead, the
+   * caller is expected to also invoke `useSplitsStore.createExercise(name)`
+   * and pass back that created exercise's id so this store never mutates the
+   * splits store directly. Returns the new position in `session.exercises`
+   * so the caller can `goToExercise` it if they want.
+   */
+  addAdHocExercise: (input: {
+    masterExerciseId: string;
+    name: string;
+    unilateral?: boolean;
+    plateLoaded?: boolean;
+  }) => Promise<number>;
   finishWorkout: (completedAt?: number) => Promise<void>;
   abandonWorkout: () => Promise<void>;
   leaveWorkout: () => Promise<void>;
@@ -221,6 +236,26 @@ export const useWorkoutStore = create<WorkoutState>()(
         const updated = { ...session, exercises, currentExerciseIndex: get().currentExerciseIndex };
         set({ session: updated });
         await setActiveSession(updated);
+      },
+
+      addAdHocExercise: async ({ masterExerciseId, name, unilateral, plateLoaded }) => {
+        const trimmed = name.trim();
+        const { session } = get();
+        if (!session || !trimmed) return -1;
+
+        const newExercise: LoggedExercise = {
+          exerciseId: masterExerciseId,
+          exerciseName: trimmed,
+          sets: [],
+          ...(unilateral ? { unilateral: true } : {}),
+          ...(plateLoaded ? { plateLoaded: true } : {}),
+        };
+
+        const exercises = [...session.exercises, newExercise];
+        const updated = { ...session, exercises, currentExerciseIndex: get().currentExerciseIndex };
+        set({ session: updated });
+        await setActiveSession(updated);
+        return exercises.length - 1;
       },
 
       finishWorkout: async (completedAt?: number) => {

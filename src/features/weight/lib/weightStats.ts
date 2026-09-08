@@ -7,7 +7,6 @@ export type WeightPoint = {
   date: number;
   label: string;
   weightLbs: number;
-  calories?: number;
 };
 
 export type WeightTrendDirection = 'up' | 'down' | 'steady';
@@ -71,7 +70,6 @@ export function buildWeightSeries(entries: WeightEntry[]): WeightPoint[] {
       date,
       label: formatShortDate(date),
       weightLbs: entry.weightLbs,
-      ...(entry.calories !== undefined ? { calories: entry.calories } : {}),
     };
   });
 }
@@ -136,4 +134,67 @@ export function getLatestWeightLbs(entries: WeightEntry[]): number | null {
   const sorted = sortByDate(entries);
   if (sorted.length === 0) return null;
   return sorted[sorted.length - 1].weightLbs;
+}
+
+export type WeeklyAverage = {
+  /** ms at the START (exclusive lower bound of the 7-day window). */
+  weekStartMs: number;
+  /** ms at the END (inclusive upper bound). Corresponds to `label`. */
+  weekEndMs: number;
+  /** Formatted `weekEndMs` for display (e.g. "Aug 25"). */
+  label: string;
+  avgLbs: number;
+  entryCount: number;
+  /** avgLbs of THIS week minus avgLbs of the previous week; null for the oldest. */
+  deltaLbs: number | null;
+};
+
+/**
+ * Rolling 7-day averages stepping back from `referenceMs`, latest first.
+ * Buckets with zero entries are dropped (users don't want a table row saying
+ * "0 entries" — the point of the section is to see actual trend, not gaps).
+ * `deltaLbs` compares each bucket to the older bucket that came before it in
+ * time (so a positive delta means gaining vs the previous week); null for
+ * the oldest returned bucket since there's nothing before it to compare.
+ */
+export function getWeeklyAverages(
+  entries: WeightEntry[],
+  weekCount = 8,
+  referenceMs: number = Date.now(),
+): WeeklyAverage[] {
+  const raw: Array<Omit<WeeklyAverage, 'deltaLbs'>> = [];
+
+  for (let i = 0; i < weekCount; i++) {
+    const weekEndMs = referenceMs - i * 7 * MS_PER_DAY;
+    const weekStartMs = weekEndMs - 7 * MS_PER_DAY;
+
+    let sum = 0;
+    let entryCount = 0;
+    for (const entry of entries) {
+      const t = entryDateMs(entry);
+      if (t > weekStartMs && t <= weekEndMs) {
+        sum += entry.weightLbs;
+        entryCount += 1;
+      }
+    }
+
+    if (entryCount === 0) continue;
+
+    raw.push({
+      weekStartMs,
+      weekEndMs,
+      label: formatShortDate(weekEndMs),
+      avgLbs: sum / entryCount,
+      entryCount,
+    });
+  }
+
+  // Compute delta vs the older week (raw is latest-first, so raw[i+1] is older).
+  return raw.map((bucket, i) => {
+    const older = raw[i + 1];
+    return {
+      ...bucket,
+      deltaLbs: older ? bucket.avgLbs - older.avgLbs : null,
+    };
+  });
 }

@@ -15,25 +15,13 @@ interface WeightState {
   /**
    * Insert or replace the entry for a given `dateKey`. If an entry already
    * exists for that day it is updated in place (keeping the original `id`),
-   * otherwise a new one is created. Passing `calories: null` clears any
-   * previously-set value; omitting `calories` leaves the existing one
-   * untouched.
+   * otherwise a new one is created.
    */
   upsertEntry: (input: {
     dateKey: string;
     weightLbs: number;
-    calories?: number | null;
   }) => Promise<void>;
   deleteEntry: (id: string) => Promise<void>;
-}
-
-function normalizeCalories(
-  next: number | null | undefined,
-  previous: number | undefined,
-): number | undefined {
-  if (next === null) return undefined;
-  if (next === undefined) return previous;
-  return next;
 }
 
 export const useWeightStore = create<WeightState>()(
@@ -52,36 +40,14 @@ export const useWeightStore = create<WeightState>()(
         }
       },
 
-      upsertEntry: async ({ dateKey, weightLbs, calories }) => {
+      upsertEntry: async ({ dateKey, weightLbs }) => {
         const { entries } = get();
         const existing = entries.find((e) => e.dateKey === dateKey);
         const now = Date.now();
 
         const nextEntry: WeightEntry = existing
-          ? {
-              ...existing,
-              weightLbs,
-              loggedAt: now,
-              ...(() => {
-                const resolved = normalizeCalories(calories, existing.calories);
-                return resolved === undefined ? {} : { calories: resolved };
-              })(),
-            }
-          : {
-              id: generateId(),
-              dateKey,
-              loggedAt: now,
-              weightLbs,
-              ...(() => {
-                const resolved = normalizeCalories(calories, undefined);
-                return resolved === undefined ? {} : { calories: resolved };
-              })(),
-            };
-
-        // Strip the calories field when clearing so serialized shape stays minimal.
-        if (existing && calories === null) {
-          delete (nextEntry as { calories?: number }).calories;
-        }
+          ? { ...existing, weightLbs, loggedAt: now }
+          : { id: generateId(), dateKey, loggedAt: now, weightLbs };
 
         const nextEntries = existing
           ? entries.map((e) => (e.dateKey === dateKey ? nextEntry : e))

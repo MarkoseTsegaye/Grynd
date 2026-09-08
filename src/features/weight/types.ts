@@ -1,7 +1,6 @@
 /**
- * One paired daily entry: body weight in pounds plus an optional daily
- * calorie intake for bulk-vs-cut context. Keyed by `dateKey` (a local
- * `YYYY-MM-DD`) so two entries on the same calendar day collapse to one.
+ * One body-weight entry per calendar day, keyed by `dateKey` (local
+ * `YYYY-MM-DD`) so two logs on the same day collapse to one.
  */
 export interface WeightEntry {
   id: string;
@@ -11,6 +10,4 @@ export interface WeightEntry {
   loggedAt: number;
   /** Body weight in pounds. */
   weightLbs: number;
-  /** Optional daily calorie intake, whole kcal. */
-  calories?: number;
 }

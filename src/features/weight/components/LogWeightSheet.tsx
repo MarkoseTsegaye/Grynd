@@ -33,16 +33,11 @@ interface Props {
   entry: WeightEntry | null;
   /** Called when the sheet content should be reset (dismiss without saving). */
   onDismiss?: () => void;
-  onSubmit: (input: {
-    dateKey: string;
-    weightLbs: number;
-    calories: number | null;
-  }) => Promise<void> | void;
+  onSubmit: (input: { dateKey: string; weightLbs: number }) => Promise<void> | void;
   onDelete?: (id: string) => Promise<void> | void;
 }
 
 const MAX_WEIGHT_LBS = 1000;
-const MAX_CALORIES = 20_000;
 
 function parseWeight(input: string): number | null {
   const trimmed = input.trim();
@@ -53,21 +48,10 @@ function parseWeight(input: string): number | null {
   return Math.round(value * 10) / 10;
 }
 
-function parseCalories(input: string): number | null {
-  const trimmed = input.trim();
-  if (!trimmed) return null;
-  const value = Number(trimmed);
-  if (!Number.isFinite(value)) return null;
-  if (value < 0 || value > MAX_CALORIES) return null;
-  return Math.round(value);
-}
-
 export function LogWeightSheet({ sheetRef, entry, onDismiss, onSubmit, onDelete }: Props) {
   const weightRef = useRef<TextInput>(null);
-  const caloriesRef = useRef<TextInput>(null);
   const [date, setDate] = useState<Date>(() => new Date());
   const [weightInput, setWeightInput] = useState('');
-  const [caloriesInput, setCaloriesInput] = useState('');
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const snapPoints = useMemo(() => [Platform.OS === 'web' ? '95%' : '82%'], []);
@@ -80,11 +64,9 @@ export function LogWeightSheet({ sheetRef, entry, onDismiss, onSubmit, onDelete 
       const parsed = parseDateKey(entry.dateKey) ?? new Date(entry.loggedAt);
       setDate(parsed);
       setWeightInput(String(entry.weightLbs));
-      setCaloriesInput(entry.calories !== undefined ? String(entry.calories) : '');
     } else {
       setDate(new Date());
       setWeightInput('');
-      setCaloriesInput('');
     }
     setDatePickerOpen(false);
   }, [entry?.id, entry]);
@@ -104,15 +86,12 @@ export function LogWeightSheet({ sheetRef, entry, onDismiss, onSubmit, onDelete 
     setSubmitting(true);
     try {
       const dateKey = toDateKey(date);
-      const cal = parseCalories(caloriesInput);
-      // Empty string during edit → clear the field (null); missing on create → undefined.
-      const calories = caloriesInput.trim() === '' ? (entry ? null : null) : cal;
-      await onSubmit({ dateKey, weightLbs: weightValue, calories });
+      await onSubmit({ dateKey, weightLbs: weightValue });
       sheetRef.current?.dismiss();
     } finally {
       setSubmitting(false);
     }
-  }, [canSubmit, caloriesInput, date, entry, onSubmit, sheetRef, weightValue]);
+  }, [canSubmit, date, onSubmit, sheetRef, weightValue]);
 
   const handleDelete = useCallback(async () => {
     if (!entry || !onDelete) return;
@@ -196,7 +175,7 @@ export function LogWeightSheet({ sheetRef, entry, onDismiss, onSubmit, onDelete 
         ) : null}
 
         {/* Weight input */}
-        <View className="mb-4">
+        <View className="mb-6">
           <Text className={`text-text-secondary ${textRoles.bodySmall} mb-1`}>WEIGHT</Text>
           <NumericInput
             ref={weightRef}
@@ -206,30 +185,10 @@ export function LogWeightSheet({ sheetRef, entry, onDismiss, onSubmit, onDelete 
             suffix="lb"
             integerOnly={false}
             keyboardType="decimal-pad"
-            returnKeyType="next"
-            onSubmitEditing={() => caloriesRef.current?.focus()}
-            maxLength={6}
-            accessibilityLabel="Body weight in pounds"
-          />
-        </View>
-
-        {/* Calories input (optional) */}
-        <View className="mb-6">
-          <Text className={`text-text-secondary ${textRoles.bodySmall} mb-1`}>
-            CALORIES <Text className={`text-text-disabled ${textRoles.caption}`}>(optional)</Text>
-          </Text>
-          <NumericInput
-            ref={caloriesRef}
-            InputComponent={BottomSheetTextInput}
-            value={caloriesInput}
-            onChangeText={setCaloriesInput}
-            suffix="kcal"
-            integerOnly
-            keyboardType="number-pad"
             returnKeyType="done"
             onSubmitEditing={handleSubmit}
-            maxLength={5}
-            accessibilityLabel="Daily calorie intake"
+            maxLength={6}
+            accessibilityLabel="Body weight in pounds"
           />
         </View>
 

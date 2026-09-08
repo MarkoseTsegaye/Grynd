@@ -7,6 +7,7 @@ export { SetTable } from './components/SetTable';
 export { RestTimerBar } from './components/RestTimerBar';
 export { ExerciseOverviewSheet } from './components/ExerciseOverviewSheet';
 export { SubstituteExerciseSheet } from './components/SubstituteExerciseSheet';
+export { AddExerciseSheet } from './components/AddExerciseSheet';
 export { PausedWorkoutResumeCard } from './components/PausedWorkoutResumeCard';
 export {
   RIR_OPTIONS,

@@ -47,6 +47,10 @@ function validatePrefs(value: unknown): GryndBackupPrefs | null {
  *   - `[]` when the field is missing (older backup — accepted as zero entries)
  *   - `WeightEntry[]` when present and every element parses cleanly
  *   - `null` when the field is present but any element is malformed (reject)
+ *
+ * Backups exported briefly in September 2026 also carried a `calories` field
+ * per entry. The feature was removed, but old exports still parse — the
+ * `calories` value is silently dropped rather than blocking the import.
  */
 function validateWeightEntries(value: unknown): WeightEntry[] | null {
   if (value === undefined) return [];
@@ -60,20 +64,11 @@ function validateWeightEntries(value: unknown): WeightEntry[] | null {
     if (typeof raw.loggedAt !== 'number') return null;
     if (typeof raw.weightLbs !== 'number' || !Number.isFinite(raw.weightLbs)) return null;
 
-    const calories =
-      raw.calories === undefined
-        ? undefined
-        : typeof raw.calories === 'number' && Number.isFinite(raw.calories)
-          ? raw.calories
-          : null;
-    if (calories === null) return null;
-
     entries.push({
       id: raw.id,
       dateKey: raw.dateKey,
       loggedAt: raw.loggedAt,
       weightLbs: raw.weightLbs,
-      ...(calories !== undefined ? { calories } : {}),
     });
   }
   return entries;
