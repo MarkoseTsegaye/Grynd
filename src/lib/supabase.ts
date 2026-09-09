@@ -1,6 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { Platform } from 'react-native';
 
 /**
  * Supabase client singleton.
@@ -34,29 +33,52 @@ import { Platform } from 'react-native';
 const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
+/**
+ * Decide what environment this file is being evaluated in. `Platform.OS`
+ * is not reliable during Expo Router's static prerender pass — Vercel
+ * has been observed to enter this module without `Platform.OS === 'web'`,
+ * which meant the earlier "skip if web + no window" guard didn't fire.
+ * These duck-type checks are portable and don't depend on the RN
+ * platform module.
+ */
+function detectEnvironment(): 'browser' | 'native' | 'ssr' {
+  // React Native (native) sets `navigator.product = 'ReactNative'` but
+  // has no `document`. This is the standard React Native detection trick.
+  if (typeof navigator !== 'undefined' && (navigator as { product?: string }).product === 'ReactNative') {
+    return 'native';
+  }
+  // Browsers have both `window` and `document`. Prerender/SSR has neither.
+  if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+    return 'browser';
+  }
+  return 'ssr';
+}
+
 function buildClient(): SupabaseClient | null {
   if (!url || !anonKey) return null;
 
-  // Guard against the Node prerender pass: no window means no browser
-  // storage and no OAuth-URL parsing to do. The runtime bundle re-runs
-  // this file on the client where `window` is present.
-  if (Platform.OS === 'web' && typeof window === 'undefined') return null;
+  const env = detectEnvironment();
 
-  const isWeb = Platform.OS === 'web';
+  // Prerender / SSR: construct nothing. GoTrueClient's constructor
+  // eagerly calls `_emitInitialSession` which hits the storage adapter;
+  // on web that adapter reaches for `window.localStorage` and blows up
+  // in Node. The runtime bundle re-evaluates this module in the browser
+  // where all the necessary globals are present.
+  if (env === 'ssr') return null;
 
   return createClient(url, anonKey, {
     auth: {
-      // On native we hand Supabase our AsyncStorage adapter so the
-      // session survives app restarts. On web supabase-js's default is
-      // `localStorage`, which is what we want — passing AsyncStorage
-      // here forces its web shim to reach into `window.localStorage`
-      // and blows up under Node prerender.
-      ...(isWeb ? {} : { storage: AsyncStorage }),
+      // Native: hand Supabase our AsyncStorage adapter so the session
+      // survives app restarts. Browser: intentionally omit `storage`
+      // and let supabase-js use its default (`localStorage`), which is
+      // the right adapter for the web bundle and does not go through
+      // the AsyncStorage web shim.
+      ...(env === 'native' ? { storage: AsyncStorage } : {}),
       autoRefreshToken: true,
       persistSession: true,
       // OAuth on web returns to the app with the code in the URL hash;
       // let Supabase parse it out. Not applicable on native.
-      detectSessionInUrl: isWeb,
+      detectSessionInUrl: env === 'browser',
       flowType: 'pkce',
     },
   });
