@@ -132,11 +132,25 @@ export default function SettingsScreen() {
     );
   }, [signOut]);
 
-  const handlePushAllNow = useCallback(async () => {
-    const result = await pushAllNow();
-    if (!result.ok) {
-      showDialog('Sync failed', result.error, [{ text: 'OK', style: 'cancel' }]);
-    }
+  const handlePushAllNow = useCallback(() => {
+    showDialog(
+      'Sync all data to cloud?',
+      'This pulls any newer changes from the server first, then pushes everything on this device. Safe to run any time — no data will be overwritten by older copies.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sync now',
+          style: 'default',
+          onPress: () => {
+            void pushAllNow().then((result) => {
+              if (!result.ok) {
+                showDialog('Sync failed', result.error, [{ text: 'OK', style: 'cancel' }]);
+              }
+            });
+          },
+        },
+      ],
+    );
   }, []);
 
   const isReady = cycleLoaded && splitsLoaded && prefsLoaded;

@@ -267,9 +267,14 @@ export function startSyncEngine(): void {
  * Steps:
  *   1. Ensure every store has hydrated from AsyncStorage — the seed
  *      relies on `getState()` returning real rows.
- *   2. Enqueue every local row for every adapter (dedup keeps the queue
- *      from bloating if the row was already queued).
- *   3. Drain.
+ *   2. **Pull first**, so any row the server already has newer than
+ *      ours merges into local via LWW. Without this a raw push would
+ *      clobber newer server-side edits from another device with our
+ *      stale local copy — Supabase's upsert has no LWW of its own.
+ *   3. Enqueue every local row for every adapter (dedup keeps the queue
+ *      from bloating if the row was already queued). What we push is
+ *      now the LWW winner, so no clobber.
+ *   4. Drain.
  */
 export async function pushAllNow(): Promise<{ ok: true; pushed: number } | { ok: false; error: string }> {
   if (!isSupabaseConfigured() || !supabase) {
@@ -297,6 +302,16 @@ export async function pushAllNow(): Promise<{ ok: true; pushed: number } | { ok:
       cycle.isLoaded ? Promise.resolve() : cycle.loadCycle(),
       prefs.isLoaded ? Promise.resolve() : prefs.loadPrefs(),
     ]);
+
+    // Pull first so newer server rows merge into local before we push.
+    // If pull fails (network, RLS, missing table) we abort — pushing on
+    // top of an unknown server state is the exact scenario this guard
+    // exists to prevent.
+    await pull();
+    if (status().status === 'offline' || status().status === 'error') {
+      const message = status().lastError ?? 'Could not reach the server.';
+      return { ok: false, error: message };
+    }
 
     let enqueued = 0;
     for (const adapter of ADAPTERS) {
