@@ -47,7 +47,9 @@ export async function exportBackup(): Promise<GryndBackupV1> {
       sessions,
       cycle: cycle ?? DEFAULT_BACKUP_CYCLE,
       prefs,
-      weight,
+      // Tombstones exist only to reach the server on the next sync push;
+      // they carry no value inside a user-visible backup.
+      weight: weight.filter((e) => e.deletedAt == null),
     },
   };
 }

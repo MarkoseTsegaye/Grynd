@@ -9,6 +9,8 @@ import { useCycleStore } from '../../src/features/splits/store/cycleStore';
 import { useSplitsStore } from '../../src/features/splits';
 import { usePrefsStore } from '../../src/shared/store/prefsStore';
 import { SignInSheet, useAuth, useAuthStore } from '../../src/features/auth';
+import { pull as syncPull, useSyncStatusStore } from '../../src/storage/sync';
+import { SyncStatusDot } from '../../src/shared/components/SyncStatusDot';
 import {
   REST_PRESETS,
   REST_STEP_SECONDS,
@@ -23,6 +25,38 @@ import { colors } from '../../src/shared/theme/colors';
 import { textRoles } from '../../src/shared/theme/typography';
 import type { Split, WorkoutCycle } from '../../src/features/splits/types';
 import { DataBackupSection } from '../../src/features/settings/components/DataBackupSection';
+
+function formatSyncStatus(input: {
+  status: string;
+  pendingWrites: number;
+  lastSyncedAt: number | null;
+  error: string | null;
+}): string {
+  const { status, pendingWrites, lastSyncedAt, error } = input;
+  if (status === 'syncing') {
+    return pendingWrites > 0
+      ? `Syncing ${pendingWrites} change${pendingWrites === 1 ? '' : 's'}…`
+      : 'Syncing…';
+  }
+  if (status === 'offline') return 'Offline — changes queued locally';
+  if (status === 'error') return error ? `Sync error: ${error}` : 'Sync error';
+  if (status === 'unconfigured') return 'Cloud sync not configured';
+  // idle
+  if (pendingWrites > 0) return `${pendingWrites} pending`;
+  if (lastSyncedAt == null) return 'Up to date';
+  return `Synced ${formatRelativeAgo(Date.now() - lastSyncedAt)}`;
+}
+
+function formatRelativeAgo(deltaMs: number): string {
+  const seconds = Math.max(0, Math.round(deltaMs / 1000));
+  if (seconds < 45) return 'just now';
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.round(hours / 24);
+  return `${days}d ago`;
+}
 
 function getCycleSummary(cycle: WorkoutCycle | null, splits: Split[]): string {
   const days = cycle?.days ?? [];
@@ -74,6 +108,10 @@ export default function SettingsScreen() {
   const { status, user, isAnonymous, isIdentified, isUnconfigured } = useAuth();
   const signOut = useAuthStore((s) => s.signOut);
   const signInSheetRef = useRef<BottomSheetModal>(null);
+  const syncStatus = useSyncStatusStore((s) => s.status);
+  const pendingWrites = useSyncStatusStore((s) => s.pendingWrites);
+  const lastSyncedAt = useSyncStatusStore((s) => s.lastSyncedAt);
+  const lastSyncError = useSyncStatusStore((s) => s.lastError);
 
   const handleSignIn = useCallback(() => {
     signInSheetRef.current?.present();
@@ -169,6 +207,33 @@ export default function SettingsScreen() {
                 </Text>
               </View>
             </View>
+
+            {!isUnconfigured && (
+              <View className="flex-row items-center gap-2 mt-3">
+                <SyncStatusDot />
+                <Text
+                  className={`text-text-secondary ${textRoles.caption} flex-1`}
+                  numberOfLines={1}
+                >
+                  {formatSyncStatus({
+                    status: syncStatus,
+                    pendingWrites,
+                    lastSyncedAt,
+                    error: lastSyncError,
+                  })}
+                </Text>
+                {(syncStatus === 'offline' || syncStatus === 'error') && (
+                  <TouchableOpacity
+                    onPress={() => void syncPull()}
+                    accessibilityLabel="Retry sync"
+                    activeOpacity={0.7}
+                    className="px-2 py-1"
+                  >
+                    <Text className={`text-accent ${textRoles.caption}`}>Retry</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
 
             {!isUnconfigured && (
               <View className="flex-row gap-2 mt-4">

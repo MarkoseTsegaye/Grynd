@@ -64,11 +64,26 @@ function validateWeightEntries(value: unknown): WeightEntry[] | null {
     if (typeof raw.loggedAt !== 'number') return null;
     if (typeof raw.weightLbs !== 'number' || !Number.isFinite(raw.weightLbs)) return null;
 
+    // `updatedAt` and `deletedAt` were added with the sync layer. Older
+    // backups don't carry them — backfill `updatedAt` from `loggedAt` so
+    // last-write-wins has a real value to work with, and treat missing
+    // `deletedAt` as null (live row).
+    const updatedAt =
+      typeof raw.updatedAt === 'number' && Number.isFinite(raw.updatedAt)
+        ? raw.updatedAt
+        : raw.loggedAt;
+    const deletedAt =
+      typeof raw.deletedAt === 'number' && Number.isFinite(raw.deletedAt)
+        ? raw.deletedAt
+        : null;
+
     entries.push({
       id: raw.id,
       dateKey: raw.dateKey,
       loggedAt: raw.loggedAt,
       weightLbs: raw.weightLbs,
+      updatedAt,
+      deletedAt,
     });
   }
   return entries;

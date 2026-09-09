@@ -15,10 +15,11 @@ import {
   JetBrainsMono_400Regular,
   JetBrainsMono_700Bold,
 } from '@expo-google-fonts/jetbrains-mono';
-import { View } from 'react-native';
+import { AppState, View } from 'react-native';
 import { usePrefsStore } from '../src/shared/store/prefsStore';
 import { useResumeWorkoutPrompt } from '../src/features/workout';
 import { useAuthStore } from '../src/features/auth';
+import { startSyncEngine, pull as syncPull } from '../src/storage/sync';
 import { DevBadge } from '../src/shared/components/DevBadge';
 
 const stackHeader = {
@@ -52,6 +53,17 @@ export default function RootLayout() {
     // Supabase env vars aren't set, this resolves to `status: 'unconfigured'`
     // and every downstream auth call becomes a no-op.
     void bootstrapAuth();
+
+    // Fire and forget — the engine sits idle until auth resolves a UID
+    // and does nothing at all when Supabase is unconfigured.
+    startSyncEngine();
+
+    // Pull on foreground resume so a device that's been asleep for a
+    // while catches up before the user starts editing.
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void syncPull();
+    });
+    return () => sub.remove();
   }, [bootstrapAuth]);
 
   if (!fontsLoaded) {
