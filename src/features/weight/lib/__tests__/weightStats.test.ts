@@ -32,6 +32,7 @@ function makeEntry(
     dateKey: toDateKey(date),
     loggedAt: date.getTime(),
     weightLbs: input.weightLbs,
+    updatedAt: date.getTime(),
   };
 }
 
