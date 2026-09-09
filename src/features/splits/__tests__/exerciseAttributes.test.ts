@@ -70,6 +70,7 @@ describe('exercise attributes', () => {
           name: 'Curl',
           unilateral: true,
           plateLoaded: true,
+          updatedAt: 1,
         },
       ],
     });

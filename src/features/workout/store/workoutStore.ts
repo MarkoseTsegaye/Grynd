@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { getActiveSession, setActiveSession, clearActiveSession, saveSession } from '../../../storage/adapters/sessions';
 import { useCycleStore } from '../../splits/store/cycleStore';
+import { useHistoryStore } from '../../history/store/historyStore';
 import { usePrefsStore } from '../../../shared/store/prefsStore';
 import { generateId } from '../../../shared/lib/id';
 import { sortExercisesByPerformedOrder } from '../lib/sortExercisesByPerformedOrder';
@@ -262,15 +263,24 @@ export const useWorkoutStore = create<WorkoutState>()(
         const { session } = get();
         if (!session) return;
 
+        const finishedAt = completedAt ?? Date.now();
         const completed = {
           ...session,
-          completedAt: completedAt ?? Date.now(),
+          completedAt: finishedAt,
+          // updatedAt drives sync LWW. Bump to finish time so a device
+          // that hasn't seen this session yet picks it up on next pull.
+          updatedAt: finishedAt,
           exercises: sortExercisesByPerformedOrder(session.exercises),
         };
         // Persist history and clear active before clearing memory so a failed
         // cycle advance cannot leave a ghost in-progress session.
         await saveSession(completed);
         await clearActiveSession();
+        // Push the new session into the history store's in-memory state
+        // so the sync engine's history subscription fires without waiting
+        // for the next `loadSessions()`. Safe when history hasn't loaded
+        // yet — the next load will read the same row from storage.
+        useHistoryStore.getState().ingestFinishedSession(completed);
         set({ session: null, currentExerciseIndex: 0 });
         try {
           if (usePrefsStore.getState().autoAdvanceCycle) {

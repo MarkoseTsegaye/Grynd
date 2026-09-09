@@ -1,34 +1,52 @@
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { useAuthStore } from '../../features/auth/store/authStore';
-import { useWeightStore } from '../../features/weight/store/weightStore';
 import { useSyncStatusStore } from './status';
 import * as queue from './queue';
-import * as weightTable from './tables/weight';
 import { getLastSyncedAt, setLastSyncedAt } from './lib/lastSynced';
-import { maxUpdatedAt } from './lib/merge';
-import type { WeightEntry } from '../../features/weight/types';
+import type { TableAdapter } from './lib/adapter';
+import { weightAdapter } from './tables/weight';
+import { splitsAdapter } from './tables/splits';
+import { exercisesAdapter } from './tables/exercises';
+import { sessionsAdapter } from './tables/sessions';
+import { cyclesAdapter } from './tables/cycles';
+import { prefsAdapter } from './tables/prefs';
 
 /**
  * Sync engine.
  *
+ * Owns the auth-bound + store-bound lifecycle. Adapters plug in through
+ * a registry so the engine itself is table-agnostic — adding a new
+ * synced table is one file (an adapter) plus one entry in `ADAPTERS`.
+ *
  * Once bootstrapped it:
  *
- *   - subscribes to the auth store: whenever the UID changes it resets
- *     internal state (last-synced bookmarks are per-UID) and runs an
- *     initial full push + pull for the new user
- *   - subscribes to the weight store: every mutation enqueues an upsert
- *     that a background drain flushes to Supabase
+ *   - subscribes to the auth store: whenever the UID changes it rebinds
+ *     all adapters (last-synced bookmarks are per-UID), seeds the queue
+ *     with everything currently on device the first time a UID is seen,
+ *     and runs pull + drain
+ *   - subscribes to every store the adapter registry names: every
+ *     mutation enqueues an upsert; a background drain flushes it
  *   - exposes `pull()` for pull-to-refresh / AppState-active hooks
- *
- * When Supabase is not configured, or the user has no session yet, every
- * public method is a safe no-op and the status store advertises
- * `unconfigured` / `idle` accordingly.
  */
+
+const ADAPTERS: TableAdapter[] = [
+  weightAdapter,
+  splitsAdapter,
+  exercisesAdapter,
+  sessionsAdapter,
+  cyclesAdapter,
+  prefsAdapter,
+];
+
+const ADAPTERS_BY_NAME = new Map<string, TableAdapter>(
+  ADAPTERS.map((a) => [a.name, a]),
+);
 
 let started = false;
 let boundUid: string | null = null;
 let draining = false;
 let pulling = false;
+let storeUnsubs: Array<() => void> = [];
 
 function status() {
   return useSyncStatusStore.getState();
@@ -45,8 +63,8 @@ async function refreshPendingCount(uid: string) {
 }
 
 /**
- * Push every queued write for the current UID. Safe to call repeatedly;
- * a second call while one is in flight is a no-op.
+ * Push every queued write for the current UID. Safe to call
+ * repeatedly; a second call while one is in flight is a no-op.
  */
 export async function drain(): Promise<void> {
   if (draining) return;
@@ -65,15 +83,13 @@ export async function drain(): Promise<void> {
     status().setStatus('syncing');
     const drained: typeof snap = [];
     for (const entry of snap) {
-      if (entry.table !== weightTable.TABLE) {
-        // Phase 2 only ships the weight adapter. Unknown tables sit in
-        // the queue harmlessly until their adapter lands.
+      const adapter = ADAPTERS_BY_NAME.get(entry.table);
+      if (!adapter) {
+        // Unknown table — leave it queued so a future build with the
+        // adapter can drain it.
         continue;
       }
-      const result = await weightTable.pushRow(
-        supabase,
-        entry.row as Parameters<typeof weightTable.pushRow>[1],
-      );
+      const result = await adapter.pushRow(supabase, entry.row);
       if (result.ok) {
         drained.push(entry);
       } else {
@@ -100,8 +116,8 @@ export async function drain(): Promise<void> {
 }
 
 /**
- * Pull every row updated since our last successful pull, LWW-merge into
- * the local store, and advance the bookmark.
+ * Pull every row updated since our last successful pull, LWW-merge
+ * into the local stores, and advance the per-table watermarks.
  */
 export async function pull(): Promise<void> {
   if (pulling) return;
@@ -113,29 +129,37 @@ export async function pull(): Promise<void> {
   const prev = status().status;
   try {
     status().setStatus('syncing');
-    const since = await getLastSyncedAt(uid, weightTable.TABLE);
-    const result = await weightTable.pullSince(supabase, uid, since);
+    let anyFailure = false;
+    let failureMessage: string | null = null;
+    let isNetworkFailure = false;
+    let touchedAny = false;
 
-    if (!result.ok) {
-      const isNetwork = /network|fetch|failed to fetch/i.test(result.error);
-      status().setStatus(isNetwork ? 'offline' : 'error');
-      status().setError(isNetwork ? null : result.error);
+    for (const adapter of ADAPTERS) {
+      const since = await getLastSyncedAt(uid, adapter.name);
+      const result = await adapter.pull(supabase, uid, since);
+      if (!result.ok) {
+        anyFailure = true;
+        failureMessage = result.error;
+        isNetworkFailure = /network|fetch|failed to fetch/i.test(result.error);
+        // Keep pulling other tables — one missing table shouldn't
+        // block progress on the rest.
+        continue;
+      }
+      if (result.nextSince != null) {
+        await setLastSyncedAt(uid, adapter.name, result.nextSince);
+        touchedAny = true;
+      }
+    }
+
+    if (anyFailure) {
+      status().setStatus(isNetworkFailure ? 'offline' : 'error');
+      status().setError(isNetworkFailure ? null : failureMessage);
       return;
     }
 
-    if (result.rows.length > 0) {
-      await useWeightStore.getState().applyServerRows(result.rows);
-      const max = maxUpdatedAt(result.rows);
-      if (max != null) await setLastSyncedAt(uid, weightTable.TABLE, max);
-      status().setLastSyncedAt(Date.now());
-    } else if (since == null) {
-      // First pull for this UID that returned nothing — mark the bookmark
-      // with `now` so subsequent pulls have a starting point that skips
-      // the historical scan.
-      status().setLastSyncedAt(Date.now());
-    }
+    if (touchedAny) status().setLastSyncedAt(Date.now());
+    else if (prev === 'idle') status().setLastSyncedAt(Date.now());
 
-    // Preserve a pre-existing offline/error banner if a mutation raced us.
     if (prev !== 'offline' && prev !== 'error') {
       status().setStatus('idle');
       status().setError(null);
@@ -147,48 +171,55 @@ export async function pull(): Promise<void> {
   }
 }
 
+async function enqueueRow(uid: string, table: string, rowId: string, serverRow: unknown) {
+  await queue.enqueue(uid, { table, rowId, row: serverRow });
+  await refreshPendingCount(uid);
+}
+
+async function seedIfFirstTime(uid: string) {
+  for (const adapter of ADAPTERS) {
+    const since = await getLastSyncedAt(uid, adapter.name);
+    if (since != null) continue;
+    for (const seed of adapter.seedRows(uid)) {
+      await queue.enqueue(uid, {
+        table: adapter.name,
+        rowId: seed.rowId,
+        row: seed.serverRow,
+      });
+    }
+  }
+  await refreshPendingCount(uid);
+}
+
+function bindStoreSubscriptions(uid: string) {
+  // Tear down any leftover subs first — defensive against a rebind
+  // racing with a previous UID's teardown.
+  for (const off of storeUnsubs) off();
+  storeUnsubs = [];
+
+  for (const adapter of ADAPTERS) {
+    const off = adapter.subscribe(uid, (rowId, serverRow) => {
+      void enqueueRow(uid, adapter.name, rowId, serverRow).then(() => void drain());
+    });
+    storeUnsubs.push(off);
+  }
+}
+
 async function bindToUid(uid: string) {
   boundUid = uid;
   status().setStatus('syncing');
   await refreshPendingCount(uid);
-
-  // Seed the queue with everything currently on device the first time we
-  // see this UID (fresh sign-in, or upgrade from a build with no sync).
-  // Subsequent launches with a populated `lastSyncedAt` skip this so we
-  // don't re-push the world on every start.
-  const since = await getLastSyncedAt(uid, weightTable.TABLE);
-  if (since == null) {
-    const rows = useWeightStore.getState().getAllRowsForSync();
-    for (const row of rows) {
-      await queue.enqueue(uid, {
-        table: weightTable.TABLE,
-        rowId: row.id,
-        row: weightTable.toServerRow(row, uid),
-      });
-    }
-    await refreshPendingCount(uid);
-  }
-
+  await seedIfFirstTime(uid);
+  bindStoreSubscriptions(uid);
   await pull();
   await drain();
 }
 
 async function unbind() {
   boundUid = null;
+  for (const off of storeUnsubs) off();
+  storeUnsubs = [];
   status().setPendingWrites(0);
-}
-
-/**
- * Enqueue a single weight-entry write. Called by the store subscription
- * so mutation → server round-trip is one method away.
- */
-async function enqueueWeightRow(uid: string, row: WeightEntry) {
-  await queue.enqueue(uid, {
-    table: weightTable.TABLE,
-    rowId: row.id,
-    row: weightTable.toServerRow(row, uid),
-  });
-  await refreshPendingCount(uid);
 }
 
 /**
@@ -205,7 +236,6 @@ export function startSyncEngine(): void {
     return;
   }
 
-  // Auth subscription — bind/rebind as the UID changes.
   useAuthStore.subscribe((state, prev) => {
     const uid = state.user?.id ?? null;
     const prevUid = prev.user?.id ?? null;
@@ -218,41 +248,20 @@ export function startSyncEngine(): void {
     void bindToUid(uid);
   });
 
-  // If the store already has a user (bootstrap resolved before we
-  // subscribed) bind immediately.
   const uid = currentUid();
   if (uid) void bindToUid(uid);
-
-  // Weight store — every persisted change lands as a server upsert.
-  // We diff (entries + tombstones) against the previous snapshot and
-  // enqueue any row whose `updatedAt` moved forward.
-  let lastSnapshot = new Map<string, number>();
-  useWeightStore.subscribe((state) => {
-    const activeUid = boundUid;
-    if (!activeUid) return;
-
-    const all = [...state.entries, ...state.tombstones];
-    const nextSnapshot = new Map<string, number>();
-    for (const row of all) nextSnapshot.set(row.id, row.updatedAt);
-
-    for (const row of all) {
-      const prev = lastSnapshot.get(row.id);
-      if (prev == null || row.updatedAt > prev) {
-        void enqueueWeightRow(activeUid, row).then(() => void drain());
-      }
-    }
-    lastSnapshot = nextSnapshot;
-  });
 }
 
 /**
  * Test-only helper: reset internal module state so a fresh bootstrap
- * can run in a new test. No-op outside tests but harmless to call.
+ * can run in a new test. Idempotent.
  */
 export function __resetForTests(): void {
   started = false;
   boundUid = null;
   draining = false;
   pulling = false;
+  for (const off of storeUnsubs) off();
+  storeUnsubs = [];
   status().reset();
 }

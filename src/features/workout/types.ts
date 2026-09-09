@@ -44,4 +44,12 @@ export interface WorkoutSession {
   exercises: LoggedExercise[];
   currentExerciseIndex?: number;
   pausedAt?: number;
+  /**
+   * ms of the last mutation touching this session. Sync layer LWW field.
+   * Backfilled from `completedAt` (finished sessions) or `startedAt` for
+   * rows written before phase 3.
+   */
+  updatedAt?: number;
+  /** ms of a soft delete, or null/undefined for live rows. */
+  deletedAt?: number | null;
 }
