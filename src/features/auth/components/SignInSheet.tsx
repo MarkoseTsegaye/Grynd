@@ -57,16 +57,22 @@ export function SignInSheet({ sheetRef, onChange }: Props) {
     [],
   );
 
+  const resetSheet = useCallback(() => {
+    setStep('providers');
+    setEmail('');
+    setToken('');
+    setError(null);
+  }, []);
+
   const handleSheetChange = useCallback(
     (index: number) => {
       onChange?.(index);
-      if (index < 0) {
-        // Reset when dismissed so the next open starts at the provider list.
-        setStep('providers');
-        setEmail('');
-        setToken('');
-        setError(null);
-      }
+      // Deliberately do NOT reset on dismiss. A user who sent a code
+      // and then accidentally swiped down should reopen and land right
+      // back on the token entry — Supabase rate-limits repeat sends,
+      // and forcing them to re-request is a bad UX.
+      // Reset happens explicitly on successful sign-in (see
+      // handleVerifyCode) or when the user backs out.
     },
     [onChange],
   );
@@ -90,11 +96,12 @@ export function SignInSheet({ sheetRef, onChange }: Props) {
     setError(null);
     const result = await verifyEmailOtp(email.trim(), token.trim());
     if (result.ok) {
+      resetSheet();
       sheetRef.current?.dismiss();
     } else {
       setError(result.error);
     }
-  }, [canVerifyToken, email, sheetRef, token, verifyEmailOtp]);
+  }, [canVerifyToken, email, resetSheet, sheetRef, token, verifyEmailOtp]);
 
   return (
     <BottomSheetModal
