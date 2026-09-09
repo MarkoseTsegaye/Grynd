@@ -1,5 +1,10 @@
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { useAuthStore } from '../../features/auth/store/authStore';
+import { useWeightStore } from '../../features/weight/store/weightStore';
+import { useSplitsStore } from '../../features/splits';
+import { useHistoryStore } from '../../features/history/store/historyStore';
+import { useCycleStore } from '../../features/splits/store/cycleStore';
+import { usePrefsStore } from '../../shared/store/prefsStore';
 import { useSyncStatusStore } from './status';
 import * as queue from './queue';
 import { getLastSyncedAt, setLastSyncedAt } from './lib/lastSynced';
@@ -250,6 +255,70 @@ export function startSyncEngine(): void {
 
   const uid = currentUid();
   if (uid) void bindToUid(uid);
+}
+
+/**
+ * Force-push every local row to the server right now. Called from the
+ * Settings "Sync now" button. Guarantees that anything on device ends
+ * up in Supabase, even in the failure modes the automatic seed leaves
+ * behind (stores that hadn't loaded from AsyncStorage when the engine
+ * first bound; a UID switch that raced with a store hydration).
+ *
+ * Steps:
+ *   1. Ensure every store has hydrated from AsyncStorage — the seed
+ *      relies on `getState()` returning real rows.
+ *   2. Enqueue every local row for every adapter (dedup keeps the queue
+ *      from bloating if the row was already queued).
+ *   3. Drain.
+ */
+export async function pushAllNow(): Promise<{ ok: true; pushed: number } | { ok: false; error: string }> {
+  if (!isSupabaseConfigured() || !supabase) {
+    return { ok: false, error: 'Cloud sync is not configured.' };
+  }
+  const uid = currentUid();
+  if (!uid) {
+    return { ok: false, error: 'Sign in first — no account bound.' };
+  }
+
+  status().setStatus('syncing');
+  try {
+    // Hydrate every store so seedRows() sees real data. Guarded so an
+    // already-loaded store doesn't get re-read from disk needlessly.
+    const weight = useWeightStore.getState();
+    const splits = useSplitsStore.getState();
+    const history = useHistoryStore.getState();
+    const cycle = useCycleStore.getState();
+    const prefs = usePrefsStore.getState();
+
+    await Promise.all([
+      weight.isLoaded ? Promise.resolve() : weight.loadEntries(),
+      splits.isLoaded ? Promise.resolve() : splits.loadData(),
+      history.isLoaded ? Promise.resolve() : history.loadSessions(),
+      cycle.isLoaded ? Promise.resolve() : cycle.loadCycle(),
+      prefs.isLoaded ? Promise.resolve() : prefs.loadPrefs(),
+    ]);
+
+    let enqueued = 0;
+    for (const adapter of ADAPTERS) {
+      for (const seed of adapter.seedRows(uid)) {
+        await queue.enqueue(uid, {
+          table: adapter.name,
+          rowId: seed.rowId,
+          row: seed.serverRow,
+        });
+        enqueued += 1;
+      }
+    }
+    await refreshPendingCount(uid);
+
+    await drain();
+    return { ok: true, pushed: enqueued };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    status().setStatus('error');
+    status().setError(message);
+    return { ok: false, error: message };
+  }
 }
 
 /**

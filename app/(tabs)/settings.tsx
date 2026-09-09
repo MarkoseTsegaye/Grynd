@@ -9,7 +9,7 @@ import { useCycleStore } from '../../src/features/splits/store/cycleStore';
 import { useSplitsStore } from '../../src/features/splits';
 import { usePrefsStore } from '../../src/shared/store/prefsStore';
 import { SignInSheet, useAuth, useAuthStore } from '../../src/features/auth';
-import { pull as syncPull, useSyncStatusStore } from '../../src/storage/sync';
+import { pull as syncPull, pushAllNow, useSyncStatusStore } from '../../src/storage/sync';
 import { SyncStatusDot } from '../../src/shared/components/SyncStatusDot';
 import {
   REST_PRESETS,
@@ -132,6 +132,13 @@ export default function SettingsScreen() {
     );
   }, [signOut]);
 
+  const handlePushAllNow = useCallback(async () => {
+    const result = await pushAllNow();
+    if (!result.ok) {
+      showDialog('Sync failed', result.error, [{ text: 'OK', style: 'cancel' }]);
+    }
+  }, []);
+
   const isReady = cycleLoaded && splitsLoaded && prefsLoaded;
   const days = cycle?.days ?? [];
   const canReset = days.length > 0;
@@ -238,16 +245,29 @@ export default function SettingsScreen() {
             {!isUnconfigured && (
               <View className="flex-row gap-2 mt-4">
                 {isIdentified ? (
-                  <TouchableOpacity
-                    className="flex-1 bg-surface-2 rounded-lg py-3 items-center"
-                    onPress={handleSignOut}
-                    accessibilityLabel="Sign out"
-                    activeOpacity={0.7}
-                  >
-                    <Text className={`text-text-primary ${textRoles.buttonLabel}`}>
-                      Sign out
-                    </Text>
-                  </TouchableOpacity>
+                  <>
+                    <TouchableOpacity
+                      className="flex-1 bg-accent rounded-lg py-3 items-center"
+                      onPress={() => void handlePushAllNow()}
+                      disabled={syncStatus === 'syncing'}
+                      accessibilityLabel="Sync all data to cloud"
+                      activeOpacity={0.7}
+                    >
+                      <Text className={`text-surface-0 ${textRoles.buttonLabel}`}>
+                        Sync now
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      className="flex-1 bg-surface-2 rounded-lg py-3 items-center"
+                      onPress={handleSignOut}
+                      accessibilityLabel="Sign out"
+                      activeOpacity={0.7}
+                    >
+                      <Text className={`text-text-primary ${textRoles.buttonLabel}`}>
+                        Sign out
+                      </Text>
+                    </TouchableOpacity>
+                  </>
                 ) : (
                   <TouchableOpacity
                     className="flex-1 bg-accent rounded-lg py-3 items-center"
