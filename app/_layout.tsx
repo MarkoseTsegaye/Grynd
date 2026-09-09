@@ -18,6 +18,7 @@ import {
 import { View } from 'react-native';
 import { usePrefsStore } from '../src/shared/store/prefsStore';
 import { useResumeWorkoutPrompt } from '../src/features/workout';
+import { useAuthStore } from '../src/features/auth';
 import { DevBadge } from '../src/shared/components/DevBadge';
 
 const stackHeader = {
@@ -38,10 +39,20 @@ export default function RootLayout() {
   });
 
   const { loadPrefs } = usePrefsStore();
+  const bootstrapAuth = useAuthStore((s) => s.bootstrap);
 
   useEffect(() => {
     loadPrefs();
   }, [loadPrefs]);
+
+  useEffect(() => {
+    // Anonymous bootstrap — see plan-of-record. On first launch this creates
+    // a real UID silently so the user can start writing data immediately;
+    // on subsequent launches it just restores the persisted session. When
+    // Supabase env vars aren't set, this resolves to `status: 'unconfigured'`
+    // and every downstream auth call becomes a no-op.
+    void bootstrapAuth();
+  }, [bootstrapAuth]);
 
   if (!fontsLoaded) {
     return <View className="flex-1 bg-surface-0" />;

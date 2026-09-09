@@ -1,12 +1,14 @@
-import React, { useEffect, useCallback, useState } from 'react';
+import React, { useEffect, useCallback, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, Switch, ScrollView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { showDialog } from '../../src/shared/lib/dialog';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCycleStore } from '../../src/features/splits/store/cycleStore';
 import { useSplitsStore } from '../../src/features/splits';
 import { usePrefsStore } from '../../src/shared/store/prefsStore';
+import { SignInSheet, useAuth, useAuthStore } from '../../src/features/auth';
 import {
   REST_PRESETS,
   REST_STEP_SECONDS,
@@ -69,6 +71,29 @@ export default function SettingsScreen() {
     }, [loadCycle]),
   );
 
+  const { status, user, isAnonymous, isIdentified, isUnconfigured } = useAuth();
+  const signOut = useAuthStore((s) => s.signOut);
+  const signInSheetRef = useRef<BottomSheetModal>(null);
+
+  const handleSignIn = useCallback(() => {
+    signInSheetRef.current?.present();
+  }, []);
+
+  const handleSignOut = useCallback(() => {
+    showDialog(
+      'Sign out?',
+      'Your data will stay on this device. Signing back in with the same account restores it on any device.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign out',
+          style: 'destructive',
+          onPress: () => void signOut(),
+        },
+      ],
+    );
+  }, [signOut]);
+
   const isReady = cycleLoaded && splitsLoaded && prefsLoaded;
   const days = cycle?.days ?? [];
   const canReset = days.length > 0;
@@ -110,6 +135,71 @@ export default function SettingsScreen() {
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         <View className="px-5 mb-8">
+          <Text className={`text-text-secondary ${textRoles.sectionLabel} mb-3`}>
+            Account
+          </Text>
+
+          <View className="bg-surface-1 rounded-lg px-4 py-4 mb-8">
+            <View className="flex-row items-center">
+              <Icon
+                name={isIdentified ? 'account-check' : 'account-circle-outline'}
+                size={22}
+                color={isIdentified ? 'accent' : 'text-secondary'}
+              />
+              <View className="flex-1 ml-3">
+                <Text className={`text-text-primary ${textRoles.cardTitle}`}>
+                  {isIdentified
+                    ? (user?.email ?? 'Signed in')
+                    : isAnonymous
+                      ? 'Not signed in'
+                      : isUnconfigured
+                        ? 'Cloud sync unavailable'
+                        : status === 'bootstrapping'
+                          ? 'Setting up…'
+                          : 'Sign in to back up your data'}
+                </Text>
+                <Text className={`text-text-secondary ${textRoles.bodySmall} mt-0.5`}>
+                  {isIdentified
+                    ? 'Your workouts sync across devices'
+                    : isAnonymous
+                      ? 'Sign in to back up and sync across devices'
+                      : isUnconfigured
+                        ? 'This build has no cloud provider configured'
+                        : 'One tap to keep your progress safe'}
+                </Text>
+              </View>
+            </View>
+
+            {!isUnconfigured && (
+              <View className="flex-row gap-2 mt-4">
+                {isIdentified ? (
+                  <TouchableOpacity
+                    className="flex-1 bg-surface-2 rounded-lg py-3 items-center"
+                    onPress={handleSignOut}
+                    accessibilityLabel="Sign out"
+                    activeOpacity={0.7}
+                  >
+                    <Text className={`text-text-primary ${textRoles.buttonLabel}`}>
+                      Sign out
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    className="flex-1 bg-accent rounded-lg py-3 items-center"
+                    onPress={handleSignIn}
+                    disabled={status === 'bootstrapping'}
+                    accessibilityLabel="Sign in"
+                    activeOpacity={0.7}
+                  >
+                    <Text className={`text-surface-0 ${textRoles.buttonLabel}`}>
+                      Sign in
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+          </View>
+
           <Text className={`text-text-secondary ${textRoles.sectionLabel} mb-3`}>
             Units
           </Text>
@@ -302,6 +392,8 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <SignInSheet sheetRef={signInSheetRef} />
     </View>
   );
 }
