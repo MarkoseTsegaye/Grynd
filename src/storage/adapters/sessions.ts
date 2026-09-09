@@ -4,8 +4,16 @@ import { sortExercisesByPerformedOrder } from '../../features/workout/lib/sortEx
 import type { WorkoutSession, LoggedExercise, LoggedSet } from '../../features/workout/types';
 
 function normalizeSession(session: WorkoutSession): WorkoutSession {
+  // Backfill `updatedAt` for sessions saved before phase 3 (the field
+  // didn't exist). Prefer `completedAt` for finished workouts; fall
+  // back to `startedAt` for anything still open.
+  const updatedAt =
+    typeof session.updatedAt === 'number'
+      ? session.updatedAt
+      : session.completedAt ?? session.startedAt;
   return {
     ...session,
+    updatedAt,
     exercises: sortExercisesByPerformedOrder(
       session.exercises.map((ex) => ({
         ...ex,
@@ -93,10 +101,17 @@ export async function clearActiveSession(): Promise<void> {
   }
 }
 
+/**
+ * Soft-delete a session — set `deletedAt` and bump `updatedAt` so the
+ * sync layer pushes the tombstone. UI code filters these out.
+ */
 export async function deleteSession(sessionId: string): Promise<void> {
   try {
     const sessions = await getSessions();
-    const updated = sessions.filter((s) => s.id !== sessionId);
+    const now = Date.now();
+    const updated = sessions.map((s) =>
+      s.id === sessionId ? { ...s, deletedAt: now, updatedAt: now } : s,
+    );
     await AsyncStorage.setItem(STORAGE_KEYS.SESSIONS, JSON.stringify(updated));
   } catch (err) {
     throw new Error(`Failed to delete session: ${String(err)}`);

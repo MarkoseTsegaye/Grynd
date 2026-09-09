@@ -14,6 +14,18 @@ interface CycleState {
   addRestDay: () => Promise<void>;
   removeDay: (dayId: string) => Promise<void>;
   resetCyclePosition: () => Promise<void>;
+  /**
+   * Merge a server-side cycle row into the local state. Because the
+   * cycle is a singleton per user, this is a straight LWW compare on
+   * `updatedAt` — no per-row merging.
+   */
+  applyServerCycle: (row: WorkoutCycle) => Promise<void>;
+  /** Snapshot the current cycle for the sync engine, or null if none. */
+  getCycleForSync: () => WorkoutCycle | null;
+}
+
+function stamp(cycle: WorkoutCycle): WorkoutCycle {
+  return { ...cycle, updatedAt: Date.now() };
 }
 
 export const useCycleStore = create<CycleState>()(
@@ -30,20 +42,22 @@ export const useCycleStore = create<CycleState>()(
       advanceCycle: async () => {
         const { cycle } = get();
         if (!cycle || cycle.days.length === 0) return;
-        const updated: WorkoutCycle = {
+        const updated = stamp({
           ...cycle,
           currentIndex: (cycle.currentIndex + 1) % cycle.days.length,
           lastAdvancedAt: Date.now(),
-        };
+        });
         set({ cycle: updated });
         await saveWorkoutCycle(updated);
       },
 
       reorderDays: async (days) => {
         const { cycle } = get();
-        const updated: WorkoutCycle = cycle
-          ? { ...cycle, days }
-          : { days, currentIndex: 0, lastAdvancedAt: null };
+        const updated: WorkoutCycle = stamp(
+          cycle
+            ? { ...cycle, days }
+            : { days, currentIndex: 0, lastAdvancedAt: null, updatedAt: 0 },
+        );
         set({ cycle: updated });
         await saveWorkoutCycle(updated);
       },
@@ -51,9 +65,11 @@ export const useCycleStore = create<CycleState>()(
       addSplitDay: async (splitId) => {
         const { cycle } = get();
         const newDay: CycleDay = { id: generateId(), type: 'split', splitId };
-        const updated: WorkoutCycle = cycle
-          ? { ...cycle, days: [...cycle.days, newDay] }
-          : { days: [newDay], currentIndex: 0, lastAdvancedAt: null };
+        const updated: WorkoutCycle = stamp(
+          cycle
+            ? { ...cycle, days: [...cycle.days, newDay] }
+            : { days: [newDay], currentIndex: 0, lastAdvancedAt: null, updatedAt: 0 },
+        );
         set({ cycle: updated });
         await saveWorkoutCycle(updated);
       },
@@ -61,9 +77,11 @@ export const useCycleStore = create<CycleState>()(
       addRestDay: async () => {
         const { cycle } = get();
         const newDay: CycleDay = { id: generateId(), type: 'rest' };
-        const updated: WorkoutCycle = cycle
-          ? { ...cycle, days: [...cycle.days, newDay] }
-          : { days: [newDay], currentIndex: 0, lastAdvancedAt: null };
+        const updated: WorkoutCycle = stamp(
+          cycle
+            ? { ...cycle, days: [...cycle.days, newDay] }
+            : { days: [newDay], currentIndex: 0, lastAdvancedAt: null, updatedAt: 0 },
+        );
         set({ cycle: updated });
         await saveWorkoutCycle(updated);
       },
@@ -79,7 +97,7 @@ export const useCycleStore = create<CycleState>()(
         const shifted =
           removedIndex < cycle.currentIndex ? cycle.currentIndex - 1 : cycle.currentIndex;
         const currentIndex = Math.min(Math.max(0, shifted), Math.max(0, days.length - 1));
-        const updated: WorkoutCycle = { ...cycle, days, currentIndex };
+        const updated = stamp({ ...cycle, days, currentIndex });
         set({ cycle: updated });
         await saveWorkoutCycle(updated);
       },
@@ -87,10 +105,19 @@ export const useCycleStore = create<CycleState>()(
       resetCyclePosition: async () => {
         const { cycle } = get();
         if (!cycle || cycle.days.length === 0) return;
-        const updated: WorkoutCycle = { ...cycle, currentIndex: 0 };
+        const updated = stamp({ ...cycle, currentIndex: 0 });
         set({ cycle: updated });
         await saveWorkoutCycle(updated);
       },
+
+      applyServerCycle: async (row) => {
+        const { cycle } = get();
+        if (cycle && row.updatedAt <= cycle.updatedAt) return;
+        set({ cycle: row });
+        await saveWorkoutCycle(row);
+      },
+
+      getCycleForSync: () => get().cycle,
     }),
     { name: 'CycleStore', enabled: process.env.APP_ENV === 'development' },
   ),

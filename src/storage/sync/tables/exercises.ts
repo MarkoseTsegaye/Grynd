@@ -1,45 +1,49 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { WeightEntry } from '../../../features/weight/types';
-import { useWeightStore } from '../../../features/weight/store/weightStore';
+import type { Exercise } from '../../../features/splits/types';
+import { useSplitsStore } from '../../../features/splits';
 import type { TableAdapter } from '../lib/adapter';
 import { maxUpdatedAt } from '../lib/merge';
 
-const TABLE = 'weight_entries' as const;
+const TABLE = 'exercises' as const;
 
 interface ServerRow {
   user_id: string;
   id: string;
-  date_key: string;
-  logged_at: number;
-  weight_lbs: number;
+  name: string;
+  notes: string | null;
+  unilateral: boolean | null;
+  plate_loaded: boolean | null;
   updated_at: number;
   deleted_at: number | null;
 }
 
-function toServerRow(entry: WeightEntry, userId: string): ServerRow {
+function toServerRow(exercise: Exercise, userId: string): ServerRow {
   return {
     user_id: userId,
-    id: entry.id,
-    date_key: entry.dateKey,
-    logged_at: entry.loggedAt,
-    weight_lbs: entry.weightLbs,
-    updated_at: entry.updatedAt,
-    deleted_at: entry.deletedAt ?? null,
+    id: exercise.id,
+    name: exercise.name,
+    notes: exercise.notes ?? null,
+    unilateral: exercise.unilateral ?? null,
+    plate_loaded: exercise.plateLoaded ?? null,
+    updated_at: exercise.updatedAt,
+    deleted_at: exercise.deletedAt ?? null,
   };
 }
 
-function fromServerRow(row: ServerRow): WeightEntry {
-  return {
+function fromServerRow(row: ServerRow): Exercise {
+  const exercise: Exercise = {
     id: row.id,
-    dateKey: row.date_key,
-    loggedAt: row.logged_at,
-    weightLbs: row.weight_lbs,
+    name: row.name,
     updatedAt: row.updated_at,
     deletedAt: row.deleted_at,
   };
+  if (row.notes) exercise.notes = row.notes;
+  if (row.unilateral) exercise.unilateral = true;
+  if (row.plate_loaded) exercise.plateLoaded = true;
+  return exercise;
 }
 
-export const weightAdapter: TableAdapter = {
+export const exercisesAdapter: TableAdapter = {
   name: TABLE,
 
   async pushRow(supabase, row) {
@@ -60,25 +64,23 @@ export const weightAdapter: TableAdapter = {
     const rows = (data ?? []) as ServerRow[];
     if (rows.length === 0) return { ok: true, nextSince: null };
 
-    const entries = rows.map(fromServerRow);
-    await useWeightStore.getState().applyServerRows(entries);
-    return { ok: true, nextSince: maxUpdatedAt(entries) };
+    const exercises = rows.map(fromServerRow);
+    await useSplitsStore.getState().applyServerExercises(exercises);
+    return { ok: true, nextSince: maxUpdatedAt(exercises) };
   },
 
   seedRows(uid) {
-    const all = useWeightStore.getState().getAllRowsForSync();
+    const all = useSplitsStore.getState().getAllExerciseRowsForSync();
     return all.map((row) => ({ rowId: row.id, serverRow: toServerRow(row, uid) }));
   },
 
   subscribe(uid, enqueue) {
-    // Diff (entries + tombstones) against the previous snapshot: any row
-    // whose updatedAt moved forward is enqueued as a fresh upsert.
     let last = new Map<string, number>();
-    const snap = useWeightStore.getState().getAllRowsForSync();
+    const snap = useSplitsStore.getState().getAllExerciseRowsForSync();
     for (const row of snap) last.set(row.id, row.updatedAt);
 
-    return useWeightStore.subscribe((state) => {
-      const all = [...state.entries, ...state.tombstones];
+    return useSplitsStore.subscribe((state) => {
+      const all = [...state.exercises, ...state.exerciseTombstones];
       const next = new Map<string, number>();
       for (const row of all) next.set(row.id, row.updatedAt);
 

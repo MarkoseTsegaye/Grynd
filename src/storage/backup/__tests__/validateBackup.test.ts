@@ -40,6 +40,7 @@ function makeBackup(overrides: Partial<GryndBackupV1['data']> = {}): unknown {
         ],
         currentIndex: 0,
         lastAdvancedAt: null,
+        updatedAt: 0,
       },
       prefs: { weightUnit: 'lbs', autoAdvanceCycle: true, defaultRestSeconds: 90 },
       ...overrides,
@@ -71,7 +72,7 @@ describe('validateBackup round-trip', () => {
 
   it('accepts an empty cycle', () => {
     const result = validateBackup(
-      makeBackup({ cycle: { days: [], currentIndex: 0, lastAdvancedAt: null } }),
+      makeBackup({ cycle: { days: [], currentIndex: 0, lastAdvancedAt: null, updatedAt: 0 } }),
     );
     expect(result.ok).toBe(true);
   });

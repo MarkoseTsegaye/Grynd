@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { showDialog } from '../../src/shared/lib/dialog';
 import { useRouter } from 'expo-router';
 import { useSplitsList, SplitCard } from '../../src/features/splits';
@@ -17,8 +18,11 @@ import { CycleStrip } from '../../src/features/splits/components/CycleStrip';
 import { buildCycleStrip } from '../../src/features/splits/lib/cycleStrip';
 import { getSplitActivity } from '../../src/features/splits/lib/splitActivity';
 import { getSplitGlyph } from '../../src/features/splits/lib/splitGlyph';
-import { useHistory } from '../../src/features/history';
+import { useHistory, useHistoryStore } from '../../src/features/history';
 import { textRoles } from '../../src/shared/theme/typography';
+import { SignInPromptCard, SignInSheet, useSignInPrompt } from '../../src/features/auth';
+import { SyncStatusDot } from '../../src/shared/components/SyncStatusDot';
+import { useAuth } from '../../src/features/auth';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -26,7 +30,12 @@ export default function HomeScreen() {
   const { splits, isLoaded } = useSplitsList();
   const { getExercisesForSplit } = useSplitsStore();
   const { sessions } = useHistory();
+  const historyLoaded = useHistoryStore((s) => s.isLoaded);
+  const loadSessions = useHistoryStore((s) => s.loadSessions);
   const { cycle, isLoaded: cycleLoaded, loadCycle, advanceCycle } = useCycleStore();
+  const { isUnconfigured } = useAuth();
+  const { shouldShow: shouldShowSignInPrompt, dismiss: dismissSignInPrompt } = useSignInPrompt();
+  const signInSheetRef = useRef<BottomSheetModal>(null);
   const {
     loadActiveSession,
     session: activeSession,
@@ -41,6 +50,14 @@ export default function HomeScreen() {
   useEffect(() => {
     if (!sessionLoaded) loadActiveSession();
   }, [sessionLoaded, loadActiveSession]);
+
+  useEffect(() => {
+    // History drives the sign-in prompt threshold ("≥3 finished
+    // workouts"). Loading it on Home means the prompt appears the
+    // moment the user qualifies, without waiting for them to open the
+    // History tab.
+    if (!historyLoaded) loadSessions();
+  }, [historyLoaded, loadSessions]);
 
   if (!isLoaded || !sessionLoaded) {
     return <View className="flex-1 bg-surface-0" />;
@@ -107,13 +124,23 @@ export default function HomeScreen() {
   return (
     <View className="flex-1 bg-surface-0">
       <View
-        className="px-5 pb-4"
+        className="px-5 pb-4 flex-row items-center justify-between"
         style={{ paddingTop: Platform.OS === 'web' ? Math.max(insets.top + 8, 56) : 56 }}
       >
         <Text className={`text-text-primary ${textRoles.screenTitle}`}>Workouts</Text>
+        {!isUnconfigured && <SyncStatusDot size={9} />}
       </View>
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+        {shouldShowSignInPrompt && (
+          <View className="mx-5 mb-4">
+            <SignInPromptCard
+              onSignIn={() => signInSheetRef.current?.present()}
+              onDismiss={() => void dismissSignInPrompt()}
+            />
+          </View>
+        )}
+
         {showPausedCard && activeSession && (
           <PausedWorkoutResumeCard
             splitName={activeSession.splitName}
@@ -244,6 +271,8 @@ export default function HomeScreen() {
           </View>
         )}
       </ScrollView>
+
+      <SignInSheet sheetRef={signInSheetRef} />
     </View>
   );
 }

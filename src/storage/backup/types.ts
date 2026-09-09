@@ -38,4 +38,5 @@ export const DEFAULT_BACKUP_CYCLE: WorkoutCycle = {
   days: [],
   currentIndex: 0,
   lastAdvancedAt: null,
+  updatedAt: 0,
 };

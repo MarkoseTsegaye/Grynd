@@ -3,8 +3,8 @@ import { buildCycleStrip } from '../lib/cycleStrip';
 import type { CycleDay, Split } from '../types';
 
 const splits: Split[] = [
-  { id: 'push', name: 'Push', exerciseIds: [], createdAt: 1 },
-  { id: 'legs', name: 'Legs Day Extra Long', exerciseIds: [], createdAt: 2 },
+  { id: 'push', name: 'Push', exerciseIds: [], createdAt: 1, updatedAt: 1 },
+  { id: 'legs', name: 'Legs Day Extra Long', exerciseIds: [], createdAt: 2, updatedAt: 2 },
 ];
 
 function day(id: string, splitId?: string): CycleDay {

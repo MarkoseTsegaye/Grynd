@@ -25,6 +25,7 @@ function makeCycle(overrides: Partial<WorkoutCycle> = {}): WorkoutCycle {
     ],
     currentIndex: 2,
     lastAdvancedAt: null,
+    updatedAt: 0,
     ...overrides,
   };
 }

@@ -42,13 +42,13 @@ export async function exportBackup(): Promise<GryndBackupV1> {
     exportedAt: new Date().toISOString(),
     app: BACKUP_APP,
     data: {
-      splits,
-      exercises,
-      sessions,
+      // Tombstones exist only to reach the server on the next sync
+      // push; they carry no value inside a user-visible backup.
+      splits: splits.filter((s) => s.deletedAt == null),
+      exercises: exercises.filter((e) => e.deletedAt == null),
+      sessions: sessions.filter((s) => s.deletedAt == null),
       cycle: cycle ?? DEFAULT_BACKUP_CYCLE,
       prefs,
-      // Tombstones exist only to reach the server on the next sync push;
-      // they carry no value inside a user-visible backup.
       weight: weight.filter((e) => e.deletedAt == null),
     },
   };

@@ -117,10 +117,19 @@ function validateCycle(value: unknown): GryndBackup['data']['cycle'] | null {
     });
   }
 
+  // `updatedAt` was added with the sync layer. Older backups don't
+  // carry it — backfill from `lastAdvancedAt` (or 0 for a never-
+  // advanced cycle) so LWW has a starting value.
+  const updatedAt =
+    typeof value.updatedAt === 'number' && Number.isFinite(value.updatedAt)
+      ? value.updatedAt
+      : (value.lastAdvancedAt as number | null) ?? 0;
+
   return {
     days,
     currentIndex: value.currentIndex,
     lastAdvancedAt: value.lastAdvancedAt,
+    updatedAt,
   };
 }
 
