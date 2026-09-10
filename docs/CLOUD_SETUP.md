@@ -35,21 +35,25 @@ Under **Authentication → URL Configuration**:
 - **Redirect URLs**: add the deep-link scheme `workout-logger://auth-callback`
   and any local dev URLs (`http://localhost:8081`, Vercel preview domains).
 
-## 3. Run the migration
+## 3. Run the migrations
 
-The initial schema lives at `supabase/migrations/001_initial.sql`. Apply it
-either through the Supabase SQL Editor (paste the file, run) or via the
-Supabase CLI:
+Two migration files live under `supabase/migrations/`:
+
+- `001_initial.sql` — one table per persisted store (`splits`, `exercises`,
+  `sessions`, `cycles`, `prefs`, `weight_entries`), row-level security on
+  each, and policies scoping reads and writes to `auth.uid()`. Anonymous
+  users get their own RLS-scoped island.
+- `002_delete_user.sql` — a `delete_user()` RPC that lets a signed-in user
+  self-serve delete their own account. The Settings → Danger zone →
+  Delete account button calls this. Without it, "Delete account" fails
+  with an "unknown function" error and the user has to email support.
+
+Apply both through the Supabase SQL Editor (paste, run) or via the CLI:
 
 ```bash
 supabase link --project-ref <your-project-ref>
 supabase db push
 ```
-
-The migration creates one table per persisted store (`splits`, `exercises`,
-`sessions`, `cycles`, `prefs`, `weight_entries`), enables row-level security
-on each, and adds policies that scope reads and writes to `auth.uid()`.
-Anonymous users get their own RLS-scoped island.
 
 ## 4. Point the app at the project
 

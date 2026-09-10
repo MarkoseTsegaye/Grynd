@@ -54,6 +54,15 @@ interface AuthState {
     token: string,
   ) => Promise<{ ok: true } | { ok: false; error: string }>;
   signOut: () => Promise<void>;
+  /**
+   * Deletes the current user's server-side account (via the
+   * `delete_user()` RPC — see supabase/migrations/002_delete_user.sql)
+   * and wipes every local AsyncStorage key. Sign-out follows so the
+   * next launch bootstraps a fresh anonymous account.
+   *
+   * Irreversible. UI must confirm before calling.
+   */
+  deleteAccount: () => Promise<{ ok: true } | { ok: false; error: string }>;
 }
 
 function pickStatusFromUser(user: User | null): AuthStatus {
@@ -182,6 +191,29 @@ export const useAuthStore = create<AuthState>()(
         if (!supabase) return { ok: false, error: 'Cloud sign-in is not configured.' };
         set({ isSigningIn: true, errorMessage: null });
         try {
+          // If the current session is anonymous, attach the identity to
+          // THIS user rather than creating a new one. updateUser({email})
+          // triggers a confirm-email flow whose OTP we verify below with
+          // type: 'email_change'. Net effect: the UID stays the same, so
+          // all locally-synced data lives under one account after sign-in.
+          //
+          // For a fresh (non-anonymous) session, fall through to the
+          // standard signInWithOtp flow.
+          const currentUser = get().user;
+          const isAnon =
+            currentUser &&
+            ((currentUser as User & { is_anonymous?: boolean }).is_anonymous === true ||
+              ((currentUser.app_metadata?.providers as string[] | undefined) ?? []).length === 0);
+
+          if (isAnon) {
+            const { error } = await supabase.auth.updateUser({ email });
+            if (error) {
+              set({ errorMessage: error.message });
+              return { ok: false, error: error.message };
+            }
+            return { ok: true };
+          }
+
           const { error } = await supabase.auth.signInWithOtp({
             email,
             options: {
@@ -206,11 +238,21 @@ export const useAuthStore = create<AuthState>()(
         if (!supabase) return { ok: false, error: 'Cloud sign-in is not configured.' };
         set({ isSigningIn: true, errorMessage: null });
         try {
-          const { data, error } = await supabase.auth.verifyOtp({
-            email,
-            token,
-            type: 'email',
-          });
+          // Mirror sendEmailOtp: if the current session is anonymous,
+          // this token came from updateUser({email})'s confirmation email
+          // and verifies via type: 'email_change' — attaching the
+          // identity to the same UID. Otherwise it's a plain OTP sign-in.
+          const currentUser = get().user;
+          const isAnon =
+            currentUser &&
+            ((currentUser as User & { is_anonymous?: boolean }).is_anonymous === true ||
+              ((currentUser.app_metadata?.providers as string[] | undefined) ?? []).length === 0);
+
+          const { data, error } = await supabase.auth.verifyOtp(
+            isAnon
+              ? { email, token, type: 'email_change' }
+              : { email, token, type: 'email' },
+          );
           if (error) {
             set({ errorMessage: error.message });
             return { ok: false, error: error.message };
@@ -237,6 +279,60 @@ export const useAuthStore = create<AuthState>()(
         await supabase.auth.signOut();
         set({ session: null, user: null, status: 'idle' });
         void get();
+      },
+
+      deleteAccount: async () => {
+        if (!supabase) {
+          return { ok: false, error: 'Cloud sign-in is not configured.' };
+        }
+        set({ isSigningIn: true, errorMessage: null });
+        try {
+          // 1. Server-side delete via the RPC. Cascades wipe the user's
+          //    rows in every data table. If the migration hasn't been
+          //    applied on the target project this errors out — the
+          //    caller surfaces the message so the user knows they can
+          //    email support.
+          const { error: rpcError } = await supabase.rpc('delete_user');
+          if (rpcError) {
+            set({ errorMessage: rpcError.message });
+            return { ok: false, error: rpcError.message };
+          }
+
+          // 2. Wipe every local AsyncStorage key so the next launch
+          //    doesn't restore stale data. `getAllKeys` + `multiRemove`
+          //    is safer than clear() — it leaves alone any keys owned
+          //    by libraries we don't manage (Supabase itself, expo,
+          //    etc). We match by our own prefixes.
+          try {
+            const AsyncStorage = (
+              await import('@react-native-async-storage/async-storage')
+            ).default;
+            const keys = await AsyncStorage.getAllKeys();
+            const ours = keys.filter(
+              (k) =>
+                k.startsWith('splits:') ||
+                k.startsWith('exercises:') ||
+                k.startsWith('sessions:') ||
+                k.startsWith('cycle:') ||
+                k.startsWith('prefs:') ||
+                k.startsWith('weight:') ||
+                k.startsWith('sync:') ||
+                k.startsWith('auth:'),
+            );
+            if (ours.length > 0) await AsyncStorage.multiRemove(ours);
+          } catch {
+            // Non-fatal: the account is gone server-side; stale local
+            // data will be overwritten by the next fresh bootstrap.
+          }
+
+          // 3. Sign out so onAuthStateChange emits the transition and
+          //    the sync engine unbinds.
+          await supabase.auth.signOut();
+          set({ session: null, user: null, status: 'idle' });
+          return { ok: true };
+        } finally {
+          set({ isSigningIn: false });
+        }
       },
     }),
     { name: 'AuthStore', enabled: process.env.APP_ENV === 'development' },
