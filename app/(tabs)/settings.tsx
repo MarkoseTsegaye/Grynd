@@ -132,6 +132,33 @@ export default function SettingsScreen() {
     );
   }, [signOut]);
 
+  const deleteAccount = useAuthStore((s) => s.deleteAccount);
+
+  const handleDeleteAccount = useCallback(() => {
+    showDialog(
+      'Delete account?',
+      "This permanently deletes your account and all of your synced data on the server. Your on-device data is also wiped. This can't be undone.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            void deleteAccount().then((result) => {
+              if (!result.ok) {
+                showDialog(
+                  'Delete failed',
+                  `${result.error}\n\nIf this keeps happening, contact support.`,
+                  [{ text: 'OK', style: 'cancel' }],
+                );
+              }
+            });
+          },
+        },
+      ],
+    );
+  }, [deleteAccount]);
+
   const handlePushAllNow = useCallback(() => {
     showDialog(
       'Sync all data to cloud?',
@@ -472,7 +499,7 @@ export default function SettingsScreen() {
           <Text className={`text-danger ${textRoles.sectionLabel} mb-3`}>Danger zone</Text>
 
           <TouchableOpacity
-            className={`bg-surface-1 rounded-lg px-4 py-4 flex-row items-center mb-8 ${!canReset ? 'opacity-40' : ''}`}
+            className={`bg-surface-1 rounded-lg px-4 py-4 flex-row items-center mb-3 ${!canReset ? 'opacity-40' : ''}`}
             style={{ borderWidth: 1, borderColor: 'rgba(255, 76, 76, 0.35)' }}
             onPress={handleReset}
             disabled={!canReset}
@@ -489,6 +516,25 @@ export default function SettingsScreen() {
               </Text>
             </View>
           </TouchableOpacity>
+
+          {!isUnconfigured && (
+            <TouchableOpacity
+              className="bg-surface-1 rounded-lg px-4 py-4 flex-row items-center mb-8"
+              style={{ borderWidth: 1, borderColor: 'rgba(255, 76, 76, 0.35)' }}
+              onPress={handleDeleteAccount}
+              accessibilityRole="button"
+              accessibilityLabel="Delete account"
+              activeOpacity={0.7}
+            >
+              <Icon name="account-remove" size={20} color="danger" />
+              <View className="flex-1 ml-3">
+                <Text className={`text-danger ${textRoles.cardTitle}`}>Delete account</Text>
+                <Text className={`text-text-secondary ${textRoles.bodySmall} mt-0.5`}>
+                  Permanently remove your account and all synced data
+                </Text>
+              </View>
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
 

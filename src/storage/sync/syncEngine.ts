@@ -210,10 +210,38 @@ function bindStoreSubscriptions(uid: string) {
   }
 }
 
+/**
+ * Load every persisted store from AsyncStorage. Sync-critical: `seedRows`
+ * on each adapter reads `useXStore.getState()`, so if a store hasn't
+ * hydrated yet the seed sees an empty state and pushes nothing.
+ *
+ * Idempotent — each store's own `isLoaded` gate skips a re-read.
+ */
+async function hydrateAllStores(): Promise<void> {
+  const weight = useWeightStore.getState();
+  const splits = useSplitsStore.getState();
+  const history = useHistoryStore.getState();
+  const cycle = useCycleStore.getState();
+  const prefs = usePrefsStore.getState();
+
+  await Promise.all([
+    weight.isLoaded ? Promise.resolve() : weight.loadEntries(),
+    splits.isLoaded ? Promise.resolve() : splits.loadData(),
+    history.isLoaded ? Promise.resolve() : history.loadSessions(),
+    cycle.isLoaded ? Promise.resolve() : cycle.loadCycle(),
+    prefs.isLoaded ? Promise.resolve() : prefs.loadPrefs(),
+  ]);
+}
+
 async function bindToUid(uid: string) {
   boundUid = uid;
   status().setStatus('syncing');
   await refreshPendingCount(uid);
+  // Hydrate BEFORE seeding — earlier versions seeded off empty stores
+  // because Home hadn't loaded them yet, leaving a green dot with an
+  // empty server. This closes that gap so a fresh sign-in "just works"
+  // without the user having to tap "Sync now".
+  await hydrateAllStores();
   await seedIfFirstTime(uid);
   bindStoreSubscriptions(uid);
   await pull();
@@ -287,21 +315,7 @@ export async function pushAllNow(): Promise<{ ok: true; pushed: number } | { ok:
 
   status().setStatus('syncing');
   try {
-    // Hydrate every store so seedRows() sees real data. Guarded so an
-    // already-loaded store doesn't get re-read from disk needlessly.
-    const weight = useWeightStore.getState();
-    const splits = useSplitsStore.getState();
-    const history = useHistoryStore.getState();
-    const cycle = useCycleStore.getState();
-    const prefs = usePrefsStore.getState();
-
-    await Promise.all([
-      weight.isLoaded ? Promise.resolve() : weight.loadEntries(),
-      splits.isLoaded ? Promise.resolve() : splits.loadData(),
-      history.isLoaded ? Promise.resolve() : history.loadSessions(),
-      cycle.isLoaded ? Promise.resolve() : cycle.loadCycle(),
-      prefs.isLoaded ? Promise.resolve() : prefs.loadPrefs(),
-    ]);
+    await hydrateAllStores();
 
     // Pull first so newer server rows merge into local before we push.
     // If pull fails (network, RLS, missing table) we abort — pushing on

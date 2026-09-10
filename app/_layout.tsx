@@ -21,6 +21,7 @@ import { useResumeWorkoutPrompt } from '../src/features/workout';
 import { useAuthStore } from '../src/features/auth';
 import { startSyncEngine, pull as syncPull } from '../src/storage/sync';
 import { DevBadge } from '../src/shared/components/DevBadge';
+import { SyncErrorBanner } from '../src/shared/components/SyncErrorBanner';
 
 const stackHeader = {
   headerShown: true,
@@ -113,6 +114,7 @@ export default function RootLayout() {
             options={{ animation: 'slide_from_right', ...stackHeader, headerTitle: 'Progress' }}
           />
         </Stack>
+        <SyncErrorBanner />
         <DevBadge />
       </BottomSheetModalProvider>
       </GestureHandlerRootView>
