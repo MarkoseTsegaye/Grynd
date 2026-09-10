@@ -14,6 +14,9 @@ import { getLastSetForExercise } from '../../src/features/splits/lib/exerciseHis
 import { validateSplitName } from '../../src/features/splits/lib/splitName';
 import { showDialog } from '../../src/shared/lib/dialog';
 import { Icon } from '../../src/shared/components/Icon';
+import { Sparkline } from '../../src/features/progress';
+import { buildFirstSetSeries } from '../../src/features/progress/lib/firstSetProgress';
+import { getMetricValue } from '../../src/features/progress/lib/chartMetric';
 import { usePrefsStore } from '../../src/shared/store/prefsStore';
 import type { Exercise } from '../../src/features/splits/types';
 import { textRoles } from '../../src/shared/theme/typography';
@@ -60,10 +63,19 @@ export default function ManageSplitScreen() {
     [cycle, splitId],
   );
 
-  const lastSetByExercise = useMemo(() => {
-    const map: Record<string, string | null> = {};
+  // One pass over `sessions` per exercise, producing both the caption's
+  // last-set text and the row's est. 1RM sparkline. The per-split
+  // progress screen used to own the sparkline; it's here now so
+  // deleting that screen doesn't lose the path to a lift's chart.
+  const previewByExercise = useMemo(() => {
+    const map: Record<string, { lastSet: string | null; values: number[] }> = {};
     for (const exercise of exercises) {
-      map[exercise.id] = getLastSetForExercise(sessions, exercise.id, weightUnit);
+      map[exercise.id] = {
+        lastSet: getLastSetForExercise(sessions, exercise.id, weightUnit),
+        values: buildFirstSetSeries(sessions, exercise.id, 'all').map((point) =>
+          getMetricValue(point, 'e1rm'),
+        ),
+      };
     }
     return map;
   }, [exercises, sessions, weightUnit]);
@@ -155,7 +167,8 @@ export default function ManageSplitScreen() {
     isActive: boolean;
     getIndex: () => number | undefined;
   }) {
-    const lastSet = lastSetByExercise[exercise.id];
+    const preview = previewByExercise[exercise.id] ?? { lastSet: null, values: [] };
+    const lastSet = preview.lastSet;
     const position = (getIndex() ?? 0) + 1;
 
     return (
@@ -212,14 +225,34 @@ export default function ManageSplitScreen() {
             </View>
           </TouchableOpacity>
 
+          {/* Its own hit target: the name area edits the exercise, this
+              opens its chart. One row, two destinations, no overlap. */}
+          <TouchableOpacity
+            onPress={() =>
+              router.push({
+                pathname: '/progress/exercise/[exerciseId]',
+                params: { exerciseId: exercise.id, splitId },
+              })
+            }
+            accessibilityLabel={`View ${exercise.name} progress`}
+            accessibilityRole="button"
+            className="flex-row items-center gap-1 pl-2 pr-1 py-4"
+            activeOpacity={0.7}
+          >
+            {preview.values.length > 1 && (
+              <Sparkline values={preview.values} width={44} height={20} />
+            )}
+            <Icon name="chevron-right" size={18} color="text-secondary" />
+          </TouchableOpacity>
+
           <TouchableOpacity
             onPress={() => confirmRemove(exercise)}
             accessibilityLabel={`Remove ${exercise.name}`}
             accessibilityRole="button"
-            className="px-3 py-4"
+            className="px-2 py-4"
             activeOpacity={0.7}
           >
-            <Icon name="trash-can-outline" size={18} color="text-disabled" />
+            <Icon name="trash-can-outline" size={18} color="text-secondary" />
           </TouchableOpacity>
         </View>
       </ScaleDecorator>

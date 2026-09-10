@@ -89,29 +89,15 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="progress"
+        name="trends"
         options={{
-          title: 'Progress',
-          tabBarLabel: 'Progress',
-          tabBarIcon: ({ focused }) => (
-            <MaterialCommunityIcons
-              name={focused ? 'chart-line' : 'chart-line-variant'}
-              size={24}
-              color={focused ? colors.accent : colors['text-secondary']}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="weight"
-        options={{
-          title: 'Weight',
-          tabBarLabel: 'Weight',
-          // scale-bathroom has no outlined variant in MDI; the accent color
+          title: 'Trends',
+          tabBarLabel: 'Trends',
+          // trending-up has no outlined variant in MDI; the accent color
           // swap on focus is enough to signal state.
           tabBarIcon: ({ focused }) => (
             <MaterialCommunityIcons
-              name="scale-bathroom"
+              name="trending-up"
               size={24}
               color={focused ? colors.accent : colors['text-secondary']}
             />

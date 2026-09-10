@@ -103,15 +103,6 @@ export default function HistoryScreen() {
             />
           </TouchableOpacity>
         )}
-        <TouchableOpacity
-          onPress={() => router.push('/progress/volume')}
-          accessibilityLabel="View workout volume chart"
-          accessibilityRole="button"
-          activeOpacity={0.7}
-          hitSlop={8}
-        >
-          <Icon name="chart-line" size={24} color="text-secondary" />
-        </TouchableOpacity>
       </View>
     </View>
   );

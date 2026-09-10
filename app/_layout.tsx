@@ -102,12 +102,12 @@ export default function RootLayout() {
             options={{ animation: 'slide_from_right', ...stackHeader, headerTitle: 'Training Cycle' }}
           />
           <Stack.Screen
-            name="progress/volume"
-            options={{ animation: 'slide_from_right', ...stackHeader, headerTitle: 'Workout Volume' }}
+            name="trends/weight"
+            options={{ animation: 'slide_from_right', ...stackHeader, headerTitle: 'Body weight' }}
           />
           <Stack.Screen
-            name="progress/split/[splitId]"
-            options={{ animation: 'slide_from_right', ...stackHeader, headerTitle: 'Exercises' }}
+            name="progress/volume"
+            options={{ animation: 'slide_from_right', ...stackHeader, headerTitle: 'Workout Volume' }}
           />
           <Stack.Screen
             name="progress/exercise/[exerciseId]"
