@@ -12,13 +12,22 @@ import {
   getSplitFilters,
 } from '../../src/features/history/lib/sessionSummary';
 import { Icon } from '../../src/shared/components/Icon';
+import { Chip } from '../../src/shared/components/Chip';
+import { showDialog } from '../../src/shared/lib/dialog';
+import { formatShortDate } from '../../src/shared/lib/date';
 import { textRoles } from '../../src/shared/theme/typography';
+import type { WorkoutSession } from '../../src/features/workout/types';
 
 export default function HistoryScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { sessions, isLoaded, deleteSession } = useHistory();
-  const currentOpenRef = useRef<Swipeable | null>(null);
+  // Keyed by session id rather than a ref created inside renderItem —
+  // that produced a fresh ref object on every render, so the
+  // "close the previously open row" check compared against stale refs
+  // and only worked by accident.
+  const swipeableRefs = useRef(new Map<string, Swipeable>());
+  const currentOpenId = useRef<string | null>(null);
   const [splitFilter, setSplitFilter] = useState<string | null>(null);
   const [legendOpen, setLegendOpen] = useState(false);
 
@@ -28,22 +37,39 @@ export default function HistoryScreen() {
     [sessions, splitFilter],
   );
 
+  // Deleting a session now propagates to every signed-in device as a
+  // sync tombstone, and there is no undo — so it asks first. Declining
+  // closes the row rather than leaving it open on a destructive action.
   const handleDelete = useCallback(
-    async (id: string, swipeableRef: Swipeable) => {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      swipeableRef.close();
-      await deleteSession(id);
+    (session: WorkoutSession) => {
+      const row = swipeableRefs.current.get(session.id);
+      showDialog(
+        'Delete workout?',
+        `${session.splitName} · ${formatShortDate(session.completedAt ?? session.startedAt)} will be removed from every device you're signed in on. This cannot be undone.`,
+        [
+          { text: 'Cancel', style: 'cancel', onPress: () => row?.close() },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: () => {
+              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              row?.close();
+              void deleteSession(session.id);
+            },
+          },
+        ],
+      );
     },
     [deleteSession],
   );
 
   const renderRightActions = useCallback(
-    (id: string, swipeableRef: React.RefObject<Swipeable | null>) => (
+    (session: WorkoutSession) => (
       <TouchableOpacity
         className="bg-danger items-center justify-center rounded-lg mb-4"
         style={{ width: 80 }}
-        onPress={() => swipeableRef.current && handleDelete(id, swipeableRef.current)}
-        accessibilityLabel="Delete session"
+        onPress={() => handleDelete(session)}
+        accessibilityLabel={`Delete ${session.splitName} session`}
         activeOpacity={0.8}
       >
         <Icon name="trash-can-outline" size={24} color="text-primary" />
@@ -117,26 +143,15 @@ export default function HistoryScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ gap: 8, paddingBottom: 14 }}
         >
-          {[null, ...splitNames].map((name) => {
-            const selected = splitFilter === name;
-            return (
-              <TouchableOpacity
-                key={name ?? 'all'}
-                className={`rounded-lg px-4 h-10 items-center justify-center ${selected ? 'bg-accent' : 'bg-surface-1'}`}
-                onPress={() => setSplitFilter(name)}
-                accessibilityRole="button"
-                accessibilityState={{ selected }}
-                accessibilityLabel={name ? `Show ${name} sessions` : 'Show all sessions'}
-                activeOpacity={0.7}
-              >
-                <Text
-                  className={`${textRoles.toggleLabel} ${selected ? 'text-surface-0' : 'text-text-secondary'}`}
-                >
-                  {name ?? 'All'}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
+          {[null, ...splitNames].map((name) => (
+            <Chip
+              key={name ?? 'all'}
+              label={name ?? 'All'}
+              selected={splitFilter === name}
+              onPress={() => setSplitFilter(name)}
+              accessibilityLabel={name ? `Show ${name} sessions` : 'Show all sessions'}
+            />
+          ))}
         </ScrollView>
       )}
       {legendOpen && <SetLegend />}
@@ -157,27 +172,28 @@ export default function HistoryScreen() {
             No {splitFilter} sessions yet.
           </Text>
         }
-        renderItem={({ item: session }) => {
-          const swipeableRef = React.createRef<Swipeable>();
-          return (
-            <Swipeable
-              ref={swipeableRef}
-              renderRightActions={() => renderRightActions(session.id, swipeableRef)}
-              overshootRight={false}
-              onSwipeableWillOpen={() => {
-                if (currentOpenRef.current && currentOpenRef.current !== swipeableRef.current) {
-                  currentOpenRef.current.close();
-                }
-                currentOpenRef.current = swipeableRef.current;
-              }}
-            >
-              <SessionCard
-                session={session}
-                onPress={() => router.push(`/history/${session.id}`)}
-              />
-            </Swipeable>
-          );
-        }}
+        renderItem={({ item: session }) => (
+          <Swipeable
+            ref={(row) => {
+              if (row) swipeableRefs.current.set(session.id, row);
+              else swipeableRefs.current.delete(session.id);
+            }}
+            renderRightActions={() => renderRightActions(session)}
+            overshootRight={false}
+            onSwipeableWillOpen={() => {
+              const openId = currentOpenId.current;
+              if (openId && openId !== session.id) {
+                swipeableRefs.current.get(openId)?.close();
+              }
+              currentOpenId.current = session.id;
+            }}
+          >
+            <SessionCard
+              session={session}
+              onPress={() => router.push(`/history/${session.id}`)}
+            />
+          </Swipeable>
+        )}
       />
     </View>
   );

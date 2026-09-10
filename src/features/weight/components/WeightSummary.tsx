@@ -2,43 +2,50 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import { Icon } from '../../../shared/components/Icon';
 import { textRoles } from '../../../shared/theme/typography';
+import {
+  formatBodyWeightDelta,
+  formatBodyWeightValue,
+  unitLabel,
+  type WeightUnit,
+} from '../lib/weightUnits';
 import type { WeeklyDelta } from '../lib/weightStats';
 
 interface Props {
   currentLbs: number | null;
   rolling7dayAvgLbs: number | null;
   weeklyDelta: WeeklyDelta | null;
+  unit: WeightUnit;
+  /** Shown under the headline number, e.g. "Today · Sep 10". */
+  latestLabel?: string;
 }
 
-function formatLbs(value: number): string {
-  const rounded = Math.round(value * 10) / 10;
-  return Number.isInteger(rounded) ? `${rounded}` : rounded.toFixed(1);
-}
+export function WeightSummary({
+  currentLbs,
+  rolling7dayAvgLbs,
+  weeklyDelta,
+  unit,
+  latestLabel,
+}: Props) {
+  const suffix = unitLabel(unit);
 
-function formatDelta(value: number): string {
-  const abs = Math.abs(value);
-  const rounded = Math.round(abs * 10) / 10;
-  const numeric = Number.isInteger(rounded) ? `${rounded}` : rounded.toFixed(1);
-  return `${numeric} lb`;
-}
-
-export function WeightSummary({ currentLbs, rolling7dayAvgLbs, weeklyDelta }: Props) {
   return (
     <View className="bg-surface-1 rounded-xl px-4 py-4 mb-4">
       <View className="flex-row items-end gap-2">
         <Text className={`text-text-primary ${textRoles.metricDisplay}`}>
-          {currentLbs !== null ? formatLbs(currentLbs) : '—'}
+          {currentLbs !== null ? formatBodyWeightValue(currentLbs, unit) : '—'}
         </Text>
-        <Text className={`text-text-secondary ${textRoles.bodySmall} mb-2`}>lb</Text>
+        <Text className={`text-text-secondary ${textRoles.bodySmall} mb-2`}>{suffix}</Text>
       </View>
-      <Text className={`text-text-secondary ${textRoles.caption} mt-0.5`}>Latest weight</Text>
+      <Text className={`text-text-secondary ${textRoles.caption} mt-0.5`}>
+        {latestLabel ?? 'Latest weight'}
+      </Text>
 
       <View className="flex-row items-center justify-between mt-4 pt-4 border-t border-surface-2">
         <View className="flex-1 pr-3">
           <Text className={`text-text-secondary ${textRoles.caption} mb-1`}>7-day avg</Text>
           <Text className={`text-text-primary ${textRoles.metricLarge}`}>
-            {rolling7dayAvgLbs !== null ? `${formatLbs(rolling7dayAvgLbs)}` : '—'}
-            <Text className={`text-text-secondary ${textRoles.bodySmall}`}> lb</Text>
+            {rolling7dayAvgLbs !== null ? formatBodyWeightValue(rolling7dayAvgLbs, unit) : '—'}
+            <Text className={`text-text-secondary ${textRoles.bodySmall}`}> {suffix}</Text>
           </Text>
         </View>
 
@@ -46,6 +53,9 @@ export function WeightSummary({ currentLbs, rolling7dayAvgLbs, weeklyDelta }: Pr
           <Text className={`text-text-secondary ${textRoles.caption} mb-1`}>vs prior 7 days</Text>
           {weeklyDelta ? (
             <View className="flex-row items-center gap-1">
+              {/* Neutral on purpose: whether up is good depends on whether
+                  the user is bulking or cutting, which the app doesn't
+                  know. Colouring it green/amber picked a side. */}
               <Icon
                 name={
                   weeklyDelta.direction === 'up'
@@ -55,16 +65,12 @@ export function WeightSummary({ currentLbs, rolling7dayAvgLbs, weeklyDelta }: Pr
                       : 'minus'
                 }
                 size={18}
-                color={
-                  weeklyDelta.direction === 'steady'
-                    ? 'text-secondary'
-                    : weeklyDelta.direction === 'up'
-                      ? 'warning'
-                      : 'success'
-                }
+                color="text-secondary"
               />
               <Text className={`text-text-primary ${textRoles.metricLarge}`}>
-                {weeklyDelta.direction === 'steady' ? '0' : formatDelta(weeklyDelta.deltaLbs)}
+                {weeklyDelta.direction === 'steady'
+                  ? '0'
+                  : formatBodyWeightDelta(weeklyDelta.deltaLbs, unit)}
               </Text>
             </View>
           ) : (

@@ -25,6 +25,14 @@ import {
 } from '../../../shared/lib/date';
 import { textRoles, typography } from '../../../shared/theme/typography';
 import { colors } from '../../../shared/theme/colors';
+import { usePrefsStore } from '../../../shared/store/prefsStore';
+import {
+  bodyWeightToDisplay,
+  displayToLbs,
+  maxBodyWeightInUnit,
+  unitLabel,
+  type WeightUnit,
+} from '../lib/weightUnits';
 import type { WeightEntry } from '../types';
 
 interface Props {
@@ -37,18 +45,23 @@ interface Props {
   onDelete?: (id: string) => Promise<void> | void;
 }
 
-const MAX_WEIGHT_LBS = 1000;
-
-function parseWeight(input: string): number | null {
+/**
+ * Parses what the user typed, in the unit they're typing in. The result
+ * is a DISPLAY value — the caller converts to stored pounds. Keeping the
+ * conversion out of here means the bounds check happens against a
+ * ceiling expressed in the same unit as the input.
+ */
+function parseWeight(input: string, unit: WeightUnit): number | null {
   const trimmed = input.trim();
   if (!trimmed) return null;
   const value = Number(trimmed);
   if (!Number.isFinite(value)) return null;
-  if (value <= 0 || value > MAX_WEIGHT_LBS) return null;
+  if (value <= 0 || value > maxBodyWeightInUnit(unit)) return null;
   return Math.round(value * 10) / 10;
 }
 
 export function LogWeightSheet({ sheetRef, entry, onDismiss, onSubmit, onDelete }: Props) {
+  const weightUnit = usePrefsStore((s) => s.weightUnit);
   const weightRef = useRef<TextInput>(null);
   const [date, setDate] = useState<Date>(() => new Date());
   const [weightInput, setWeightInput] = useState('');
@@ -63,13 +76,14 @@ export function LogWeightSheet({ sheetRef, entry, onDismiss, onSubmit, onDelete 
     if (entry) {
       const parsed = parseDateKey(entry.dateKey) ?? new Date(entry.loggedAt);
       setDate(parsed);
-      setWeightInput(String(entry.weightLbs));
+      // Seed the field in the unit the user types in, not the stored one.
+      setWeightInput(String(bodyWeightToDisplay(entry.weightLbs, weightUnit)));
     } else {
       setDate(new Date());
       setWeightInput('');
     }
     setDatePickerOpen(false);
-  }, [entry?.id, entry]);
+  }, [entry?.id, entry, weightUnit]);
 
   const renderBackdrop = useCallback(
     (props: BottomSheetBackdropProps) => (
@@ -78,7 +92,7 @@ export function LogWeightSheet({ sheetRef, entry, onDismiss, onSubmit, onDelete 
     [],
   );
 
-  const weightValue = parseWeight(weightInput);
+  const weightValue = parseWeight(weightInput, weightUnit);
   const canSubmit = weightValue !== null && !submitting;
 
   const handleSubmit = useCallback(async () => {
@@ -86,12 +100,15 @@ export function LogWeightSheet({ sheetRef, entry, onDismiss, onSubmit, onDelete 
     setSubmitting(true);
     try {
       const dateKey = toDateKey(date);
-      await onSubmit({ dateKey, weightLbs: weightValue });
+      // `weightValue` is in the user's display unit; the store is
+      // lb-canonical. Skipping this conversion is what would make a kg
+      // user's "82" land as 82 lb.
+      await onSubmit({ dateKey, weightLbs: displayToLbs(weightValue, weightUnit) });
       sheetRef.current?.dismiss();
     } finally {
       setSubmitting(false);
     }
-  }, [canSubmit, date, onSubmit, sheetRef, weightValue]);
+  }, [canSubmit, date, onSubmit, sheetRef, weightUnit, weightValue]);
 
   const handleDelete = useCallback(async () => {
     if (!entry || !onDelete) return;
@@ -182,13 +199,15 @@ export function LogWeightSheet({ sheetRef, entry, onDismiss, onSubmit, onDelete 
             InputComponent={BottomSheetTextInput}
             value={weightInput}
             onChangeText={setWeightInput}
-            suffix="lb"
+            suffix={unitLabel(weightUnit)}
             integerOnly={false}
             keyboardType="decimal-pad"
             returnKeyType="done"
             onSubmitEditing={handleSubmit}
             maxLength={6}
-            accessibilityLabel="Body weight in pounds"
+            accessibilityLabel={
+              weightUnit === 'kg' ? 'Body weight in kilograms' : 'Body weight in pounds'
+            }
           />
         </View>
 

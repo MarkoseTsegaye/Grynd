@@ -3,6 +3,7 @@ import { LayoutChangeEvent, Text, View, Pressable } from 'react-native';
 import Svg, { Circle, Line, Polyline } from 'react-native-svg';
 import { colors } from '../../../shared/theme/colors';
 import { textRoles } from '../../../shared/theme/typography';
+import { formatBodyWeight, type WeightUnit } from '../lib/weightUnits';
 import type { WeightPoint } from '../lib/weightStats';
 
 /**
@@ -21,6 +22,7 @@ interface Props {
   points: WeightPoint[];
   selectedId?: string | null;
   onSelect?: (point: WeightPoint) => void;
+  unit: WeightUnit;
 }
 
 function shouldShowXLabel(index: number, total: number): boolean {
@@ -29,13 +31,11 @@ function shouldShowXLabel(index: number, total: number): boolean {
   return index % step === 0 || index === total - 1;
 }
 
-function formatWeight(value: number): string {
-  const rounded = Math.round(value * 10) / 10;
-  return Number.isInteger(rounded) ? `${rounded} lb` : `${rounded.toFixed(1)} lb`;
-}
-
-export function WeightLineChart({ points, selectedId, onSelect }: Props) {
+export function WeightLineChart({ points, selectedId, onSelect, unit }: Props) {
   const [width, setWidth] = useState(0);
+  // The plot's geometry stays in stored pounds — only the labels convert,
+  // so switching units never reshapes the line.
+  const formatWeight = (lbs: number) => formatBodyWeight(lbs, unit);
 
   const onLayout = (event: LayoutChangeEvent) => {
     setWidth(event.nativeEvent.layout.width);
@@ -77,8 +77,8 @@ export function WeightLineChart({ points, selectedId, onSelect }: Props) {
   const accessibilityLabel = useMemo(() => {
     if (points.length === 0) return 'Body weight chart (no data).';
     const latest = points[points.length - 1];
-    return `Body weight chart with ${points.length} entries. Latest ${formatWeight(latest.weightLbs)} on ${latest.label}.`;
-  }, [points]);
+    return `Body weight chart with ${points.length} entries. Latest ${formatBodyWeight(latest.weightLbs, unit)} on ${latest.label}.`;
+  }, [points, unit]);
 
   return (
     <View
