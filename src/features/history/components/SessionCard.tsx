@@ -6,8 +6,9 @@ import { textRoles } from '../../../shared/theme/typography';
 import { Icon } from '../../../shared/components/Icon';
 import { useHistoryStore } from '../store/historyStore';
 import { getPriorExerciseSets } from '../lib/getPriorExerciseSets';
+import { summarizeExerciseLine, type ExerciseLine } from '../lib/exerciseLine';
 import { getSessionSummary, pluralize } from '../lib/sessionSummary';
-import { SetRow } from './SetRow';
+import { ExerciseDeltaChip } from './ExerciseDeltaChip';
 import { SessionSummaryStrip } from './SessionSummaryStrip';
 import type { WorkoutSession } from '../../workout/types';
 
@@ -16,7 +17,11 @@ interface Props {
   onPress: () => void;
 }
 
-const PREVIEW_EXERCISE_COUNT = 3;
+/**
+ * Each exercise is one ~38 px row now rather than a stack of set rows, so a
+ * card can show five without turning into a screenful.
+ */
+const PREVIEW_EXERCISE_COUNT = 5;
 
 export function SessionCard({ session, onPress }: Props) {
   const { weightUnit, isLoaded: prefsLoaded, loadPrefs } = usePrefsStore();
@@ -31,18 +36,23 @@ export function SessionCard({ session, onPress }: Props) {
     [session, weightUnit],
   );
 
-  // Resolve prior sets once per session/history change rather than on every render.
-  const priorSetsByExerciseId = useMemo(() => {
-    const map: Record<string, ReturnType<typeof getPriorExerciseSets>> = {};
+  // One line per exercise, resolved once per session/history/unit change
+  // rather than on every render.
+  const lines = useMemo(() => {
+    const rows: { key: string; name: string; line: ExerciseLine }[] = [];
     for (const exercise of session.exercises.slice(0, PREVIEW_EXERCISE_COUNT)) {
       const lookupId = exercise.substitutedForExerciseId ?? exercise.exerciseId;
-      map[exercise.exerciseId] = getPriorExerciseSets(session, lookupId, sessions);
+      const priorSets = getPriorExerciseSets(session, lookupId, sessions);
+      const line = summarizeExerciseLine(exercise, priorSets, weightUnit);
+      if (line === null) continue;
+      rows.push({ key: exercise.exerciseId, name: exercise.exerciseName, line });
     }
-    return map;
-  }, [session, sessions]);
+    return rows;
+  }, [session, sessions, weightUnit]);
 
-  const visibleExercises = session.exercises.slice(0, PREVIEW_EXERCISE_COUNT);
-  const extraCount = session.exercises.length - visibleExercises.length;
+  // Counts both truncated exercises and any that logged no sets, since
+  // neither is represented above and both are on the detail screen.
+  const extraCount = session.exercises.length - lines.length;
 
   return (
     <TouchableOpacity
@@ -57,49 +67,35 @@ export function SessionCard({ session, onPress }: Props) {
         <Text className={`text-text-primary ${textRoles.cardTitle}`} numberOfLines={1}>
           {session.splitName}
         </Text>
-        <Text className={`text-text-disabled ${textRoles.caption}`}>
+        <Text className={`text-text-secondary ${textRoles.caption}`}>
           · {formatShortDate(session.completedAt ?? session.startedAt)}
         </Text>
       </View>
 
       <SessionSummaryStrip summary={summary} />
 
-      {visibleExercises.map((exercise, exIdx) => {
-        const priorSets = priorSetsByExerciseId[exercise.exerciseId];
-        return (
-          <View
-            key={exercise.exerciseId}
-            className={exIdx > 0 ? 'border-t border-surface-2 pt-2 mt-1' : 'pt-1'}
+      {lines.map(({ key, name, line }, index) => (
+        <View
+          key={key}
+          className={`flex-row items-center gap-2 py-1.5 ${index > 0 ? 'border-t border-surface-2' : ''}`}
+        >
+          <Text
+            className={`flex-1 text-text-primary ${textRoles.listItemTitle}`}
+            numberOfLines={1}
           >
-            <View className="flex-row items-baseline justify-between">
-              <Text
-                className={`flex-1 text-text-primary ${textRoles.listItemTitle}`}
-                numberOfLines={1}
-              >
-                {exercise.exerciseName}
-              </Text>
-              <Text className={`text-text-disabled ${textRoles.caption} ml-2`}>
-                {pluralize(exercise.sets.length, 'set')}
-              </Text>
-            </View>
-
-            {exercise.sets.map((set, i) => (
-              <SetRow
-                key={`${set.loggedAt}-${i}`}
-                setNumber={i + 1}
-                set={set}
-                priorSet={priorSets && i < priorSets.length ? priorSets[i] : null}
-                weightUnit={weightUnit}
-              />
-            ))}
-          </View>
-        );
-      })}
+            {name}
+          </Text>
+          <Text className={`text-text-secondary ${textRoles.metric}`}>
+            {line.setsText} @ {line.topSetText}
+          </Text>
+          <ExerciseDeltaChip delta={line.delta} />
+        </View>
+      ))}
 
       {/* Tap-through affordance — the card was already tappable but never said so */}
-      <View className="flex-row items-center justify-center gap-1 border-t border-surface-2 mt-2 py-3">
+      <View className="flex-row items-center justify-center gap-1 border-t border-surface-2 mt-1.5 py-3">
         <Text className={`text-accent ${textRoles.toggleLabel}`}>
-          View full session
+          View session
           {extraCount > 0 ? ` · +${pluralize(extraCount, 'exercise')}` : ''}
         </Text>
         <Icon name="chevron-right" size={16} color="accent" />

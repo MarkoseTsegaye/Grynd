@@ -1,11 +1,13 @@
-import React, { useEffect, useMemo } from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { formatShortDate } from '../../../shared/lib/date';
 import { usePrefsStore } from '../../../shared/store/prefsStore';
 import { textRoles } from '../../../shared/theme/typography';
 import { useHistoryStore } from '../store/historyStore';
 import { getPriorExerciseSets } from '../lib/getPriorExerciseSets';
 import { getSessionSummary, pluralize } from '../lib/sessionSummary';
+import { Icon } from '../../../shared/components/Icon';
+import { SetLegend } from './SetLegend';
 import { SetRow } from './SetRow';
 import { SessionSummaryStrip } from './SessionSummaryStrip';
 import type { WorkoutSession } from '../../workout/types';
@@ -23,6 +25,7 @@ export function SessionDetail({ session }: Props) {
   }, [prefsLoaded, loadPrefs]);
 
   const summary = useMemo(() => getSessionSummary(session, weightUnit), [session, weightUnit]);
+  const [legendOpen, setLegendOpen] = useState(false);
 
   // Resolve each exercise's prior-session sets once per session/history change
   // instead of re-scanning all sessions on every render.
@@ -42,7 +45,7 @@ export function SessionDetail({ session }: Props) {
         <Text className={`text-text-primary ${textRoles.cardTitle}`} numberOfLines={1}>
           {session.splitName}
         </Text>
-        <Text className={`text-text-disabled ${textRoles.caption}`}>
+        <Text className={`text-text-secondary ${textRoles.caption}`}>
           · {formatShortDate(session.completedAt ?? session.startedAt)}
         </Text>
       </View>
@@ -62,19 +65,19 @@ export function SessionDetail({ session }: Props) {
               >
                 {exercise.exerciseName}
               </Text>
-              <Text className={`text-text-disabled ${textRoles.caption} ml-2`}>
+              <Text className={`text-text-secondary ${textRoles.caption} ml-2`}>
                 {pluralize(exercise.sets.length, 'set')}
               </Text>
             </View>
 
             {exercise.substitutedForExerciseName && (
-              <Text className={`text-text-disabled ${textRoles.caption} mb-1`}>
+              <Text className={`text-text-secondary ${textRoles.caption} mb-1`}>
                 Substitute for {exercise.substitutedForExerciseName}
               </Text>
             )}
 
             {exercise.sets.length === 0 ? (
-              <Text className={`text-text-disabled ${textRoles.caption} pl-4 py-1`}>
+              <Text className={`text-text-secondary ${textRoles.caption} pl-4 py-1`}>
                 No sets logged
               </Text>
             ) : (
@@ -91,6 +94,24 @@ export function SessionDetail({ session }: Props) {
           </View>
         );
       })}
+      {/* The delta chips above are the only cryptic thing on this screen, and
+          this is now the only screen that shows them — so the key lives here
+          rather than on the History tab it used to sit on. */}
+      <TouchableOpacity
+        className="flex-row items-center justify-center gap-1 h-11 mt-2"
+        onPress={() => setLegendOpen((open) => !open)}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: legendOpen }}
+        accessibilityLabel={legendOpen ? 'Hide the set key' : 'Show the set key'}
+        activeOpacity={0.7}
+      >
+        <Text className={`text-text-secondary ${textRoles.toggleLabel}`}>
+          How to read these rows
+        </Text>
+        <Icon name={legendOpen ? 'chevron-up' : 'chevron-down'} size={16} color="text-secondary" />
+      </TouchableOpacity>
+      {legendOpen && <SetLegend />}
+
       <View className="h-8" />
     </ScrollView>
   );

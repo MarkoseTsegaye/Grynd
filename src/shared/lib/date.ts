@@ -102,3 +102,17 @@ export function dateToCompletedAtMs(
   const endOfSelected = endOfLocalDay(selected);
   return Math.max(endOfSelected, startedAt);
 }
+
+/**
+ * Local midnight at the start of the calendar week containing `date`.
+ * Defaults to Monday-start (ISO), which is what History's week buckets use;
+ * `getWeeklyAverages` in weightStats deliberately uses rolling 7-day windows
+ * instead, so the two are not interchangeable.
+ */
+export function startOfWeek(date: Date | number, weekStartsOn: number = 1): Date {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const shift = (d.getDay() - weekStartsOn + 7) % 7;
+  d.setDate(d.getDate() - shift);
+  return d;
+}
