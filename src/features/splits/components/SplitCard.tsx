@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Icon } from '../../../shared/components/Icon';
+import { Badge } from '../../../shared/components/Badge';
 import { colors } from '../../../shared/theme/colors';
 import { getSplitGlyph } from '../lib/splitGlyph';
 import { textRoles } from '../../../shared/theme/typography';
@@ -9,11 +10,11 @@ import type { Split } from '../types';
 interface Props {
   split: Split;
   exerciseCount: number;
-  /** Home tab: whole card starts workout */
+  /** Home tab: whole card starts the workout. */
   onPress?: () => void;
-  /** Splits tab: edit icon */
+  /** Splits tab: whole card opens Manage. */
   onManage?: () => void;
-  /** Splits tab: delete icon */
+  /** Splits tab: delete icon. */
   onDelete?: () => void;
   /** Home tab: this split is the current cycle day. */
   isToday?: boolean;
@@ -42,6 +43,17 @@ export function SplitCard({
 }: Props) {
   const isStartMode = !!onPress && !onManage;
 
+  // Cycle placement used to be two badges beside the title, which
+  // crowded out the name and painted "NOT IN CYCLE" in warning amber —
+  // a normal state for anyone with more splits than cycle days. It is
+  // metadata, so it reads as metadata, on the caption line.
+  const captionParts = [`${exerciseCount} ${exerciseCount === 1 ? 'exercise' : 'exercises'}`];
+  if (lastPerformedLabel) captionParts.push(lastPerformedLabel);
+  // `formatCycleDays` returns "day 5" / "days 1, 4" — sentence-cased here
+  // because it reads as its own clause after the separator.
+  if (cycleLabel) captionParts.push(cycleLabel.charAt(0).toUpperCase() + cycleLabel.slice(1));
+  else if (showNotInCycle) captionParts.push('Not in cycle');
+
   const inner = (
     // Today's split gets an accent edge and tag so the hero card and this list
     // stay in sync — otherwise every row looks equally like "the" workout.
@@ -61,7 +73,7 @@ export function SplitCard({
             accessibilityLabel={`Drag to reorder ${split.name}`}
             activeOpacity={0.6}
           >
-            <Icon name="drag-vertical" size={18} color="text-disabled" />
+            <Icon name="drag-vertical" size={20} color="text-secondary" />
           </TouchableOpacity>
         )}
         <View
@@ -78,80 +90,45 @@ export function SplitCard({
             >
               {split.name}
             </Text>
-            {isToday && (
-              <View className="bg-accent rounded px-1.5 py-0.5">
-                <Text className={`text-surface-0 ${textRoles.captionBold}`} style={{ fontSize: 10 }}>
-                  TODAY
-                </Text>
-              </View>
-            )}
-            {!isToday && cycleLabel && (
-              <View className="bg-surface-2 rounded px-1.5 py-0.5">
-                <Text
-                  className={`text-text-secondary ${textRoles.captionBold}`}
-                  style={{ fontSize: 10 }}
-                >
-                  {cycleLabel.toUpperCase()}
-                </Text>
-              </View>
-            )}
-            {showNotInCycle && (
-              <View
-                className="rounded px-1.5 py-0.5"
-                style={{ borderWidth: 1, borderColor: 'rgba(255, 176, 32, 0.45)' }}
-              >
-                <Text className={`text-warning ${textRoles.captionBold}`} style={{ fontSize: 10 }}>
-                  NOT IN CYCLE
-                </Text>
-              </View>
-            )}
+            {isToday && <Badge label="TODAY" variant="accent" size="sm" />}
           </View>
           <Text className={`text-text-secondary ${textRoles.caption} mt-0.5`}>
-            {exerciseCount} {exerciseCount === 1 ? 'exercise' : 'exercises'}
-            {lastPerformedLabel ? ` · ${lastPerformedLabel}` : ''}
+            {captionParts.join(' · ')}
           </Text>
         </View>
         {isStartMode ? (
           <Icon name="play-circle-outline" size={20} color="accent" />
         ) : (
-          <View className="flex-row gap-3 items-center">
-            {onManage && (
-              <TouchableOpacity
-                onPress={onManage}
-                accessibilityLabel={`Edit ${split.name}`}
-                activeOpacity={0.7}
-              >
-                <Icon name="pencil-outline" size={20} color="text-secondary" />
-              </TouchableOpacity>
-            )}
-            {onDelete && (
-              <TouchableOpacity
-                onPress={onDelete}
-                accessibilityLabel={`Delete ${split.name}`}
-                activeOpacity={0.7}
-              >
-                <Icon name="trash-can-outline" size={20} color="text-secondary" />
-              </TouchableOpacity>
-            )}
-          </View>
+          onDelete && (
+            <TouchableOpacity
+              onPress={onDelete}
+              accessibilityLabel={`Delete ${split.name}`}
+              activeOpacity={0.7}
+            >
+              <Icon name="trash-can-outline" size={20} color="text-secondary" />
+            </TouchableOpacity>
+          )
         )}
       </View>
     </View>
   );
 
-  if (onPress) {
-    return (
-      <TouchableOpacity
-        onPress={onPress}
-        accessibilityLabel={`Start ${split.name} workout${isToday ? ", today's split" : ''}${
-          lastPerformedLabel ? `, last performed ${lastPerformedLabel}` : ', never performed'
-        }`}
-        activeOpacity={0.7}
-      >
-        {inner}
-      </TouchableOpacity>
-    );
-  }
+  const activate = onPress ?? onManage;
+  if (!activate) return inner;
 
-  return inner;
+  return (
+    <TouchableOpacity
+      onPress={activate}
+      accessibilityLabel={
+        onPress
+          ? `Start ${split.name} workout${isToday ? ", today's split" : ''}${
+              lastPerformedLabel ? `, last performed ${lastPerformedLabel}` : ', never performed'
+            }`
+          : `Manage ${split.name}, ${captionParts.join(', ')}`
+      }
+      activeOpacity={0.7}
+    >
+      {inner}
+    </TouchableOpacity>
+  );
 }

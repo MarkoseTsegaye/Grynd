@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
   Platform,
@@ -10,6 +10,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { Icon } from '../../src/shared/components/Icon';
+import { Chip } from '../../src/shared/components/Chip';
 import { textRoles } from '../../src/shared/theme/typography';
 import { formatDisplayDate, parseDateKey } from '../../src/shared/lib/date';
 import {
@@ -23,15 +24,22 @@ import {
   type WeightRangeId,
 } from '../../src/features/weight';
 import type { WeightEntry } from '../../src/features/weight';
-
-function formatLbs(value: number): string {
-  const rounded = Math.round(value * 10) / 10;
-  return Number.isInteger(rounded) ? `${rounded}` : rounded.toFixed(1);
-}
+import {
+  formatBodyWeightValue,
+  unitLabel,
+} from '../../src/features/weight/lib/weightUnits';
+import { usePrefsStore } from '../../src/shared/store/prefsStore';
 
 export default function WeightTabScreen() {
   const insets = useSafeAreaInsets();
   const state = useWeightChartData();
+  const weightUnit = usePrefsStore((s) => s.weightUnit);
+  const prefsLoaded = usePrefsStore((s) => s.isLoaded);
+  const loadPrefs = usePrefsStore((s) => s.loadPrefs);
+
+  useEffect(() => {
+    if (!prefsLoaded) void loadPrefs();
+  }, [prefsLoaded, loadPrefs]);
   const upsertEntry = useWeightStore((s) => s.upsertEntry);
   const deleteEntry = useWeightStore((s) => s.deleteEntry);
   const sheetRef = useRef<BottomSheetModal>(null);
@@ -109,41 +117,32 @@ export default function WeightTabScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ gap: 8, paddingBottom: 14 }}
         >
-          {WEIGHT_RANGE_OPTIONS.map((option) => {
-            const selected = state.rangeId === option.id;
-            return (
-              <TouchableOpacity
-                key={option.id}
-                className={`rounded-lg px-4 h-10 items-center justify-center ${selected ? 'bg-accent' : 'bg-surface-1'}`}
-                onPress={() => state.setRangeId(option.id as WeightRangeId)}
-                accessibilityRole="button"
-                accessibilityState={{ selected }}
-                accessibilityLabel={`Show ${option.label} range`}
-                activeOpacity={0.7}
-              >
-                <Text
-                  className={`${textRoles.toggleLabel} ${selected ? 'text-surface-0' : 'text-text-secondary'}`}
-                >
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
+          {WEIGHT_RANGE_OPTIONS.map((option) => (
+            <Chip
+              key={option.id}
+              label={option.label}
+              selected={state.rangeId === option.id}
+              onPress={() => state.setRangeId(option.id as WeightRangeId)}
+              accessibilityLabel={`Show ${option.label} range`}
+            />
+          ))}
         </ScrollView>
 
         <WeightSummary
           currentLbs={state.currentLbs}
           rolling7dayAvgLbs={state.rolling7dayAvgLbs}
           weeklyDelta={state.weeklyDelta}
+          unit={weightUnit}
         />
 
         {state.weeklyAverages.length > 0 ? (
-          <WeeklyAveragesList averages={state.weeklyAverages} />
+          <WeeklyAveragesList averages={state.weeklyAverages} unit={weightUnit} />
         ) : null}
 
         {state.visiblePoints.length > 0 ? (
           <WeightLineChart
             points={state.visiblePoints}
+            unit={weightUnit}
             onSelect={(point) => {
               const entry = state.entries.find((e) => e.id === point.id) ?? null;
               openLogSheet(entry);
@@ -169,7 +168,7 @@ export default function WeightTabScreen() {
             <TouchableOpacity
               className="flex-row items-center justify-between bg-surface-1 rounded-lg px-4 py-3 mb-2"
               onPress={() => openLogSheet(item)}
-              accessibilityLabel={`Edit ${formatLbs(item.weightLbs)} lb on ${item.dateKey}`}
+              accessibilityLabel={`Edit ${formatBodyWeightValue(item.weightLbs, weightUnit)} ${unitLabel(weightUnit)} on ${item.dateKey}`}
               accessibilityRole="button"
               activeOpacity={0.7}
             >
@@ -182,8 +181,11 @@ export default function WeightTabScreen() {
                 </Text>
               </View>
               <Text className={`text-text-primary ${textRoles.metricLarge}`}>
-                {formatLbs(item.weightLbs)}
-                <Text className={`text-text-secondary ${textRoles.bodySmall}`}> lb</Text>
+                {formatBodyWeightValue(item.weightLbs, weightUnit)}
+                <Text className={`text-text-secondary ${textRoles.bodySmall}`}>
+                  {' '}
+                  {unitLabel(weightUnit)}
+                </Text>
               </Text>
               <Icon name="chevron-right" size={18} color="text-secondary" />
             </TouchableOpacity>

@@ -6,6 +6,7 @@ import { FirstSetSummary } from '../../../src/features/progress/components/First
 import { FirstSetLineChart } from '../../../src/features/progress/components/FirstSetLineChart';
 import { CHART_METRIC_OPTIONS } from '../../../src/features/progress/lib/chartMetric';
 import { Icon } from '../../../src/shared/components/Icon';
+import { Chip } from '../../../src/shared/components/Chip';
 import { textRoles } from '../../../src/shared/theme/typography';
 
 export default function ExerciseProgressScreen() {
@@ -51,56 +52,34 @@ export default function ExerciseProgressScreen() {
       </Text>
 
       {/* Metric — plotting est. 1RM is what makes a rep-only gain visible */}
-      <View className="flex-row bg-surface-1 rounded-lg p-1 mb-3">
-        {CHART_METRIC_OPTIONS.map((option) => {
-          const selected = metric === option.id;
-          return (
-            <TouchableOpacity
-              key={option.id}
-              className={`flex-1 h-9 rounded-md items-center justify-center ${selected ? 'bg-accent' : ''}`}
-              onPress={() => setMetric(option.id)}
-              accessibilityRole="button"
-              accessibilityState={{ selected }}
-              accessibilityLabel={`Plot ${option.label}`}
-              activeOpacity={0.7}
-            >
-              <Text
-                className={`${textRoles.toggleLabel} ${selected ? 'text-surface-0' : 'text-text-secondary'}`}
-              >
-                {option.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+      <View className="flex-row gap-2 mb-3">
+        {CHART_METRIC_OPTIONS.map((option) => (
+          <Chip
+            key={option.id}
+            label={option.label}
+            selected={metric === option.id}
+            onPress={() => setMetric(option.id)}
+            accessibilityLabel={`Plot ${option.label}`}
+          />
+        ))}
       </View>
 
       {/* Ranges — empty ones are subdued and unpickable rather than silently blank */}
       <View className="flex-row flex-wrap gap-2 mb-6">
-        {rangeAvailability.map((range) => {
-          const selected = rangeId === range.id;
-          return (
-            <TouchableOpacity
-              key={range.id}
-              className={`px-3 py-1.5 rounded ${selected ? 'bg-accent' : 'bg-surface-2'} ${range.hasData ? '' : 'opacity-40'}`}
-              onPress={() => setRangeId(range.id)}
-              disabled={!range.hasData}
-              accessibilityRole="button"
-              accessibilityState={{ selected, disabled: !range.hasData }}
-              accessibilityLabel={
-                range.hasData
-                  ? `Show last ${range.label}, ${range.count} ${range.count === 1 ? 'session' : 'sessions'}`
-                  : `Last ${range.label}, no sessions`
-              }
-              activeOpacity={0.7}
-            >
-              <Text
-                className={`${selected ? 'text-surface-0' : 'text-text-secondary'} ${textRoles.toggleLabel}`}
-              >
-                {range.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+        {rangeAvailability.map((range) => (
+          <Chip
+            key={range.id}
+            label={range.label}
+            selected={rangeId === range.id}
+            onPress={() => setRangeId(range.id)}
+            disabled={!range.hasData}
+            accessibilityLabel={
+              range.hasData
+                ? `Show last ${range.label}, ${range.count} ${range.count === 1 ? 'session' : 'sessions'}`
+                : `Last ${range.label}, no sessions`
+            }
+          />
+        ))}
       </View>
 
       {points.length === 0 ? (

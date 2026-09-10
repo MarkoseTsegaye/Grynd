@@ -3,7 +3,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { colors } from '../theme/colors';
 
 type ColorToken = keyof typeof colors;
-type IconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
+export type IconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 
 interface Props {
   name: IconName;

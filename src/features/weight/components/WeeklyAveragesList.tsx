@@ -2,27 +2,24 @@ import React from 'react';
 import { Text, View } from 'react-native';
 import { Icon } from '../../../shared/components/Icon';
 import { textRoles } from '../../../shared/theme/typography';
+import {
+  formatBodyWeightDelta,
+  formatBodyWeightValue,
+  unitLabel,
+  type WeightUnit,
+} from '../lib/weightUnits';
 import type { WeeklyAverage } from '../lib/weightStats';
 
 interface Props {
   averages: WeeklyAverage[];
-}
-
-function formatLbs(value: number): string {
-  const rounded = Math.round(value * 10) / 10;
-  return Number.isInteger(rounded) ? `${rounded}` : rounded.toFixed(1);
-}
-
-function formatDelta(value: number): string {
-  const abs = Math.abs(value);
-  const rounded = Math.round(abs * 10) / 10;
-  return Number.isInteger(rounded) ? `${rounded}` : rounded.toFixed(1);
+  unit: WeightUnit;
 }
 
 const STEADY_THRESHOLD_LBS = 0.2;
 
-export function WeeklyAveragesList({ averages }: Props) {
+export function WeeklyAveragesList({ averages, unit }: Props) {
   if (averages.length === 0) return null;
+  const suffix = unitLabel(unit);
 
   return (
     <View className="bg-surface-1 rounded-xl px-4 py-4 mb-4">
@@ -56,11 +53,12 @@ export function WeeklyAveragesList({ averages }: Props) {
             </View>
             <View className="items-end">
               <Text className={`text-text-primary ${textRoles.metricLarge}`}>
-                {formatLbs(week.avgLbs)}
-                <Text className={`text-text-secondary ${textRoles.bodySmall}`}> lb</Text>
+                {formatBodyWeightValue(week.avgLbs, unit)}
+                <Text className={`text-text-secondary ${textRoles.bodySmall}`}> {suffix}</Text>
               </Text>
               {direction !== 'first' ? (
                 <View className="flex-row items-center gap-0.5 mt-0.5">
+                  {/* Neutral, same reasoning as WeightSummary. */}
                   <Icon
                     name={
                       direction === 'up'
@@ -70,26 +68,12 @@ export function WeeklyAveragesList({ averages }: Props) {
                           : 'minus'
                     }
                     size={12}
-                    color={
-                      direction === 'steady'
-                        ? 'text-secondary'
-                        : direction === 'up'
-                          ? 'warning'
-                          : 'success'
-                    }
+                    color="text-secondary"
                   />
-                  <Text
-                    className={`${textRoles.caption} ${
-                      direction === 'steady'
-                        ? 'text-text-secondary'
-                        : direction === 'up'
-                          ? 'text-warning'
-                          : 'text-success'
-                    }`}
-                  >
+                  <Text className={`text-text-secondary ${textRoles.caption}`}>
                     {direction === 'steady'
                       ? '0'
-                      : `${formatDelta(week.deltaLbs ?? 0)} lb`}
+                      : formatBodyWeightDelta(week.deltaLbs ?? 0, unit)}
                   </Text>
                 </View>
               ) : null}

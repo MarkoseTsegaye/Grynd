@@ -1,13 +1,15 @@
 import React from 'react';
 import { View } from 'react-native';
 import { useSyncStatusStore } from '../../storage/sync/status';
+import { colors } from '../theme/colors';
+import type { SyncStatus } from '../../storage/sync/status';
 
-const COLOR_BY_STATUS: Record<string, string> = {
-  idle: '#4ADE80', // green
-  syncing: '#FBBF24', // amber
-  offline: '#8A8580', // gray
-  error: '#FF4C4C', // danger
-  unconfigured: '#3D3B38', // muted
+const COLOR_BY_STATUS: Record<SyncStatus, string> = {
+  idle: colors.success,
+  syncing: colors.warning,
+  offline: colors['text-secondary'],
+  error: colors.danger,
+  unconfigured: colors['text-disabled'],
 };
 
 /**
@@ -23,7 +25,7 @@ export function SyncStatusDot({ size = 8 }: { size?: number }) {
         width: size,
         height: size,
         borderRadius: size / 2,
-        backgroundColor: COLOR_BY_STATUS[status] ?? COLOR_BY_STATUS.idle,
+        backgroundColor: COLOR_BY_STATUS[status] ?? colors.success,
       }}
       accessibilityLabel={`Sync status: ${status}`}
     />
