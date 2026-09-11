@@ -1,4 +1,4 @@
-import { kgToLbs, lbsToKg } from '../../../shared/lib/weight';
+import { kgToLbs, lbsToKg, unitLabel } from '../../../shared/lib/weight';
 
 export type WeightUnit = 'kg' | 'lbs';
 
@@ -56,10 +56,12 @@ export function formatBodyWeightDelta(deltaLbs: number, unit: WeightUnit): strin
   return `${numeric} ${unitLabel(unit)}`;
 }
 
-/** The short suffix shown next to a value. */
-export function unitLabel(unit: WeightUnit): string {
-  return unit === 'kg' ? 'kg' : 'lb';
-}
+/**
+ * Re-exported from `shared/lib/weight` so body-weight callers keep a single
+ * import; the label depends only on the unit, not on which canonical unit
+ * the value was stored in.
+ */
+export { unitLabel };
 
 /**
  * Upper bound on a body-weight entry, expressed in the unit the user is

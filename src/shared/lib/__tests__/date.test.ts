@@ -5,6 +5,7 @@ import {
   formatDisplayDate,
   isFutureCalendarDay,
   parseDateKey,
+  startOfWeek,
   toDateKey,
 } from '../date';
 
@@ -117,5 +118,33 @@ describe('parseDateKey', () => {
     expect(parseDateKey('2026-02-31')).toBeNull();
     expect(parseDateKey('2026-13-01')).toBeNull();
     expect(parseDateKey('2026-00-15')).toBeNull();
+  });
+});
+
+describe('startOfWeek', () => {
+  it('returns local midnight on the Monday of the containing week', () => {
+    const result = startOfWeek(localDate(2026, 9, 9)); // Wednesday
+    expect(result.getFullYear()).toBe(2026);
+    expect(result.getMonth()).toBe(8);
+    expect(result.getDate()).toBe(7);
+    expect(result.getHours()).toBe(0);
+    expect(result.getMinutes()).toBe(0);
+  });
+
+  it('treats Sunday as the end of its week, not the start', () => {
+    // Sun 6 Sep belongs to the week beginning Mon 31 Aug.
+    const result = startOfWeek(localDate(2026, 9, 6));
+    expect(result.getMonth()).toBe(7);
+    expect(result.getDate()).toBe(31);
+  });
+
+  it('is idempotent on a Monday', () => {
+    const monday = startOfWeek(localDate(2026, 9, 7));
+    expect(startOfWeek(monday).getTime()).toBe(monday.getTime());
+  });
+
+  it('honours an explicit week start', () => {
+    const result = startOfWeek(localDate(2026, 9, 9), 0); // Sunday-start
+    expect(result.getDate()).toBe(6);
   });
 });

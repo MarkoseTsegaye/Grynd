@@ -5,7 +5,6 @@ export { SessionCard } from './components/SessionCard';
 export { SessionDetail } from './components/SessionDetail';
 export { SessionSummaryStrip } from './components/SessionSummaryStrip';
 export { SetRow } from './components/SetRow';
-export { SetLegend } from './components/SetLegend';
 export { getSessionSummary, getSplitFilters, filterSessionsBySplit } from './lib/sessionSummary';
 export type { SessionSummary } from './lib/sessionSummary';
 export type { WorkoutSession } from './types';

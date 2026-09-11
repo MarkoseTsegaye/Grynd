@@ -11,7 +11,7 @@ function Stat({ value, label, last }: { value: string; label: string; last?: boo
   return (
     <View className={`flex-1 items-center py-2 ${last ? '' : 'border-r border-surface-1'}`}>
       <Text className={`text-text-primary ${textRoles.metricBold}`}>{value}</Text>
-      <Text className={`text-text-disabled ${textRoles.caption}`} style={{ fontSize: 11 }}>
+      <Text className={`text-text-secondary ${textRoles.caption}`} style={{ fontSize: 11 }}>
         {label}
       </Text>
     </View>

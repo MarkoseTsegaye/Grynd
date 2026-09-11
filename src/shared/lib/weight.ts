@@ -60,6 +60,11 @@ export function computePlateWeightKg(plates: Record<number, number>, unit: 'kg' 
   return unit === 'lbs' ? lbsToKg(perSide) : perSide;
 }
 
+/** The short suffix shown next to a value: `lbs` is stored, `lb` is read. */
+export function unitLabel(unit: 'kg' | 'lbs'): string {
+  return unit === 'kg' ? 'kg' : 'lb';
+}
+
 export function formatWeight(weightKg: number, unit: 'kg' | 'lbs'): string {
   return String(weightKgToDisplay(weightKg, unit));
 }

@@ -1,16 +1,16 @@
 import React, { useRef, useCallback, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Platform } from 'react-native';
-import { FlatList } from 'react-native';
+import { SectionList } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Swipeable } from 'react-native-gesture-handler';
 import * as Haptics from 'expo-haptics';
 import { useHistory, SessionCard } from '../../src/features/history';
-import { SetLegend } from '../../src/features/history/components/SetLegend';
 import {
   filterSessionsBySplit,
   getSplitFilters,
 } from '../../src/features/history/lib/sessionSummary';
+import { groupSessionsByPeriod } from '../../src/features/history/lib/groupSessions';
 import { Icon } from '../../src/shared/components/Icon';
 import { Chip } from '../../src/shared/components/Chip';
 import { showDialog } from '../../src/shared/lib/dialog';
@@ -29,11 +29,10 @@ export default function HistoryScreen() {
   const swipeableRefs = useRef(new Map<string, Swipeable>());
   const currentOpenId = useRef<string | null>(null);
   const [splitFilter, setSplitFilter] = useState<string | null>(null);
-  const [legendOpen, setLegendOpen] = useState(false);
 
   const splitNames = useMemo(() => getSplitFilters(sessions), [sessions]);
-  const visibleSessions = useMemo(
-    () => filterSessionsBySplit(sessions, splitFilter),
+  const sections = useMemo(
+    () => groupSessionsByPeriod(filterSessionsBySplit(sessions, splitFilter)),
     [sessions, splitFilter],
   );
 
@@ -80,30 +79,12 @@ export default function HistoryScreen() {
 
   const header = (
     <View
-      className="px-5 pb-4 flex-row items-center justify-between"
+      className="px-5 pb-4"
       // Web reads the notch from env(safe-area-inset-*) once viewport-fit=cover
       // is set; the 56 floor keeps the header clear on devices without one.
       style={{ paddingTop: Platform.OS === 'web' ? Math.max(insets.top + 8, 56) : 56 }}
     >
       <Text className={`text-text-primary ${textRoles.screenTitle}`}>History</Text>
-      <View className="flex-row items-center gap-4">
-        {sessions.length > 0 && (
-          <TouchableOpacity
-            onPress={() => setLegendOpen((open) => !open)}
-            accessibilityLabel={legendOpen ? 'Hide set legend' : 'Show set legend'}
-            accessibilityRole="button"
-            accessibilityState={{ expanded: legendOpen }}
-            activeOpacity={0.7}
-            hitSlop={8}
-          >
-            <Icon
-              name="help-circle-outline"
-              size={24}
-              color={legendOpen ? 'accent' : 'text-secondary'}
-            />
-          </TouchableOpacity>
-        )}
-      </View>
     </View>
   );
 
@@ -125,44 +106,48 @@ export default function HistoryScreen() {
     );
   }
 
-  const listHeader = (
-    <>
-      {/* Split filter — only earns its space once history spans more than one split */}
-      {splitNames.length > 1 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: 8, paddingBottom: 14 }}
-        >
-          {[null, ...splitNames].map((name) => (
-            <Chip
-              key={name ?? 'all'}
-              label={name ?? 'All'}
-              selected={splitFilter === name}
-              onPress={() => setSplitFilter(name)}
-              accessibilityLabel={name ? `Show ${name} sessions` : 'Show all sessions'}
-            />
-          ))}
-        </ScrollView>
-      )}
-      {legendOpen && <SetLegend />}
-    </>
-  );
+  const listHeader =
+    // Split filter — only earns its space once history spans more than one split
+    splitNames.length > 1 ? (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ gap: 8, paddingBottom: 6 }}
+      >
+        {[null, ...splitNames].map((name) => (
+          <Chip
+            key={name ?? 'all'}
+            label={name ?? 'All'}
+            selected={splitFilter === name}
+            onPress={() => setSplitFilter(name)}
+            accessibilityLabel={name ? `Show ${name} sessions` : 'Show all sessions'}
+          />
+        ))}
+      </ScrollView>
+    ) : null;
 
   return (
     <View className="flex-1 bg-surface-0">
       {header}
-      <FlatList
-        data={visibleSessions}
+      <SectionList
+        sections={sections}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
         showsVerticalScrollIndicator={false}
+        // A pinned label would float over the cards it labels on a flat dark
+        // surface and read as a rendering glitch.
+        stickySectionHeadersEnabled={false}
         ListHeaderComponent={listHeader}
         ListEmptyComponent={
           <Text className={`text-text-secondary ${textRoles.bodySmall} text-center mt-8`}>
             No {splitFilter} sessions yet.
           </Text>
         }
+        renderSectionHeader={({ section }) => (
+          <Text className={`text-text-secondary ${textRoles.sectionLabel} mt-2 mb-3`}>
+            {section.title}
+          </Text>
+        )}
         renderItem={({ item: session }) => (
           <Swipeable
             ref={(row) => {
