@@ -7,6 +7,8 @@ import { BottomSheetModal, BottomSheetFlatList, BottomSheetBackdrop } from '@gor
 import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import { useCycleStore } from '../src/features/splits/store/cycleStore';
 import { useSplitsStore } from '../src/features/splits';
+import { getSplitGlyph } from '../src/features/splits/lib/splitGlyph';
+import { Badge } from '../src/shared/components/Badge';
 import { Icon } from '../src/shared/components/Icon';
 import type { CycleDay } from '../src/features/splits/types';
 import type { Split } from '../src/features/splits/types';
@@ -28,7 +30,16 @@ function HeaderDoneButton({ onPress }: { onPress: () => void }) {
 
 export default function CycleScreen() {
   const router = useRouter();
-  const { cycle, isLoaded, loadCycle, reorderDays, addSplitDay, addRestDay, removeDay } =
+  const {
+    cycle,
+    isLoaded,
+    loadCycle,
+    reorderDays,
+    addSplitDay,
+    addRestDay,
+    removeDay,
+    setCurrentIndex,
+  } =
     useCycleStore();
   const { splits, isLoaded: splitsLoaded, loadData } = useSplitsStore();
 
@@ -66,10 +77,13 @@ export default function CycleScreen() {
 
   const days = cycle?.days ?? [];
   const splitDayCount = days.filter((d) => d.type === 'split').length;
+  const currentIndex = cycle?.currentIndex ?? 0;
 
   function renderItem({ item, drag, isActive }: { item: CycleDay; drag: () => void; isActive: boolean }) {
     const split = item.type === 'split' ? splits.find((s) => s.id === item.splitId) : null;
     const canDelete = !(item.type === 'split' && splitDayCount <= 1);
+    const dayIndex = days.findIndex((d) => d.id === item.id);
+    const isCurrent = dayIndex === currentIndex;
 
     return (
       <ScaleDecorator>
@@ -83,18 +97,40 @@ export default function CycleScreen() {
           <View className="flex-1 flex-row items-center gap-2">
             {item.type === 'split' ? (
               <>
-                <Icon name="dumbbell" size={20} color="text-secondary" />
+                {/* Same per-split glyph the strip and split cards use — the
+                    editor was the last place showing a generic dumbbell. */}
+                <Icon
+                  name={getSplitGlyph(split?.name ?? '')}
+                  size={20}
+                  color={isCurrent ? 'accent' : 'text-secondary'}
+                />
                 <Text className={`text-text-primary ${textRoles.cardTitle} flex-1`} numberOfLines={1}>
                   {split?.name ?? 'Unknown split'}
                 </Text>
               </>
             ) : (
               <>
-                <Icon name="sleep" size={20} color="text-secondary" />
-                <Text className={`text-text-secondary ${textRoles.body}`}>Rest</Text>
+                <Icon name="sleep" size={20} color={isCurrent ? 'accent' : 'text-secondary'} />
+                <Text className={`text-text-secondary ${textRoles.body} flex-1`}>Rest</Text>
               </>
             )}
           </View>
+
+          {/* Editor and Home agree on where "today" is, so the position can be
+              corrected from whichever screen you noticed the drift on. */}
+          {isCurrent ? (
+            <Badge label="TODAY" variant="accent" size="sm" />
+          ) : (
+            <TouchableOpacity
+              onPress={() => void setCurrentIndex(dayIndex)}
+              className="px-2 py-1"
+              accessibilityLabel={`Make day ${dayIndex + 1} today`}
+              accessibilityRole="button"
+              activeOpacity={0.7}
+            >
+              <Text className={`text-accent ${textRoles.toggleLabel}`}>Start here</Text>
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity
             onPress={() => canDelete && removeDay(item.id)}

@@ -16,9 +16,10 @@ import {
 import { Icon } from '../../src/shared/components/Icon';
 import { CycleStrip } from '../../src/features/splits/components/CycleStrip';
 import { buildCycleStrip } from '../../src/features/splits/lib/cycleStrip';
-import { getSplitActivity } from '../../src/features/splits/lib/splitActivity';
+import { daysBetween, getSplitActivity } from '../../src/features/splits/lib/splitActivity';
 import { getSplitGlyph } from '../../src/features/splits/lib/splitGlyph';
 import { useHistory, useHistoryStore } from '../../src/features/history';
+import { Button } from '../../src/shared/components/Button';
 import { textRoles } from '../../src/shared/theme/typography';
 import { SignInPromptCard, SignInSheet, useSignInPrompt } from '../../src/features/auth';
 import { SyncStatusDot } from '../../src/shared/components/SyncStatusDot';
@@ -32,7 +33,8 @@ export default function HomeScreen() {
   const { sessions } = useHistory();
   const historyLoaded = useHistoryStore((s) => s.isLoaded);
   const loadSessions = useHistoryStore((s) => s.loadSessions);
-  const { cycle, isLoaded: cycleLoaded, loadCycle, advanceCycle } = useCycleStore();
+  const { cycle, isLoaded: cycleLoaded, loadCycle, advanceCycle, setCurrentIndex } =
+    useCycleStore();
   const { isUnconfigured } = useAuth();
   const { shouldShow: shouldShowSignInPrompt, dismiss: dismissSignInPrompt } = useSignInPrompt();
   const signInSheetRef = useRef<BottomSheetModal>(null);
@@ -73,7 +75,43 @@ export default function HomeScreen() {
   const stripDays = buildCycleStrip(days, currentIndex, splits);
 
   const cycleLength = days.length;
-  const dayNumber = cycleLength > 0 ? currentIndex + 1 : null;
+
+  // Sitting on the same cycle day for days usually means the cycle drifted
+  // out of step with real life, not that the user trained four times.
+  const daysOnCurrentDay =
+    cycle?.lastAdvancedAt != null ? daysBetween(cycle.lastAdvancedAt, Date.now()) : 0;
+  const staleDayHint = daysOnCurrentDay >= 2 ? `${daysOnCurrentDay} days on this day` : null;
+
+  const handlePickCycleDay = (index: number) => {
+    const target = stripDays.find((day) => day.index === index);
+    if (!target || target.state === 'today') return;
+    showDialog(
+      `Make day ${target.dayNumber} today?`,
+      `${target.label} becomes your current cycle day. Nothing you've logged changes.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Make today', onPress: () => void setCurrentIndex(index) },
+      ],
+    );
+  };
+
+  const handleSkipDay = () => {
+    showDialog(
+      'Skip today?',
+      'The cycle moves on to the next day without logging a workout.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Skip', onPress: () => void advanceCycle() },
+      ],
+    );
+  };
+
+  const cycleStrip =
+    stripDays.length > 0 ? (
+      <View className="mb-3">
+        <CycleStrip days={stripDays} totalDays={cycleLength} onPickDay={handlePickCycleDay} />
+      </View>
+    ) : null;
 
   const showPausedResume = hasPausedSession(activeSession);
   const pausedMatchesToday =
@@ -168,6 +206,7 @@ export default function HomeScreen() {
             </View>
           ) : todayDay.type === 'split' ? (
             <>
+              {cycleStrip}
               <View className="flex-row items-center gap-2 mb-1">
                 <Icon
                   name={getSplitGlyph(todaySplit?.name ?? '')}
@@ -178,44 +217,57 @@ export default function HomeScreen() {
                   {todaySplit?.name ?? 'Unknown'}
                 </Text>
               </View>
-              {dayNumber !== null && (
+              {staleDayHint && (
                 <Text className={`text-text-secondary ${textRoles.bodySmall} mb-3`}>
-                  Day {dayNumber} of {cycleLength}
+                  {staleDayHint}
                 </Text>
               )}
-              {pausedMatchesToday && activeSession ? (
-                <TouchableOpacity
-                  className="bg-accent rounded-lg py-3 flex-row items-center justify-center gap-2"
-                  onPress={handleResumePausedWorkout}
-                  accessibilityLabel="Resume paused workout"
-                  activeOpacity={0.7}
-                >
-                  <Icon name="play-circle-outline" size={20} color="surface-0" />
-                  <Text className={`text-surface-0 ${textRoles.buttonLabel}`}>
-                    Resume {activeSession.splitName}
-                  </Text>
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity
-                  className="bg-accent rounded-lg py-3 flex-row items-center justify-center gap-2"
-                  onPress={() => todaySplit && startWorkoutForSplit(todaySplit.id)}
-                  accessibilityLabel="Start today's workout"
-                  activeOpacity={0.7}
-                >
-                  <Icon name="play-circle-outline" size={20} color="surface-0" />
-                  <Text className={`text-surface-0 ${textRoles.buttonLabel}`}>Start Workout</Text>
-                </TouchableOpacity>
-              )}
+              <View className="flex-row items-center gap-2">
+                <View className="flex-1">
+                  {pausedMatchesToday && activeSession ? (
+                    <TouchableOpacity
+                      className="bg-accent rounded-lg py-3 flex-row items-center justify-center gap-2"
+                      onPress={handleResumePausedWorkout}
+                      accessibilityLabel="Resume paused workout"
+                      activeOpacity={0.7}
+                    >
+                      <Icon name="play-circle-outline" size={20} color="surface-0" />
+                      <Text className={`text-surface-0 ${textRoles.buttonLabel}`}>
+                        Resume {activeSession.splitName}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      className="bg-accent rounded-lg py-3 flex-row items-center justify-center gap-2"
+                      onPress={() => todaySplit && startWorkoutForSplit(todaySplit.id)}
+                      accessibilityLabel="Start today's workout"
+                      activeOpacity={0.7}
+                    >
+                      <Icon name="play-circle-outline" size={20} color="surface-0" />
+                      <Text className={`text-surface-0 ${textRoles.buttonLabel}`}>Start Workout</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+                {/* Life happens off-cycle; without this the only way past a
+                    day you didn't train was to log a workout you didn't do. */}
+                <Button
+                  label="Skip"
+                  variant="ghost"
+                  onPress={handleSkipDay}
+                  accessibilityLabel="Skip today and advance the cycle"
+                />
+              </View>
             </>
           ) : (
             <>
+              {cycleStrip}
               <View className="flex-row items-center gap-2 mb-1">
                 <Icon name="sleep" size={20} color="text-secondary" />
                 <Text className={`text-text-primary ${textRoles.listTitle}`}>Rest Day</Text>
               </View>
-              {dayNumber !== null && (
+              {staleDayHint && (
                 <Text className={`text-text-secondary ${textRoles.bodySmall} mb-3`}>
-                  Day {dayNumber} of {cycleLength}
+                  {staleDayHint}
                 </Text>
               )}
               <TouchableOpacity
@@ -230,18 +282,6 @@ export default function HomeScreen() {
             </>
           )}
         </View>
-
-        {/* Whole cycle at a glance — replaces the row that only ran to the
-            next rest day and never showed where you were in the cycle. */}
-        {stripDays.length > 0 && (
-          <View className="px-5 mb-6">
-            <CycleStrip
-              days={stripDays}
-              totalDays={cycleLength}
-              onPress={() => router.push('/cycle')}
-            />
-          </View>
-        )}
 
         {/* All Splits section */}
         {splits.length > 0 && (
