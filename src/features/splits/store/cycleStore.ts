@@ -9,6 +9,12 @@ interface CycleState {
   isLoaded: boolean;
   loadCycle: () => Promise<void>;
   advanceCycle: () => Promise<void>;
+  /**
+   * Jump the cycle to a specific day. Clamps out-of-range input rather than
+   * wrapping — this comes from a user picking a pill, so "day 12 of 8" is a
+   * bug to contain, not an intent to honour.
+   */
+  setCurrentIndex: (index: number) => Promise<void>;
   reorderDays: (days: CycleDay[]) => Promise<void>;
   addSplitDay: (splitId: string) => Promise<void>;
   addRestDay: () => Promise<void>;
@@ -47,6 +53,19 @@ export const useCycleStore = create<CycleState>()(
           currentIndex: (cycle.currentIndex + 1) % cycle.days.length,
           lastAdvancedAt: Date.now(),
         });
+        set({ cycle: updated });
+        await saveWorkoutCycle(updated);
+      },
+
+      setCurrentIndex: async (index) => {
+        const { cycle } = get();
+        if (!cycle || cycle.days.length === 0) return;
+        const currentIndex = Math.min(Math.max(0, Math.trunc(index)), cycle.days.length - 1);
+        if (currentIndex === cycle.currentIndex) return;
+        // lastAdvancedAt moves too: deliberately choosing today's day is a
+        // fresh start on it, and without this the "3 days on this day" hint
+        // would fire the moment you used this.
+        const updated = stamp({ ...cycle, currentIndex, lastAdvancedAt: Date.now() });
         set({ cycle: updated });
         await saveWorkoutCycle(updated);
       },

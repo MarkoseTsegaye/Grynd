@@ -90,3 +90,70 @@ describe('useCycleStore removeDay', () => {
     expect(useCycleStore.getState().cycle?.currentIndex).toBe(2);
   });
 });
+
+describe('useCycleStore setCurrentIndex', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSaveWorkoutCycle.mockResolvedValue(undefined);
+    useCycleStore.setState({ cycle: null, isLoaded: false });
+  });
+
+  it('moves today to the chosen day and persists it', async () => {
+    useCycleStore.setState({ cycle: makeCycle() });
+
+    await useCycleStore.getState().setCurrentIndex(0);
+
+    const { cycle } = useCycleStore.getState();
+    expect(cycle?.currentIndex).toBe(0);
+    expect(mockSaveWorkoutCycle).toHaveBeenCalledTimes(1);
+  });
+
+  it('stamps updatedAt so the sync adapter pushes the change', async () => {
+    useCycleStore.setState({ cycle: makeCycle({ updatedAt: 0 }) });
+
+    await useCycleStore.getState().setCurrentIndex(3);
+
+    expect(useCycleStore.getState().cycle?.updatedAt).toBeGreaterThan(0);
+  });
+
+  it('resets lastAdvancedAt — choosing a day is a fresh start on it', async () => {
+    const stale = Date.now() - 5 * 24 * 60 * 60 * 1000;
+    useCycleStore.setState({ cycle: makeCycle({ lastAdvancedAt: stale }) });
+
+    await useCycleStore.getState().setCurrentIndex(1);
+
+    expect(useCycleStore.getState().cycle?.lastAdvancedAt).toBeGreaterThan(stale);
+  });
+
+  it('clamps past the end rather than wrapping to the start', async () => {
+    useCycleStore.setState({ cycle: makeCycle() });
+
+    await useCycleStore.getState().setCurrentIndex(99);
+
+    expect(useCycleStore.getState().cycle?.currentIndex).toBe(3);
+  });
+
+  it('clamps a negative index to the first day', async () => {
+    useCycleStore.setState({ cycle: makeCycle() });
+
+    await useCycleStore.getState().setCurrentIndex(-4);
+
+    expect(useCycleStore.getState().cycle?.currentIndex).toBe(0);
+  });
+
+  it('no-ops when the day is already today', async () => {
+    useCycleStore.setState({ cycle: makeCycle({ currentIndex: 2 }) });
+
+    await useCycleStore.getState().setCurrentIndex(2);
+
+    expect(mockSaveWorkoutCycle).not.toHaveBeenCalled();
+  });
+
+  it('no-ops with no cycle or an empty one', async () => {
+    await useCycleStore.getState().setCurrentIndex(0);
+    useCycleStore.setState({ cycle: makeCycle({ days: [], currentIndex: 0 }) });
+    await useCycleStore.getState().setCurrentIndex(0);
+
+    expect(mockSaveWorkoutCycle).not.toHaveBeenCalled();
+  });
+});
