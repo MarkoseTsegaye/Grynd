@@ -10,6 +10,13 @@ export const STORAGE_KEYS = {
   DEFAULT_REST_SECONDS: 'prefs:defaultRestSeconds',
   HAS_SEEN_SWIPE_HINT: 'prefs:hasSeenSwipeHint',
   /**
+   * Device-local "user has swiped or dragged a split row" bit, so the
+   * gesture hint on the Splits tab retires itself. Separate from
+   * HAS_SEEN_SWIPE_HINT, which the workout screen owns for its own hint.
+   * Neither is synced — a hint is about this device, not this account.
+   */
+  SPLITS_GESTURE_HINT_SEEN: 'prefs:splitsGestureHintSeen',
+  /**
    * Single timestamp stamped on every prefs mutation. Prefs live under
    * three separate AsyncStorage keys today (weight unit, auto-advance,
    * default rest); the sync layer treats them as one row and needs one

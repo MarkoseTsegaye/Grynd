@@ -14,8 +14,6 @@ interface Props {
   onPress?: () => void;
   /** Splits tab: whole card opens Manage. */
   onManage?: () => void;
-  /** Splits tab: delete icon. */
-  onDelete?: () => void;
   /** Home tab: this split is the current cycle day. */
   isToday?: boolean;
   /** Home tab: "Yesterday" / "3 days ago" / null when never performed. */
@@ -34,7 +32,6 @@ export function SplitCard({
   exerciseCount,
   onPress,
   onManage,
-  onDelete,
   isToday,
   lastPerformedLabel,
   cycleLabel,
@@ -96,19 +93,13 @@ export function SplitCard({
             {captionParts.join(' · ')}
           </Text>
         </View>
-        {isStartMode ? (
-          <Icon name="play-circle-outline" size={20} color="accent" />
-        ) : (
-          onDelete && (
-            <TouchableOpacity
-              onPress={onDelete}
-              accessibilityLabel={`Delete ${split.name}`}
-              activeOpacity={0.7}
-            >
-              <Icon name="trash-can-outline" size={20} color="text-secondary" />
-            </TouchableOpacity>
-          )
-        )}
+        {/* Manage mode deletes by swipe now, so the trailing slot says where
+            the row goes instead of offering a second destructive target. */}
+        <Icon
+          name={isStartMode ? 'play-circle-outline' : 'chevron-right'}
+          size={20}
+          color={isStartMode ? 'accent' : 'text-secondary'}
+        />
       </View>
     </View>
   );
