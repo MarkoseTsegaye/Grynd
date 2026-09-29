@@ -1,5 +1,5 @@
-import React, { useCallback, useMemo, useState, type RefObject } from 'react';
-import { ActivityIndicator, Platform, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { Platform, Text, TouchableOpacity, View } from 'react-native';
 import {
   BottomSheetBackdrop,
   BottomSheetModal,
@@ -8,6 +8,7 @@ import {
 } from '@gorhom/bottom-sheet';
 import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Button } from '../../../shared/components/Button';
 import { Icon } from '../../../shared/components/Icon';
 import { colors } from '../../../shared/theme/colors';
 import { textRoles, typography } from '../../../shared/theme/typography';
@@ -18,37 +19,40 @@ interface Props {
   onChange?: (index: number) => void;
 }
 
-type Step = 'providers' | 'email-request' | 'email-verify';
+type Step = 'request' | 'verify';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const OTP_LENGTH = 6;
+/** Long enough to outlast Supabase's own send throttle, short enough to not feel punitive. */
+const RESEND_COOLDOWN_SECONDS = 45;
 
 /**
- * Bottom sheet the user opens from Settings → Account → Sign in. Three
- * paths in v1:
+ * Bottom sheet the user opens from Settings → Account → Sign in.
  *
- *   - **Apple** — one tap (native `signInWithApple` on iOS, OAuth redirect
- *     on web/Android via Supabase).
- *   - **Google** — one tap (OAuth redirect via Supabase).
- *   - **Email magic link** — user types their email → we send an OTP →
- *     user pastes the 6-digit code back into the sheet to finish.
+ * One path: they type their email, we send a 6-digit code, they type it
+ * back. The emailed link into an installed iOS PWA is unreliable (see
+ * plan-of-record), so the code is the supported route, not the link.
  *
- * The magic-link deep-link back into an installed iOS PWA is unreliable
- * (see plan-of-record), so we intentionally use OTP (short numeric code
- * pasted from the email) instead of a clickable link. Works everywhere.
+ * Apple and Google buttons used to sit above this. They were removed
+ * rather than hidden — no OAuth provider is configured and none is
+ * planned, so they were two taps that could only dead-end.
  */
 export function SignInSheet({ sheetRef, onChange }: Props) {
   const insets = useSafeAreaInsets();
   const snapPoints = useMemo(() => [Platform.OS === 'web' ? '85%' : '60%'], []);
-  const signInWithApple = useAuthStore((s) => s.signInWithApple);
-  const signInWithGoogle = useAuthStore((s) => s.signInWithGoogle);
   const sendEmailOtp = useAuthStore((s) => s.sendEmailOtp);
   const verifyEmailOtp = useAuthStore((s) => s.verifyEmailOtp);
   const isSigningIn = useAuthStore((s) => s.isSigningIn);
 
-  const [step, setStep] = useState<Step>('providers');
+  const [step, setStep] = useState<Step>('request');
   const [email, setEmail] = useState('');
   const [token, setToken] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [resendIn, setResendIn] = useState(0);
+
+  // Guards the auto-submit: without it, a failed verify would re-fire on
+  // every keystroke-free re-render while six digits sat in the field.
+  const submittedToken = useRef<string | null>(null);
 
   const renderBackdrop = useCallback(
     (props: BottomSheetBackdropProps) => (
@@ -58,10 +62,12 @@ export function SignInSheet({ sheetRef, onChange }: Props) {
   );
 
   const resetSheet = useCallback(() => {
-    setStep('providers');
+    setStep('request');
     setEmail('');
     setToken('');
     setError(null);
+    setResendIn(0);
+    submittedToken.current = null;
   }, []);
 
   const handleSheetChange = useCallback(
@@ -77,31 +83,61 @@ export function SignInSheet({ sheetRef, onChange }: Props) {
     [onChange],
   );
 
+  // Resend cooldown. Ticks only while it has something to count.
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const id = setInterval(() => setResendIn((n) => Math.max(0, n - 1)), 1000);
+    return () => clearInterval(id);
+  }, [resendIn]);
+
   const canSubmitEmail = EMAIL_RE.test(email.trim()) && !isSigningIn;
-  const canVerifyToken = token.trim().length >= 6 && !isSigningIn;
+  const canVerifyToken = token.trim().length === OTP_LENGTH && !isSigningIn;
 
   const handleSendCode = useCallback(async () => {
     if (!canSubmitEmail) return;
     setError(null);
     const result = await sendEmailOtp(email.trim());
     if (result.ok) {
-      setStep('email-verify');
+      setStep('verify');
+      setResendIn(RESEND_COOLDOWN_SECONDS);
     } else {
       setError(result.error);
     }
   }, [canSubmitEmail, email, sendEmailOtp]);
 
-  const handleVerifyCode = useCallback(async () => {
-    if (!canVerifyToken) return;
+  const handleResend = useCallback(async () => {
+    if (resendIn > 0 || isSigningIn) return;
     setError(null);
-    const result = await verifyEmailOtp(email.trim(), token.trim());
+    setToken('');
+    submittedToken.current = null;
+    const result = await sendEmailOtp(email.trim());
+    if (result.ok) setResendIn(RESEND_COOLDOWN_SECONDS);
+    else setError(result.error);
+  }, [email, isSigningIn, resendIn, sendEmailOtp]);
+
+  const handleVerifyCode = useCallback(async () => {
+    const value = token.trim();
+    if (value.length !== OTP_LENGTH || isSigningIn) return;
+    submittedToken.current = value;
+    setError(null);
+    const result = await verifyEmailOtp(email.trim(), value);
     if (result.ok) {
       resetSheet();
       sheetRef.current?.dismiss();
     } else {
       setError(result.error);
     }
-  }, [canVerifyToken, email, resetSheet, sheetRef, token, verifyEmailOtp]);
+  }, [email, isSigningIn, resetSheet, sheetRef, token, verifyEmailOtp]);
+
+  // The sixth digit is the whole intent — making the user reach for a
+  // button afterwards is a step with no decision in it.
+  useEffect(() => {
+    const value = token.trim();
+    if (step !== 'verify') return;
+    if (value.length !== OTP_LENGTH) return;
+    if (submittedToken.current === value) return;
+    void handleVerifyCode();
+  }, [handleVerifyCode, step, token]);
 
   return (
     <BottomSheetModal
@@ -117,46 +153,40 @@ export function SignInSheet({ sheetRef, onChange }: Props) {
       backgroundStyle={{ backgroundColor: '#141414' }}
       handleIndicatorStyle={{ backgroundColor: '#3D3B38' }}
     >
-      <BottomSheetView className="px-5 pt-2 pb-8 flex-1">
+      <BottomSheetView style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 32 }}>
+        {/* Web has no pan-down-to-close gesture, so it needs a real target. */}
+        {Platform.OS === 'web' ? (
+          <View className="flex-row justify-end -mr-1 -mt-1">
+            <TouchableOpacity
+              onPress={() => sheetRef.current?.dismiss()}
+              accessibilityLabel="Close sign in"
+              accessibilityRole="button"
+              activeOpacity={0.7}
+              hitSlop={12}
+              className="p-2"
+            >
+              <Icon name="close" size={24} color="text-secondary" />
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
         <Text
           className={`text-text-primary ${textRoles.modalTitle} mb-1`}
+          style={webText(typography.fonts.sansBold, typography.sizes.lg, colors['text-primary'])}
           accessibilityRole="header"
         >
-          {step === 'providers' ? 'Back up your progress' : 'Enter your email'}
+          {step === 'request' ? 'Back up your progress' : 'Enter your code'}
         </Text>
-        <Text className={`text-text-secondary ${textRoles.bodySmall} mb-6`}>
-          {step === 'providers'
-            ? 'Sign in in one tap so your data syncs across devices and survives a reinstall.'
-            : step === 'email-request'
-              ? "We'll email you a 6-digit code to sign in — no password required."
-              : `We sent a code to ${email}. Paste it below to finish signing in.`}
+        <Text
+          className={`text-text-secondary ${textRoles.bodySmall} mb-6`}
+          style={webText(typography.fonts.sans, typography.sizes.sm, colors['text-secondary'])}
+        >
+          {step === 'request'
+            ? "One sign-in and your workouts sync across devices. Nothing changes on this device — everything you've logged stays right here."
+            : `We sent a 6-digit code to ${email}. It signs you in as soon as you finish typing it.`}
         </Text>
 
-        {step === 'providers' ? (
-          <View className="gap-3">
-            <ProviderButton
-              icon="apple"
-              label="Continue with Apple"
-              onPress={signInWithApple}
-              busy={isSigningIn}
-              tone="on-light"
-            />
-            <ProviderButton
-              icon="google"
-              label="Continue with Google"
-              onPress={signInWithGoogle}
-              busy={isSigningIn}
-              tone="on-light"
-            />
-            <ProviderButton
-              icon="email"
-              label="Continue with email"
-              onPress={() => setStep('email-request')}
-              busy={false}
-              tone="on-surface"
-            />
-          </View>
-        ) : step === 'email-request' ? (
+        {step === 'request' ? (
           <View className="gap-3">
             <BottomSheetTextInput
               className="bg-surface-2 rounded-lg px-4 py-3 text-text-primary font-sans text-base"
@@ -170,47 +200,18 @@ export function SignInSheet({ sheetRef, onChange }: Props) {
               autoCorrect={false}
               autoFocus
               returnKeyType="send"
-              onSubmitEditing={handleSendCode}
+              onSubmitEditing={() => void handleSendCode()}
               accessibilityLabel="Email address"
-              style={
-                Platform.OS === 'web'
-                  ? {
-                      // Same web-only inline rescue as NumericInput —
-                      // BottomSheetTextInput's wrapper chain drops className.
-                      color: colors['text-primary'],
-                      fontFamily: typography.fonts.sans,
-                      fontSize: typography.sizes.base,
-                    }
-                  : undefined
-              }
+              style={webInput(typography.fonts.sans, typography.sizes.base)}
             />
-            {error ? (
-              <Text className={`text-danger ${textRoles.caption}`}>{error}</Text>
-            ) : null}
-            <TouchableOpacity
-              className={`bg-accent rounded-lg py-4 items-center ${!canSubmitEmail ? 'opacity-40' : ''}`}
-              onPress={handleSendCode}
+            {error ? <ErrorLine message={error} /> : null}
+            <Button
+              label="Send code"
+              onPress={() => void handleSendCode()}
+              loading={isSigningIn}
               disabled={!canSubmitEmail}
               accessibilityLabel="Send sign-in code"
-              activeOpacity={0.7}
-            >
-              {isSigningIn ? (
-                <ActivityIndicator color={colors['surface-0']} />
-              ) : (
-                <Text className={`text-surface-0 ${textRoles.buttonLabel}`}>Send code</Text>
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity
-              className="items-center py-2"
-              onPress={() => {
-                setStep('providers');
-                setError(null);
-              }}
-              accessibilityLabel="Back to sign-in options"
-              activeOpacity={0.7}
-            >
-              <Text className={`text-text-secondary ${textRoles.bodySmall}`}>Back</Text>
-            </TouchableOpacity>
+            />
           </View>
         ) : (
           <View className="gap-3">
@@ -222,49 +223,69 @@ export function SignInSheet({ sheetRef, onChange }: Props) {
               placeholderTextColor="#3D3B38"
               keyboardType="number-pad"
               autoComplete="one-time-code"
-              maxLength={6}
+              maxLength={OTP_LENGTH}
               autoFocus
               returnKeyType="done"
-              onSubmitEditing={handleVerifyCode}
+              onSubmitEditing={() => void handleVerifyCode()}
               accessibilityLabel="Sign-in code"
-              style={
-                Platform.OS === 'web'
-                  ? {
-                      color: colors['text-primary'],
-                      fontFamily: typography.fonts.monoBold,
-                      fontSize: typography.sizes['2xl'],
-                    }
-                  : undefined
-              }
+              style={{
+                ...webInput(typography.fonts.monoBold, typography.sizes['2xl']),
+                textAlign: 'center',
+              }}
             />
-            {error ? (
-              <Text className={`text-danger ${textRoles.caption}`}>{error}</Text>
-            ) : null}
-            <TouchableOpacity
-              className={`bg-accent rounded-lg py-4 items-center ${!canVerifyToken ? 'opacity-40' : ''}`}
-              onPress={handleVerifyCode}
+            {error ? <ErrorLine message={error} /> : null}
+            <Button
+              label="Sign in"
+              onPress={() => void handleVerifyCode()}
+              loading={isSigningIn}
               disabled={!canVerifyToken}
               accessibilityLabel="Verify code"
-              activeOpacity={0.7}
-            >
-              {isSigningIn ? (
-                <ActivityIndicator color={colors['surface-0']} />
-              ) : (
-                <Text className={`text-surface-0 ${textRoles.buttonLabel}`}>Sign in</Text>
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity
-              className="items-center py-2"
-              onPress={() => {
-                setStep('email-request');
-                setToken('');
-                setError(null);
-              }}
-              accessibilityLabel="Try a different email"
-              activeOpacity={0.7}
-            >
-              <Text className={`text-text-secondary ${textRoles.bodySmall}`}>Try a different email</Text>
-            </TouchableOpacity>
+            />
+
+            <View className="flex-row items-center justify-between">
+              <TouchableOpacity
+                className="py-2 pr-3"
+                onPress={() => {
+                  setStep('request');
+                  setToken('');
+                  setError(null);
+                  submittedToken.current = null;
+                }}
+                accessibilityLabel="Try a different email"
+                accessibilityRole="button"
+                activeOpacity={0.7}
+              >
+                <Text
+                  className={`text-text-secondary ${textRoles.bodySmall}`}
+                  style={webText(typography.fonts.sans, typography.sizes.sm, colors['text-secondary'])}
+                >
+                  Try a different email
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                className="py-2 pl-3"
+                onPress={() => void handleResend()}
+                disabled={resendIn > 0 || isSigningIn}
+                accessibilityLabel={
+                  resendIn > 0 ? `Resend available in ${resendIn} seconds` : 'Resend code'
+                }
+                accessibilityRole="button"
+                accessibilityState={{ disabled: resendIn > 0 || isSigningIn }}
+                activeOpacity={0.7}
+              >
+                <Text
+                  className={`${resendIn > 0 ? 'text-text-secondary' : 'text-accent'} ${textRoles.bodySmall}`}
+                  style={webText(
+                    typography.fonts.sans,
+                    typography.sizes.sm,
+                    resendIn > 0 ? colors['text-secondary'] : colors.accent,
+                  )}
+                >
+                  {resendIn > 0 ? `Resend in ${resendIn}s` : 'Resend code'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
       </BottomSheetView>
@@ -272,33 +293,38 @@ export function SignInSheet({ sheetRef, onChange }: Props) {
   );
 }
 
-function ProviderButton({
-  icon,
-  label,
-  onPress,
-  busy,
-  tone,
-}: {
-  icon: React.ComponentProps<typeof Icon>['name'];
-  label: string;
-  onPress: () => void | Promise<void>;
-  busy: boolean;
-  /** on-light = light background (Apple/Google convention) · on-surface = surface-2 */
-  tone: 'on-light' | 'on-surface';
-}) {
-  const bg = tone === 'on-light' ? 'bg-text-primary' : 'bg-surface-2';
-  const fg = tone === 'on-light' ? 'text-surface-0' : 'text-text-primary';
-  const iconColor = tone === 'on-light' ? 'surface-0' : 'text-primary';
+function ErrorLine({ message }: { message: string }) {
   return (
-    <TouchableOpacity
-      className={`flex-row items-center justify-center gap-2 rounded-lg py-4 ${bg} ${busy ? 'opacity-40' : ''}`}
-      onPress={() => void onPress()}
-      disabled={busy}
-      accessibilityLabel={label}
-      activeOpacity={0.7}
+    <Text
+      className={`text-danger ${textRoles.caption}`}
+      style={webText(typography.fonts.sans, typography.sizes.xs, colors.danger)}
     >
-      <Icon name={icon} size={20} color={iconColor} />
-      <Text className={`${fg} ${textRoles.buttonLabel}`}>{label}</Text>
-    </TouchableOpacity>
+      {message}
+    </Text>
   );
+}
+
+/**
+ * The BottomSheetTextInput → gesture-handler → react-native-web wrapper
+ * chain drops NativeWind classes, so anything inside this sheet needs its
+ * type and colour restated inline on web. Same rescue as NumericInput.
+ */
+function webText(fontFamily: string, fontSize: number, color: string) {
+  return Platform.OS === 'web' ? { fontFamily, fontSize, color } : undefined;
+}
+
+function webInput(fontFamily: string, fontSize: number) {
+  return Platform.OS === 'web'
+    ? {
+        backgroundColor: colors['surface-2'],
+        borderRadius: 8,
+        borderWidth: 0,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        color: colors['text-primary'],
+        fontFamily,
+        fontSize,
+        width: '100%' as const,
+      }
+    : undefined;
 }

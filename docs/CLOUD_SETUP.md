@@ -21,13 +21,23 @@ Under **Authentication → Providers**:
 
 - **Anonymous Sign-Ins** — enable. The app calls `signInAnonymously()` on
   first launch so users can log workouts before signing in.
-- **Apple** — enable and paste your Services ID + private key. Required on
-  iOS by App Store guidelines when offering third-party auth.
-- **Google** — enable and paste your OAuth 2.0 client IDs (iOS, Android,
-  Web).
 - **Email** — enable "Email OTP" (not magic link). The app uses the 6-digit
   code flow because deep-linking a magic link back into an installed iOS
   PWA is unreliable.
+
+No OAuth provider is needed: email is the only sign-in method the app
+offers. If you ever add Apple or Google, note that App Store guidelines
+require offering Sign in with Apple once you offer any other third-party
+sign-in — which is part of why the app stays on email alone.
+
+### Adding phone sign-in later
+
+The code side mirrors email almost exactly (`updateUser({ phone })` +
+`verifyOtp({ type: 'phone_change' })`). The prerequisite is not free:
+Supabase phone auth requires an external SMS provider (Twilio, MessageBird,
+Vonage or Textlocal) configured under **Authentication → Providers →
+Phone**, billed per message plus a monthly number rental. Set that up first
+if you want it.
 
 Under **Authentication → URL Configuration**:
 
