@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState, type RefObject } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetView,
@@ -8,7 +8,15 @@ import {
 import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WorkoutDatePicker } from './WorkoutDatePicker';
-import { dateToCompletedAtMs, isFutureCalendarDay } from '../../../shared/lib/date';
+import { Button } from '../../../shared/components/Button';
+import { Icon } from '../../../shared/components/Icon';
+import {
+  dateKeyToday,
+  dateToCompletedAtMs,
+  formatDisplayDate,
+  isFutureCalendarDay,
+  toDateKey,
+} from '../../../shared/lib/date';
 import { textRoles } from '../../../shared/theme/typography';
 import type { WorkoutSession } from '../types';
 
@@ -28,14 +36,17 @@ export function FinishWorkoutSheet({
   onChange,
 }: Props) {
   const insets = useSafeAreaInsets();
-  const snapPoints = useMemo(() => ['72%'], []);
+  // Index 0 is the confirm; index 1 only exists for the date picker.
+  const snapPoints = useMemo(() => ['45%', '72%'], []);
   const [selectedDate, setSelectedDate] = useState(() => new Date());
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const exerciseCount = session.exercises.length;
   const totalSets = session.exercises.reduce((acc, ex) => acc + ex.sets.length, 0);
   const isFutureDate = isFutureCalendarDay(selectedDate);
+  const isToday = toDateKey(selectedDate) === dateKeyToday();
   const canConfirm = !isFutureDate && !isConfirming;
 
   const renderBackdrop = useCallback(
@@ -48,8 +59,18 @@ export function FinishWorkoutSheet({
   const resetState = useCallback(() => {
     setSelectedDate(new Date());
     setIsConfirming(false);
+    setDatePickerOpen(false);
     setError(null);
   }, []);
+
+  // The sheet grows only when the picker needs the room, so finishing on
+  // today — nearly every time — is one tap with nothing to scroll past.
+  const handleToggleDatePicker = useCallback(() => {
+    setDatePickerOpen((open) => {
+      sheetRef.current?.snapToIndex(open ? 0 : 1);
+      return !open;
+    });
+  }, [sheetRef]);
 
   const handleSheetChange = useCallback(
     (index: number) => {
@@ -95,7 +116,10 @@ export function FinishWorkoutSheet({
       backgroundStyle={{ backgroundColor: '#141414' }}
       handleIndicatorStyle={{ backgroundColor: '#3D3B38' }}
     >
-      <BottomSheetView className="px-6 pb-8 pt-2">
+      {/* Inline padding rather than className: the BottomSheetView →
+          gesture-handler → react-native-web chain drops NativeWind classes,
+          so on web this content ran off both edges of the sheet. */}
+      <BottomSheetView style={{ paddingHorizontal: 24, paddingTop: 8, paddingBottom: 32 }}>
         <Text
           className={`text-text-primary ${textRoles.cardTitleSmall} mb-1`}
           accessibilityRole="header"
@@ -115,8 +139,27 @@ export function FinishWorkoutSheet({
           </Text>
         </View>
 
-        <Text className={`text-text-secondary ${textRoles.caption} mb-2 px-1`}>WORKOUT DATE</Text>
-        <WorkoutDatePicker value={selectedDate} onChange={setSelectedDate} />
+        <TouchableOpacity
+          className="flex-row items-center justify-center gap-1 h-11"
+          onPress={handleToggleDatePicker}
+          accessibilityLabel={`Change workout date, currently ${formatDisplayDate(selectedDate)}`}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: datePickerOpen }}
+          activeOpacity={0.7}
+        >
+          <Text className={`text-text-secondary ${textRoles.bodySmall}`}>
+            {isToday ? `Today · ${formatDisplayDate(selectedDate)}` : formatDisplayDate(selectedDate)}
+          </Text>
+          <Icon
+            name={datePickerOpen ? 'chevron-up' : 'chevron-down'}
+            size={18}
+            color="text-secondary"
+          />
+        </TouchableOpacity>
+
+        {datePickerOpen ? (
+          <WorkoutDatePicker value={selectedDate} onChange={setSelectedDate} />
+        ) : null}
 
         {isFutureDate && (
           <Text className={`text-danger ${textRoles.caption} mt-3 text-center`}>
@@ -128,28 +171,24 @@ export function FinishWorkoutSheet({
         )}
 
         <View className="flex-row gap-3 mt-6">
-          <TouchableOpacity
-            className="flex-1 bg-surface-2 rounded-lg py-4 items-center"
-            onPress={() => sheetRef.current?.dismiss()}
-            disabled={isConfirming}
-            accessibilityLabel="Cancel finish workout"
-            activeOpacity={0.7}
-          >
-            <Text className={`text-text-primary ${textRoles.buttonLabel}`}>Cancel</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            className={`flex-1 bg-accent rounded-lg py-4 items-center ${!canConfirm ? 'opacity-40' : ''}`}
-            onPress={() => void handleConfirm()}
-            disabled={!canConfirm}
-            accessibilityLabel="Confirm finish workout"
-            activeOpacity={0.7}
-          >
-            {isConfirming ? (
-              <ActivityIndicator color="#0A0A0A" />
-            ) : (
-              <Text className={`text-surface-0 ${textRoles.buttonLabel}`}>Confirm</Text>
-            )}
-          </TouchableOpacity>
+          <View className="flex-1">
+            <Button
+              label="Cancel"
+              variant="ghost"
+              onPress={() => sheetRef.current?.dismiss()}
+              disabled={isConfirming}
+              accessibilityLabel="Cancel finish workout"
+            />
+          </View>
+          <View className="flex-1">
+            <Button
+              label="Confirm"
+              onPress={() => void handleConfirm()}
+              loading={isConfirming}
+              disabled={!canConfirm}
+              accessibilityLabel="Confirm finish workout"
+            />
+          </View>
         </View>
       </BottomSheetView>
     </BottomSheetModal>

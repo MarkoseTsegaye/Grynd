@@ -14,6 +14,7 @@ import {
   BottomSheetTextInput,
 } from '@gorhom/bottom-sheet';
 import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
+import { Button } from '../../../shared/components/Button';
 import { NumericInput } from '../../../shared/components/NumericInput';
 import { Icon } from '../../../shared/components/Icon';
 import { WorkoutDatePicker } from '../../workout/components/WorkoutDatePicker';
@@ -85,6 +86,22 @@ export function LogWeightSheet({ sheetRef, entry, onDismiss, onSubmit, onDelete 
     setDatePickerOpen(false);
   }, [entry?.id, entry, weightUnit]);
 
+  /**
+   * Open with the cursor already in the weight field — the number is the
+   * only reason this sheet exists.
+   *
+   * Native only, and deliberately not `autoFocus`. Focusing this input
+   * programmatically sends @gorhom/bottom-sheet down a keyboard path that
+   * calls `TextInputState.currentlyFocusedInput()`, which react-native-web
+   * does not implement; it threw on every open of the sheet. Tapping the
+   * field still focuses it fine on web, and the field is now the first
+   * thing in the sheet, so the cost there is one tap.
+   */
+  const handleSheetChange = useCallback((index: number) => {
+    if (index < 0 || Platform.OS === 'web') return;
+    setTimeout(() => weightRef.current?.focus(), 120);
+  }, []);
+
   const renderBackdrop = useCallback(
     (props: BottomSheetBackdropProps) => (
       <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.7} />
@@ -136,6 +153,7 @@ export function LogWeightSheet({ sheetRef, entry, onDismiss, onSubmit, onDelete 
       android_keyboardInputMode="adjustResize"
       bottomInset={0}
       backdropComponent={renderBackdrop}
+      onChange={handleSheetChange}
       onDismiss={onDismiss}
       backgroundStyle={{ backgroundColor: '#141414' }}
       handleIndicatorStyle={{ backgroundColor: '#3D3B38' }}
@@ -145,44 +163,96 @@ export function LogWeightSheet({ sheetRef, entry, onDismiss, onSubmit, onDelete 
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
       >
-        {/* Web: close X — same reason as LogSheet (pan gestures are disabled). */}
-        {Platform.OS === 'web' ? (
-          <View className="flex-row justify-end pt-1 -mr-1">
-            <TouchableOpacity
-              onPress={() => sheetRef.current?.dismiss()}
-              accessibilityLabel="Close weight log"
-              accessibilityRole="button"
-              activeOpacity={0.7}
-              hitSlop={12}
-              className="p-2"
-            >
-              <Icon name="close" size={24} color="text-secondary" />
-            </TouchableOpacity>
-          </View>
-        ) : null}
+        {/* Title and close. The X is no longer web-only: pan-to-close is
+            disabled on every platform here (the wheel picker needs the
+            vertical gesture), so without it native had no way out but the
+            backdrop. */}
+        <View className="flex-row items-center justify-between pt-1 -mr-1 mb-5">
+          <Text
+            className={`text-text-primary ${textRoles.modalTitle}`}
+            style={
+              Platform.OS === 'web'
+                ? {
+                    color: colors['text-primary'],
+                    fontFamily: typography.fonts.sansBold,
+                    fontSize: typography.sizes.lg,
+                  }
+                : undefined
+            }
+            accessibilityRole="header"
+          >
+            {isEditing ? 'Edit Weight' : 'Log Weight'}
+          </Text>
+          <TouchableOpacity
+            onPress={() => sheetRef.current?.dismiss()}
+            accessibilityLabel="Close weight log"
+            accessibilityRole="button"
+            activeOpacity={0.7}
+            hitSlop={12}
+            className="p-2"
+          >
+            <Icon name="close" size={24} color="text-secondary" />
+          </TouchableOpacity>
+        </View>
 
+        {/* The number you came to type is first and focused. The date was
+            above it, so logging today's weight — every time but a backfill —
+            started by scrolling past a control you did not need. */}
         <Text
-          className={`text-text-primary ${textRoles.modalTitle} mb-4 mt-2`}
-          accessibilityRole="header"
+          className={`text-text-secondary ${textRoles.sectionLabel} mb-1.5`}
+          style={
+            Platform.OS === 'web'
+              ? {
+                  color: colors['text-secondary'],
+                  fontFamily: typography.fonts.sans,
+                  fontSize: typography.sizes.xs,
+                }
+              : undefined
+          }
         >
-          {isEditing ? 'Edit Weight' : 'Log Weight'}
+          Weight
         </Text>
+        <NumericInput
+          ref={weightRef}
+          InputComponent={BottomSheetTextInput}
+          value={weightInput}
+          onChangeText={setWeightInput}
+          suffix={unitLabel(weightUnit)}
+          integerOnly={false}
+          keyboardType="decimal-pad"
+          returnKeyType="done"
+          onSubmitEditing={handleSubmit}
+          maxLength={6}
+          accessibilityLabel={
+            weightUnit === 'kg' ? 'Body weight in kilograms' : 'Body weight in pounds'
+          }
+        />
 
-        {/* Date row — tap to expand a wheel picker for backfill. */}
+        {/* Backfilling another day is the rare case, so it is a link rather
+            than a picker sitting open. */}
         <TouchableOpacity
-          className="bg-surface-2 rounded-lg px-4 py-3 mb-4 flex-row items-center justify-between"
+          className="flex-row items-center justify-center gap-1 h-11 my-2"
           onPress={() => setDatePickerOpen((open) => !open)}
-          accessibilityLabel="Change date"
+          accessibilityLabel={`Change date, currently ${formatDisplayDate(date)}`}
           accessibilityRole="button"
+          accessibilityState={{ expanded: datePickerOpen }}
           activeOpacity={0.7}
         >
-          <View>
-            <Text className={`text-text-secondary ${textRoles.caption}`}>Date</Text>
-            <Text className={`text-text-primary ${textRoles.body} mt-0.5`}>
-              {isToday ? `Today · ${formatDisplayDate(date)}` : formatDisplayDate(date)}
-            </Text>
-          </View>
-          <Icon name={datePickerOpen ? 'chevron-up' : 'chevron-down'} size={22} color="text-secondary" />
+          <Text
+            className={`text-text-secondary ${textRoles.body}`}
+            style={
+              Platform.OS === 'web'
+                ? {
+                    color: colors['text-secondary'],
+                    fontFamily: typography.fonts.sans,
+                    fontSize: typography.sizes.sm,
+                  }
+                : undefined
+            }
+          >
+            {isToday ? `Today · ${formatDisplayDate(date)}` : formatDisplayDate(date)}
+          </Text>
+          <Icon name={datePickerOpen ? 'chevron-up' : 'chevron-down'} size={18} color="text-secondary" />
         </TouchableOpacity>
 
         {datePickerOpen ? (
@@ -191,51 +261,13 @@ export function LogWeightSheet({ sheetRef, entry, onDismiss, onSubmit, onDelete 
           </View>
         ) : null}
 
-        {/* Weight input */}
-        <View className="mb-6">
-          <Text className={`text-text-secondary ${textRoles.bodySmall} mb-1`}>WEIGHT</Text>
-          <NumericInput
-            ref={weightRef}
-            InputComponent={BottomSheetTextInput}
-            value={weightInput}
-            onChangeText={setWeightInput}
-            suffix={unitLabel(weightUnit)}
-            integerOnly={false}
-            keyboardType="decimal-pad"
-            returnKeyType="done"
-            onSubmitEditing={handleSubmit}
-            maxLength={6}
-            accessibilityLabel={
-              weightUnit === 'kg' ? 'Body weight in kilograms' : 'Body weight in pounds'
-            }
-          />
-        </View>
-
-        {/* Save button */}
-        <TouchableOpacity
-          className={`bg-accent rounded-lg py-4 items-center ${!canSubmit ? 'opacity-40' : ''}`}
-          onPress={handleSubmit}
+        <Button
+          label={isEditing ? 'Save' : 'Log weight'}
+          onPress={() => void handleSubmit()}
+          loading={submitting}
           disabled={!canSubmit}
           accessibilityLabel={isEditing ? 'Save weight entry' : 'Log weight entry'}
-          activeOpacity={0.7}
-        >
-          <Text
-            className={`text-surface-0 ${textRoles.buttonLabel}`}
-            style={
-              Platform.OS === 'web'
-                ? {
-                    // Same web-only inline style rescue as NumericInput —
-                    // BottomSheetTextInput chain drops className styles.
-                    color: colors['surface-0'],
-                    fontFamily: typography.fonts.sansBold,
-                    fontSize: typography.sizes.base,
-                  }
-                : undefined
-            }
-          >
-            {isEditing ? 'Save' : 'Log weight'}
-          </Text>
-        </TouchableOpacity>
+        />
 
         {/* Delete row — only for editing an existing entry */}
         {isEditing && onDelete ? (
