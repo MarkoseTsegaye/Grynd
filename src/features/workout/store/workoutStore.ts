@@ -46,7 +46,21 @@ interface WorkoutState {
   ) => Promise<void>;
   deleteSet: (exerciseId: string, setIndex: number) => Promise<void>;
   goToExercise: (index: number) => void;
-  substituteExercise: (index: number, substituteName: string) => Promise<void>;
+  /**
+   * Replace the planned exercise at `index` with a real library exercise.
+   * Takes a resolved `masterExerciseId` for the same reason
+   * `addAdHocExercise` does: a generated id has no catalog row behind it,
+   * so the lift could never be opened from Trends or build history.
+   */
+  substituteExercise: (
+    index: number,
+    input: {
+      masterExerciseId: string;
+      name: string;
+      unilateral?: boolean;
+      plateLoaded?: boolean;
+    },
+  ) => Promise<void>;
   /**
    * Append a new exercise to the current session. If `masterExerciseId` is
    * provided, the entry references an existing library exercise (the store
@@ -214,9 +228,9 @@ export const useWorkoutStore = create<WorkoutState>()(
         void setActiveSession(updated);
       },
 
-      substituteExercise: async (index, substituteName) => {
-        const trimmed = substituteName.trim();
-        if (!trimmed) return;
+      substituteExercise: async (index, { masterExerciseId, name, unilateral, plateLoaded }) => {
+        const trimmed = name.trim();
+        if (!trimmed || !masterExerciseId) return;
 
         const { session } = get();
         if (!session || index < 0 || index >= session.exercises.length) return;
@@ -226,9 +240,11 @@ export const useWorkoutStore = create<WorkoutState>()(
         const plannedName = current.substitutedForExerciseName ?? current.exerciseName;
 
         const substitute: LoggedExercise = {
-          exerciseId: generateId(),
+          exerciseId: masterExerciseId,
           exerciseName: trimmed,
           sets: [],
+          ...(unilateral ? { unilateral: true } : {}),
+          ...(plateLoaded ? { plateLoaded: true } : {}),
           substitutedForExerciseId: plannedId,
           substitutedForExerciseName: plannedName,
         };

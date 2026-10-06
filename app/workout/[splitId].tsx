@@ -632,6 +632,7 @@ export default function WorkoutScreen() {
       <SubstituteExerciseSheet
         sheetRef={substituteSheetRef}
         onChange={handleSubstituteSheetChange}
+        currentExerciseId={currentExercise?.exerciseId}
         onConfirm={handleConfirmSubstitute}
         onClose={() => {}}
       />
@@ -660,7 +661,10 @@ export default function WorkoutScreen() {
         backgroundStyle={{ backgroundColor: '#141414' }}
         handleIndicatorStyle={{ backgroundColor: '#3D3B38' }}
       >
-        <BottomSheetView className="px-6 pb-8 pt-2">
+        {/* Inline padding: the sheet → gesture-handler → react-native-web
+            chain drops NativeWind classes, running this content off both
+            edges on the PWA. */}
+        <BottomSheetView style={{ paddingHorizontal: 24, paddingTop: 8, paddingBottom: 32 }}>
           <TouchableOpacity
             className="flex-row items-center gap-3 py-4 border-b border-surface-2"
             onPress={handleDiscard}

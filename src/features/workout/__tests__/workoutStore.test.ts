@@ -352,3 +352,82 @@ describe('useWorkoutStore pause/resume', () => {
     expect(useWorkoutStore.getState().session).toBeNull();
   });
 });
+
+describe('useWorkoutStore substituteExercise', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSetActiveSession.mockResolvedValue(undefined);
+    useWorkoutStore.setState({ session: makeSession(), currentExerciseIndex: 0 });
+  });
+
+  // The bug: this used to mint `exerciseId: generateId()`, an id with no
+  // library row behind it — so a substituted lift opened as "Exercise not
+  // found" in Trends and never accumulated history across sessions.
+  it('stores the picked library exercise id, not a generated one', async () => {
+    await useWorkoutStore
+      .getState()
+      .substituteExercise(0, { masterExerciseId: 'lib-incline', name: 'Incline DB Press' });
+
+    const entry = useWorkoutStore.getState().session!.exercises[0];
+    expect(entry.exerciseId).toBe('lib-incline');
+    expect(entry.exerciseId).not.toBe('generated-id');
+    expect(entry.exerciseName).toBe('Incline DB Press');
+  });
+
+  it('remembers what was planned so history still compares against it', async () => {
+    await useWorkoutStore
+      .getState()
+      .substituteExercise(0, { masterExerciseId: 'lib-incline', name: 'Incline DB Press' });
+
+    const entry = useWorkoutStore.getState().session!.exercises[0];
+    expect(entry.substitutedForExerciseId).toBe('ex-1');
+    expect(entry.substitutedForExerciseName).toBe('Bench');
+  });
+
+  it('carries the exercise attributes through, like addAdHocExercise', async () => {
+    await useWorkoutStore.getState().substituteExercise(0, {
+      masterExerciseId: 'lib-row',
+      name: 'Single-arm Row',
+      unilateral: true,
+      plateLoaded: true,
+    });
+
+    const entry = useWorkoutStore.getState().session!.exercises[0];
+    expect(entry.unilateral).toBe(true);
+    expect(entry.plateLoaded).toBe(true);
+  });
+
+  it('keeps pointing at the original plan when substituting twice', async () => {
+    const store = useWorkoutStore.getState();
+    await store.substituteExercise(0, { masterExerciseId: 'lib-a', name: 'A' });
+    await useWorkoutStore.getState().substituteExercise(0, { masterExerciseId: 'lib-b', name: 'B' });
+
+    const entry = useWorkoutStore.getState().session!.exercises[0];
+    expect(entry.exerciseId).toBe('lib-b');
+    expect(entry.substitutedForExerciseId).toBe('ex-1');
+  });
+
+  it('starts the substitute with no sets', async () => {
+    useWorkoutStore.setState({
+      session: makeSession({
+        exercises: [
+          { exerciseId: 'ex-1', exerciseName: 'Bench', sets: [{ weightKg: 80, reps: 8, loggedAt: 1 }] },
+        ],
+      }),
+    });
+
+    await useWorkoutStore.getState().substituteExercise(0, { masterExerciseId: 'lib-x', name: 'X' });
+
+    expect(useWorkoutStore.getState().session!.exercises[0].sets).toEqual([]);
+  });
+
+  it('no-ops without a resolved library id or name, and on a bad index', async () => {
+    const before = useWorkoutStore.getState().session;
+    await useWorkoutStore.getState().substituteExercise(0, { masterExerciseId: '', name: 'X' });
+    await useWorkoutStore.getState().substituteExercise(0, { masterExerciseId: 'lib-x', name: '  ' });
+    await useWorkoutStore.getState().substituteExercise(9, { masterExerciseId: 'lib-x', name: 'X' });
+
+    expect(useWorkoutStore.getState().session).toBe(before);
+    expect(mockSetActiveSession).not.toHaveBeenCalled();
+  });
+});

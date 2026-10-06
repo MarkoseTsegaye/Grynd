@@ -17,6 +17,14 @@ import {
 import { buildEffort, getSetRir } from '../lib/effort';
 import type { LoggedExercise, LoggedSet } from '../types';
 
+/** What the exercise picker resolves with — a real library row. */
+type PickedExercise = {
+  id: string;
+  name: string;
+  unilateral?: boolean;
+  plateLoaded?: boolean;
+};
+
 type WeightMode = 'straight' | 'plates';
 
 function presentSheet(
@@ -224,11 +232,15 @@ export function useWorkout(substituteSheetRef: RefObject<BottomSheetModal | null
   }, [substituteSheetRef]);
 
   const applySubstitute = useCallback(
-    async (name: string) => {
-      const trimmed = name.trim();
-      if (!trimmed) return;
+    async (exercise: PickedExercise) => {
+      if (!exercise.name.trim() || !exercise.id) return;
 
-      await substituteExercise(currentExerciseIndex, trimmed);
+      await substituteExercise(currentExerciseIndex, {
+        masterExerciseId: exercise.id,
+        name: exercise.name,
+        unilateral: exercise.unilateral,
+        plateLoaded: exercise.plateLoaded,
+      });
       impact();
       dismissSubstituteSheet();
     },
@@ -236,9 +248,8 @@ export function useWorkout(substituteSheetRef: RefObject<BottomSheetModal | null
   );
 
   const handleConfirmSubstitute = useCallback(
-    (name: string) => {
-      const trimmed = name.trim();
-      if (!trimmed || !currentExercise) return;
+    (exercise: PickedExercise) => {
+      if (!exercise.name.trim() || !currentExercise) return;
 
       if (currentExercise.sets.length > 0) {
         showDialog(
@@ -250,7 +261,7 @@ export function useWorkout(substituteSheetRef: RefObject<BottomSheetModal | null
               text: 'Substitute',
               style: 'destructive',
               onPress: () => {
-                void applySubstitute(trimmed);
+                void applySubstitute(exercise);
               },
             },
           ],
@@ -258,7 +269,7 @@ export function useWorkout(substituteSheetRef: RefObject<BottomSheetModal | null
         return;
       }
 
-      void applySubstitute(trimmed);
+      void applySubstitute(exercise);
     },
     [applySubstitute, currentExercise],
   );
