@@ -137,10 +137,7 @@ export default function WorkoutScreen() {
     [addAdHocExercise, handleGoToExercise],
   );
 
-  // Cancel sheet
-  const cancelSheetRef = useRef<BottomSheetModal>(null);
   const pendingLeaveRef = useRef<(() => void) | null>(null);
-  const cancelSnapPoints = useMemo(() => ['38%'], []);
   const [finishSheetVisible, setFinishSheetVisible] = useState(false);
   const sheetBlocksSwipe =
     overviewSheetVisible || substituteSheetVisible || finishSheetVisible;
@@ -154,14 +151,49 @@ export default function WorkoutScreen() {
   const shouldPreventLeave =
     !allowLeave && bootstrapState === 'ready' && !!session && session.pausedAt == null;
 
-  usePreventRemove(shouldPreventLeave, () => {
-    cancelSheetRef.current?.present();
-  });
-
   const beginIntentionalLeave = useCallback((navigate: () => void) => {
     pendingLeaveRef.current = navigate;
     setAllowLeave(true);
   }, []);
+
+  const leaveToHome = useCallback(async () => {
+    overviewSheetRef.current?.dismiss();
+    substituteSheetRef.current?.dismiss();
+    finishSheetRef.current?.dismiss();
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    resetRestTimer();
+    beginIntentionalLeave(() => {
+      void (async () => {
+        await leaveWorkout();
+        router.replace('/(tabs)');
+      })();
+    });
+  }, [beginIntentionalLeave, leaveWorkout, router, resetRestTimer]);
+
+  /**
+   * Leaving is the only thing this offers. Discarding a workout lives on the
+   * Home banner instead: it throws away every set just logged, and it has no
+   * business sitting one tap from the button you press to step out of the gym
+   * floor for a minute.
+   *
+   * A dialog rather than a sheet — a sheet is somewhere to do something, a
+   * destructive yes/no is a question. `showDialog` also works inside an
+   * installed iOS PWA, where window.confirm is silently suppressed.
+   */
+  const confirmLeave = useCallback(() => {
+    showDialog(
+      'Leave workout?',
+      'Your sets are saved. Pick it up again from the banner on Home.',
+      [
+        { text: 'Keep going', style: 'cancel' },
+        { text: 'Leave', onPress: () => void leaveToHome() },
+      ],
+    );
+  }, [leaveToHome]);
+
+  usePreventRemove(shouldPreventLeave, () => {
+    confirmLeave();
+  });
 
   useEffect(() => {
     if (!allowLeave) return;
@@ -284,12 +316,12 @@ export default function WorkoutScreen() {
     if (!shouldPreventLeave) return;
 
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      cancelSheetRef.current?.present();
+      confirmLeave();
       return true;
     });
 
     return () => subscription.remove();
-  }, [shouldPreventLeave]);
+  }, [shouldPreventLeave, confirmLeave]);
 
   // Show swipe hint on first workout ever
   useEffect(() => {
@@ -494,39 +526,9 @@ export default function WorkoutScreen() {
   );
 
   const handleCancelPress = useCallback(() => {
-    cancelSheetRef.current?.present();
-  }, []);
+    confirmLeave();
+  }, [confirmLeave]);
 
-  const handleDiscard = useCallback(async () => {
-    cancelSheetRef.current?.dismiss();
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    resetRestTimer();
-    beginIntentionalLeave(() => {
-      void (async () => {
-        await abandonWorkout();
-        router.replace('/(tabs)');
-      })();
-    });
-  }, [abandonWorkout, beginIntentionalLeave, router, resetRestTimer]);
-
-  const handleLeaveWorkout = useCallback(async () => {
-    cancelSheetRef.current?.dismiss();
-    overviewSheetRef.current?.dismiss();
-    substituteSheetRef.current?.dismiss();
-    finishSheetRef.current?.dismiss();
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    resetRestTimer();
-    beginIntentionalLeave(() => {
-      void (async () => {
-        await leaveWorkout();
-        router.replace('/(tabs)');
-      })();
-    });
-  }, [beginIntentionalLeave, leaveWorkout, router, resetRestTimer]);
-
-  const handleKeepGoing = useCallback(() => {
-    cancelSheetRef.current?.dismiss();
-  }, []);
 
   if (bootstrapState === 'error' || bootstrapState === 'empty') {
     return (
@@ -652,48 +654,6 @@ export default function WorkoutScreen() {
         />
       )}
 
-      {/* Cancel workout confirmation sheet */}
-      <BottomSheetModal
-        ref={cancelSheetRef}
-        snapPoints={cancelSnapPoints}
-        enablePanDownToClose
-        backdropComponent={renderBackdrop}
-        backgroundStyle={{ backgroundColor: '#141414' }}
-        handleIndicatorStyle={{ backgroundColor: '#3D3B38' }}
-      >
-        {/* Inline padding: the sheet → gesture-handler → react-native-web
-            chain drops NativeWind classes, running this content off both
-            edges on the PWA. */}
-        <BottomSheetView style={{ paddingHorizontal: 24, paddingTop: 8, paddingBottom: 32 }}>
-          <TouchableOpacity
-            className="flex-row items-center gap-3 py-4 border-b border-surface-2"
-            onPress={handleDiscard}
-            accessibilityLabel="Discard workout"
-            activeOpacity={0.7}
-          >
-            <Icon name="trash-can-outline" size={22} color="danger" />
-            <Text className={`text-danger ${textRoles.buttonLabel}`}>Discard Workout</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            className="flex-row items-center gap-3 py-4 border-b border-surface-2"
-            onPress={handleLeaveWorkout}
-            accessibilityLabel="Leave workout"
-            activeOpacity={0.7}
-          >
-            <Icon name="exit-to-app" size={22} color="text-primary" />
-            <Text className={`text-text-primary ${textRoles.buttonLabel}`}>Leave Workout</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            className="flex-row items-center gap-3 py-4"
-            onPress={handleKeepGoing}
-            accessibilityLabel="Keep going"
-            activeOpacity={0.7}
-          >
-            <Icon name="arrow-left" size={22} color="text-primary" />
-            <Text className={`text-text-primary ${textRoles.buttonLabel}`}>Keep Going</Text>
-          </TouchableOpacity>
-        </BottomSheetView>
-      </BottomSheetModal>
     </View>
   );
 }

@@ -5,14 +5,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import DraggableFlatList, { ScaleDecorator } from 'react-native-draggable-flatlist';
 import { Swipeable } from 'react-native-gesture-handler';
-import { BottomSheetModal, BottomSheetView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
-import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
+import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import * as Haptics from 'expo-haptics';
 import { useSplitsList, SplitCard } from '../../src/features/splits';
 import { useSplitsStore } from '../../src/features/splits';
 import { CreateSplitSheet } from '../../src/features/splits/components/CreateSplitSheet';
 import { Button } from '../../src/shared/components/Button';
 import { Icon } from '../../src/shared/components/Icon';
+import { showDialog } from '../../src/shared/lib/dialog';
 import { useCycleStore } from '../../src/features/splits/store/cycleStore';
 import { useHistory } from '../../src/features/history';
 import { getCycleUsage } from '../../src/features/splits/lib/cycleUsage';
@@ -39,10 +39,6 @@ export default function SplitsScreen() {
 
   const createSheetRef = useRef<BottomSheetModal>(null);
 
-  // Delete confirmation
-  const deleteSheetRef = useRef<BottomSheetModal>(null);
-  const deleteSnapPoints = useMemo(() => ['35%'], []);
-  const [pendingDeleteSplit, setPendingDeleteSplit] = useState<Split | null>(null);
 
   // Same registry as History: a ref created inside renderItem is a new object
   // every render, so "close the previously open row" compares against stale refs.
@@ -63,37 +59,32 @@ export default function SplitsScreen() {
     });
   }, []);
 
-  const renderBackdrop = useCallback(
-    (props: BottomSheetBackdropProps) => (
-      <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.7} />
-    ),
-    [],
+  // A dialog, not a sheet — the same idiom History's swipe-delete uses. A
+  // sheet is somewhere to do something; a destructive yes/no is a question.
+  // Either way out closes the row: backing out of a destructive action
+  // shouldn't leave it parked on its red button.
+  const confirmDeleteSplit = useCallback(
+    (split: Split) => {
+      const closeRow = () => swipeableRefs.current.get(split.id)?.close();
+      showDialog(
+        `Delete ${split.name}?`,
+        "This removes it from every device you're signed in on and cannot be undone. Any cycle days using this split will be set to rest days.",
+        [
+          { text: 'Cancel', style: 'cancel', onPress: closeRow },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: () => {
+              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              closeRow();
+              void deleteSplit(split.id);
+            },
+          },
+        ],
+      );
+    },
+    [deleteSplit],
   );
-
-  const openDeleteSheet = useCallback((split: Split) => {
-    setPendingDeleteSplit(split);
-    deleteSheetRef.current?.present();
-  }, []);
-
-  const handleConfirmDelete = useCallback(async () => {
-    if (!pendingDeleteSplit) return;
-    deleteSheetRef.current?.dismiss();
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    await deleteSplit(pendingDeleteSplit.id);
-  }, [pendingDeleteSplit, deleteSplit]);
-
-  const handleCancelDelete = useCallback(() => {
-    deleteSheetRef.current?.dismiss();
-  }, []);
-
-  // Runs for every close — Cancel, backdrop tap, or pan-down. Backing out of a
-  // destructive action shouldn't leave the row sitting open on its red button.
-  const handleSheetDismissed = useCallback(() => {
-    setPendingDeleteSplit((split) => {
-      if (split) swipeableRefs.current.get(split.id)?.close();
-      return null;
-    });
-  }, []);
 
   const handleOpenCreate = useCallback(async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -105,14 +96,14 @@ export default function SplitsScreen() {
       <TouchableOpacity
         className="bg-danger items-center justify-center rounded-lg mb-3"
         style={{ width: 80 }}
-        onPress={() => openDeleteSheet(split)}
+        onPress={() => confirmDeleteSplit(split)}
         accessibilityLabel={`Delete ${split.name}`}
         activeOpacity={0.8}
       >
         <Icon name="trash-can-outline" size={24} color="text-primary" />
       </TouchableOpacity>
     ),
-    [openDeleteSheet],
+    [confirmDeleteSplit],
   );
 
   const ctaBottomOffset = FLOATING_CTA_GAP;
@@ -225,12 +216,11 @@ export default function SplitsScreen() {
         }
       />
 
-      {!pendingDeleteSplit && (
-        <View
-          className="absolute left-5 right-5"
-          style={{ bottom: ctaBottomOffset }}
-          pointerEvents="box-none"
-        >
+      <View
+        className="absolute left-5 right-5"
+        style={{ bottom: ctaBottomOffset }}
+        pointerEvents="box-none"
+      >
           <View
             style={{
               shadowColor: '#000',
@@ -246,49 +236,11 @@ export default function SplitsScreen() {
               onPress={() => void handleOpenCreate()}
               accessibilityLabel="Create new split"
             />
-          </View>
         </View>
-      )}
+      </View>
 
       {createSheet}
 
-      {/* Delete confirmation sheet */}
-      <BottomSheetModal
-        ref={deleteSheetRef}
-        snapPoints={deleteSnapPoints}
-        enablePanDownToClose
-        backdropComponent={renderBackdrop}
-        onDismiss={handleSheetDismissed}
-        backgroundStyle={{ backgroundColor: '#141414' }}
-        handleIndicatorStyle={{ backgroundColor: '#3D3B38' }}
-      >
-        {/* Inline padding: the sheet → gesture-handler → react-native-web
-            chain drops NativeWind classes, running this content off both
-            edges on the PWA. */}
-        <BottomSheetView style={{ paddingHorizontal: 24, paddingTop: 8, paddingBottom: 32 }}>
-          <Text className={`text-text-primary ${textRoles.modalTitle} mb-1`}>
-            Delete {pendingDeleteSplit?.name ?? 'Split'}?
-          </Text>
-          <Text className={`text-text-secondary ${textRoles.bodySmall} mb-6`}>
-            This removes it from every device you&apos;re signed in on and cannot be undone. Any
-            cycle days using this split will be set to rest days.
-          </Text>
-          <View className="mb-3">
-            <Button
-              label="Delete"
-              variant="danger"
-              onPress={() => void handleConfirmDelete()}
-              accessibilityLabel="Confirm delete split"
-            />
-          </View>
-          <Button
-            label="Cancel"
-            variant="ghost"
-            onPress={handleCancelDelete}
-            accessibilityLabel="Cancel delete"
-          />
-        </BottomSheetView>
-      </BottomSheetModal>
     </View>
   );
 }
