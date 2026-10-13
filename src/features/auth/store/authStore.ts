@@ -13,10 +13,10 @@ import { isSupabaseConfigured, supabase } from '../../../lib/supabase';
  *
  *   1. First launch → `bootstrap()` calls `signInAnonymously()`. User gets
  *      a real UID immediately, no sign-in wall, can log workouts.
- *   2. Any time later → they can sign in via Apple / Google / email OTP.
+ *   2. Any time later → they can sign in with an emailed 6-digit code.
  *      All existing data stays attached to the same UID because we use
- *      `linkIdentity` (OAuth) or `updateUser({ email })` + OTP, NOT a
- *      fresh sign-in that would create a new account.
+ *      `updateUser({ email })` + OTP, NOT a fresh sign-in that would
+ *      create a new account.
  *   3. Sign out → clears the session. On next launch we re-bootstrap into
  *      a NEW anonymous account (the previous data is safely on the server
  *      attached to the previous UID; signing back in with the same
@@ -44,9 +44,7 @@ interface AuthState {
   isSigningIn: boolean;
 
   bootstrap: () => Promise<void>;
-  signInWithApple: () => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
-  /** Sends the magic-link email. The link back into the app calls back into Supabase to complete. */
+  /** Emails a 6-digit code. Deliberately a code, not a clickable link — see SignInSheet. */
   sendEmailOtp: (email: string) => Promise<{ ok: true } | { ok: false; error: string }>;
   /** Called from the deep-link handler once the user pastes/opens the token. */
   verifyEmailOtp: (
@@ -78,11 +76,12 @@ function pickStatusFromUser(user: User | null): AuthStatus {
 }
 
 /**
- * The deep-link scheme the OAuth provider redirects back to. On native we
- * use the Expo scheme configured in `app.config.ts` (`workout-logger://`);
- * on web the browser stays in the same origin.
+ * Where Supabase sends a user who opens the emailed link instead of typing
+ * the code. The sheet's 6-digit code is the supported path — an emailed
+ * link back into an installed iOS PWA is unreliable — but Supabase includes
+ * a link in the template regardless, so it needs somewhere sane to land.
  */
-function getOAuthRedirectTo(): string | undefined {
+function getEmailRedirectTo(): string | undefined {
   if (Platform.OS === 'web') {
     if (typeof window === 'undefined') return undefined;
     return `${window.location.origin}/`;
@@ -151,42 +150,6 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      signInWithApple: async () => {
-        if (!supabase) return;
-        set({ isSigningIn: true, errorMessage: null });
-        try {
-          // signInWithOAuth opens a browser (native) or redirects (web).
-          // The `redirectTo` value is where Supabase sends the user after
-          // the identity is granted. Our `bootstrap` subscription picks up
-          // the resulting session automatically.
-          const { error } = await supabase.auth.signInWithOAuth({
-            provider: 'apple',
-            options: { redirectTo: getOAuthRedirectTo() },
-          });
-          if (error) {
-            set({ errorMessage: error.message });
-          }
-        } finally {
-          set({ isSigningIn: false });
-        }
-      },
-
-      signInWithGoogle: async () => {
-        if (!supabase) return;
-        set({ isSigningIn: true, errorMessage: null });
-        try {
-          const { error } = await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: { redirectTo: getOAuthRedirectTo() },
-          });
-          if (error) {
-            set({ errorMessage: error.message });
-          }
-        } finally {
-          set({ isSigningIn: false });
-        }
-      },
-
       sendEmailOtp: async (email) => {
         if (!supabase) return { ok: false, error: 'Cloud sign-in is not configured.' };
         set({ isSigningIn: true, errorMessage: null });
@@ -221,7 +184,7 @@ export const useAuthStore = create<AuthState>()(
               // here so a future switch to invite-only email links is one
               // line away.
               shouldCreateUser: true,
-              emailRedirectTo: getOAuthRedirectTo(),
+              emailRedirectTo: getEmailRedirectTo(),
             },
           });
           if (error) {

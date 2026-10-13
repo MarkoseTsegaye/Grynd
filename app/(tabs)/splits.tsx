@@ -262,7 +262,10 @@ export default function SplitsScreen() {
         backgroundStyle={{ backgroundColor: '#141414' }}
         handleIndicatorStyle={{ backgroundColor: '#3D3B38' }}
       >
-        <BottomSheetView className="px-6 pb-8 pt-2">
+        {/* Inline padding: the sheet → gesture-handler → react-native-web
+            chain drops NativeWind classes, running this content off both
+            edges on the PWA. */}
+        <BottomSheetView style={{ paddingHorizontal: 24, paddingTop: 8, paddingBottom: 32 }}>
           <Text className={`text-text-primary ${textRoles.modalTitle} mb-1`}>
             Delete {pendingDeleteSplit?.name ?? 'Split'}?
           </Text>
@@ -270,22 +273,20 @@ export default function SplitsScreen() {
             This removes it from every device you&apos;re signed in on and cannot be undone. Any
             cycle days using this split will be set to rest days.
           </Text>
-          <TouchableOpacity
-            className="bg-danger rounded-lg py-4 items-center mb-3"
-            onPress={handleConfirmDelete}
-            accessibilityLabel="Confirm delete split"
-            activeOpacity={0.7}
-          >
-            <Text className={`text-text-primary ${textRoles.buttonLabel}`}>Delete</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            className="bg-surface-2 rounded-lg py-4 items-center"
+          <View className="mb-3">
+            <Button
+              label="Delete"
+              variant="danger"
+              onPress={() => void handleConfirmDelete()}
+              accessibilityLabel="Confirm delete split"
+            />
+          </View>
+          <Button
+            label="Cancel"
+            variant="ghost"
             onPress={handleCancelDelete}
             accessibilityLabel="Cancel delete"
-            activeOpacity={0.7}
-          >
-            <Text className={`text-text-secondary ${textRoles.buttonLabel}`}>Cancel</Text>
-          </TouchableOpacity>
+          />
         </BottomSheetView>
       </BottomSheetModal>
     </View>

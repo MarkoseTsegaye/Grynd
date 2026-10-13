@@ -1,14 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity } from 'react-native';
+import { Platform, View, Text, TouchableOpacity } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetView,
   BottomSheetBackdrop,
+  BottomSheetTextInput,
 } from '@gorhom/bottom-sheet';
 import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import { ExerciseAttributeControls } from './ExerciseAttributeControls';
+import { Button } from '../../../shared/components/Button';
 import { Icon } from '../../../shared/components/Icon';
-import { textRoles } from '../../../shared/theme/typography';
+import { textRoles, typography } from '../../../shared/theme/typography';
 import { colors } from '../../../shared/theme/colors';
 import type { Exercise } from '../types';
 
@@ -70,7 +72,10 @@ export function EditExerciseSheet({ sheetRef, exercise, onSave, onRemove, onClos
       backgroundStyle={{ backgroundColor: colors['surface-1'] }}
       handleIndicatorStyle={{ backgroundColor: colors['text-disabled'] }}
     >
-      <BottomSheetView className="px-6 pb-8 pt-2">
+      {/* Inline padding: the sheet → gesture-handler → react-native-web
+          chain drops NativeWind classes, running this content off both
+          edges on the PWA. */}
+      <BottomSheetView style={{ paddingHorizontal: 24, paddingTop: 8, paddingBottom: 32 }}>
         <Text className={`text-text-primary ${textRoles.modalTitle}`} accessibilityRole="header">
           {exercise?.name ?? 'Edit Exercise'}
         </Text>
@@ -78,19 +83,32 @@ export function EditExerciseSheet({ sheetRef, exercise, onSave, onRemove, onClos
           Changes apply to future sets. Sets already logged keep the values they were logged with.
         </Text>
 
-        <Text
-          className={`text-text-disabled ${textRoles.sectionLabel} mb-1.5`}
-          style={{ fontSize: 10 }}
-        >
-          Name
-        </Text>
-        <TextInput
+        <Text className={`text-text-secondary ${textRoles.sectionLabel} mb-1.5`}>Name</Text>
+        {/* BottomSheetTextInput, not a bare TextInput: inside a sheet the
+            plain one misses the sheet's own keyboard handling. */}
+        <BottomSheetTextInput
           className={`bg-surface-2 text-text-primary ${textRoles.body} rounded-lg px-4 py-3 mb-4`}
           value={name}
           onChangeText={setName}
           placeholder="Exercise name"
-          placeholderTextColor={colors['text-disabled']}
+          placeholderTextColor={colors['text-secondary']}
           accessibilityLabel="Exercise name"
+          style={
+            Platform.OS === 'web'
+              ? {
+                  backgroundColor: colors['surface-2'],
+                  borderRadius: 8,
+                  borderWidth: 0,
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                  marginBottom: 16,
+                  color: colors['text-primary'],
+                  fontFamily: typography.fonts.sans,
+                  fontSize: typography.sizes.base,
+                  width: '100%',
+                }
+              : undefined
+          }
         />
 
         <View className="mb-4">
@@ -103,19 +121,13 @@ export function EditExerciseSheet({ sheetRef, exercise, onSave, onRemove, onClos
           />
         </View>
 
-        <TouchableOpacity
-          className={`bg-accent rounded-lg py-4 items-center ${!canSave ? 'opacity-40' : ''}`}
-          onPress={() => {
-            void handleSave();
-          }}
+        <Button
+          label="Save changes"
+          onPress={() => void handleSave()}
+          loading={isSaving}
           disabled={!canSave}
           accessibilityLabel="Save exercise"
-          activeOpacity={0.7}
-        >
-          <Text className={`text-surface-0 ${textRoles.buttonLabel}`}>
-            {isSaving ? 'Saving...' : 'Save changes'}
-          </Text>
-        </TouchableOpacity>
+        />
 
         {onRemove && exercise && (
           <TouchableOpacity

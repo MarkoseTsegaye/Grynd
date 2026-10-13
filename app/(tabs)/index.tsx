@@ -7,12 +7,7 @@ import { useRouter } from 'expo-router';
 import { useSplitsList, SplitCard } from '../../src/features/splits';
 import { useSplitsStore } from '../../src/features/splits';
 import { useCycleStore } from '../../src/features/splits/store/cycleStore';
-import {
-  useWorkoutStore,
-  PausedWorkoutResumeCard,
-  hasPausedSession,
-  isIncompleteActiveSession,
-} from '../../src/features/workout';
+import { useWorkoutStore, isIncompleteActiveSession } from '../../src/features/workout';
 import { Icon } from '../../src/shared/components/Icon';
 import { CycleStrip } from '../../src/features/splits/components/CycleStrip';
 import { buildCycleStrip } from '../../src/features/splits/lib/cycleStrip';
@@ -113,14 +108,16 @@ export default function HomeScreen() {
       </View>
     ) : null;
 
-  const showPausedResume = hasPausedSession(activeSession);
+  // Any unfinished session, however it was left. The standalone card that
+  // used to sit here is gone: ActiveWorkoutBanner now surfaces this from
+  // every screen, and a card plus a banner for one session is noise. The
+  // Today card's own Resume stays — it is the right affordance when the
+  // unfinished workout IS today's split.
   const pausedMatchesToday =
-    showPausedResume &&
-    activeSession != null &&
+    isIncompleteActiveSession(activeSession) &&
     todayDay?.type === 'split' &&
     todaySplit != null &&
     activeSession.splitId === todaySplit.id;
-  const showPausedCard = showPausedResume && !pausedMatchesToday;
 
   const handleResumePausedWorkout = () => {
     if (!activeSession) return;
@@ -177,13 +174,6 @@ export default function HomeScreen() {
               onDismiss={() => void dismissSignInPrompt()}
             />
           </View>
-        )}
-
-        {showPausedCard && activeSession && (
-          <PausedWorkoutResumeCard
-            splitName={activeSession.splitName}
-            onResume={handleResumePausedWorkout}
-          />
         )}
 
         {/* Today card */}

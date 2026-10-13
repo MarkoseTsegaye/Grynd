@@ -22,6 +22,7 @@ import { useAuthStore } from '../src/features/auth';
 import { startSyncEngine, pull as syncPull } from '../src/storage/sync';
 import { DevBadge } from '../src/shared/components/DevBadge';
 import { SyncErrorBanner } from '../src/shared/components/SyncErrorBanner';
+import { ActiveWorkoutBanner } from '../src/features/workout/components/ActiveWorkoutBanner';
 
 const stackHeader = {
   headerShown: true,
@@ -115,6 +116,7 @@ export default function RootLayout() {
           />
         </Stack>
         <SyncErrorBanner />
+        <ActiveWorkoutBanner />
         <DevBadge />
       </BottomSheetModalProvider>
       </GestureHandlerRootView>

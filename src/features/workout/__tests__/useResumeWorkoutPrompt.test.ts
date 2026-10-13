@@ -86,8 +86,14 @@ describe('shouldPromptResumeSession', () => {
     expect(shouldPromptResumeSession(makeSession({ completedAt: 9000 }), '/(tabs)')).toBe(false);
   });
 
-  it('does not prompt for legacy incomplete sessions off workout route', () => {
+  // Deliberately narrow: a session left behind by a killed app is surfaced
+  // by ActiveWorkoutBanner, not by a modal on every launch.
+  it('does not prompt for an incomplete session that was never explicitly paused', () => {
     expect(shouldPromptResumeSession(makeSession(), '/')).toBe(false);
+  });
+
+  it('does not prompt when there is no session at all', () => {
+    expect(shouldPromptResumeSession(null, '/(tabs)')).toBe(false);
   });
 });
 

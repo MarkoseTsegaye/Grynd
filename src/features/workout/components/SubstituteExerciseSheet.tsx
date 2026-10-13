@@ -1,120 +1,45 @@
-import React, { useCallback, useMemo, useState, type RefObject } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
-import {
-  BottomSheetModal,
-  BottomSheetView,
-  BottomSheetBackdrop,
-  BottomSheetTextInput,
-} from '@gorhom/bottom-sheet';
-import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { textRoles } from '../../../shared/theme/typography';
+import React, { type RefObject } from 'react';
+import type { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { ExercisePickerSheet } from './ExercisePickerSheet';
+import type { Exercise } from '../../splits/types';
 
 interface Props {
   sheetRef: RefObject<BottomSheetModal | null>;
   onChange: (index: number) => void;
-  onConfirm: (name: string) => void;
+  /** The exercise being replaced — not offered as its own replacement. */
+  currentExerciseId?: string;
+  /** The picked library exercise replaces the planned one for this session. */
+  onConfirm: (exercise: Exercise) => void;
   onClose: () => void;
 }
 
+/**
+ * Swap the exercise you planned for the one you're actually doing.
+ *
+ * This used to be a bare text box: you retyped a name, and the substitute
+ * was stored under a freshly generated id with no library row behind it.
+ * That made it unopenable from Trends, invisible to momentum ranking, and
+ * unable to accumulate history — substituting the same movement twice
+ * produced two unrelated ids. It now picks a real exercise, like adding one.
+ */
 export function SubstituteExerciseSheet({
   sheetRef,
   onChange,
+  currentExerciseId,
   onConfirm,
   onClose,
 }: Props) {
-  const insets = useSafeAreaInsets();
-  const snapPoints = useMemo(() => ['40%'], []);
-  const [nameInput, setNameInput] = useState('');
-
-  const renderBackdrop = useCallback(
-    (props: BottomSheetBackdropProps) => (
-      <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.7} />
-    ),
-    [],
-  );
-
-  const handleSheetChange = useCallback(
-    (index: number) => {
-      onChange(index);
-      if (index < 0) {
-        setNameInput('');
-      }
-    },
-    [onChange],
-  );
-
-  const handleDismiss = useCallback(() => {
-    setNameInput('');
-    onClose();
-  }, [onClose]);
-
-  const trimmedName = nameInput.trim();
-  const canConfirm = trimmedName.length > 0;
-
-  const handleConfirm = useCallback(() => {
-    if (!canConfirm) return;
-    onConfirm(trimmedName);
-  }, [canConfirm, onConfirm, trimmedName]);
-
   return (
-    <BottomSheetModal
-      ref={sheetRef}
-      snapPoints={snapPoints}
-      enablePanDownToClose
-      enableHandlePanningGesture={false}
-      enableContentPanningGesture={false}
-      keyboardBehavior="extend"
-      keyboardBlurBehavior="restore"
-      android_keyboardInputMode="adjustResize"
-      bottomInset={insets.bottom}
-      backdropComponent={renderBackdrop}
-      onChange={handleSheetChange}
-      onDismiss={handleDismiss}
-      backgroundStyle={{ backgroundColor: '#141414' }}
-      handleIndicatorStyle={{ backgroundColor: '#3D3B38' }}
-    >
-      <BottomSheetView className="px-6 pb-8 pt-2">
-        <Text
-          className={`text-text-secondary ${textRoles.bodySmall} mb-4`}
-          accessibilityRole="header"
-        >
-          Substitute exercise
-        </Text>
-
-        <Text className={`text-text-secondary ${textRoles.caption} mb-1`}>EXERCISE NAME</Text>
-        <BottomSheetTextInput
-          className="bg-surface-2 rounded-lg px-4 py-3 text-text-primary font-sans text-base mb-5"
-          value={nameInput}
-          onChangeText={setNameInput}
-          placeholder="e.g. Incline DB Press"
-          placeholderTextColor="#8A8580"
-          autoFocus
-          returnKeyType="done"
-          onSubmitEditing={handleConfirm}
-          accessibilityLabel="Substitute exercise name"
-        />
-
-        <View className="flex-row gap-3">
-          <TouchableOpacity
-            className="flex-1 bg-surface-2 rounded-lg py-4 items-center"
-            onPress={() => sheetRef.current?.dismiss()}
-            accessibilityLabel="Cancel substitute"
-            activeOpacity={0.7}
-          >
-            <Text className={`text-text-primary ${textRoles.buttonLabel}`}>Cancel</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            className={`flex-1 bg-accent rounded-lg py-4 items-center ${!canConfirm ? 'opacity-40' : ''}`}
-            onPress={handleConfirm}
-            disabled={!canConfirm}
-            accessibilityLabel="Confirm substitute"
-            activeOpacity={0.7}
-          >
-            <Text className={`text-surface-0 ${textRoles.buttonLabel}`}>Confirm</Text>
-          </TouchableOpacity>
-        </View>
-      </BottomSheetView>
-    </BottomSheetModal>
+    <ExercisePickerSheet
+      sheetRef={sheetRef}
+      title="Substitute exercise"
+      searchPlaceholder="Search or add new..."
+      emptyHint="No exercises in your library yet. Type a name to create one."
+      selectVerb="Substitute with"
+      excludeExerciseId={currentExerciseId}
+      onSelect={onConfirm}
+      onChange={onChange}
+      onClose={onClose}
+    />
   );
 }
