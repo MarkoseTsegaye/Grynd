@@ -143,12 +143,12 @@ export function LogPad({
         >
           <View className="flex-1 flex-row items-baseline gap-1">
             <Text className={`text-text-primary ${textRoles.metricBody}`}>{weightText}</Text>
-            <Text className={`text-text-disabled ${textRoles.caption}`}>{weightUnit}</Text>
-            <Text className={`text-text-disabled ${textRoles.caption}`}> × </Text>
-            <Text className={`${repValue ? 'text-text-primary' : 'text-text-disabled'} ${textRoles.metricBody}`}>
+            <Text className={`text-text-secondary ${textRoles.caption}`}>{weightUnit}</Text>
+            <Text className={`text-text-secondary ${textRoles.caption}`}> × </Text>
+            <Text className={`${repValue ? 'text-text-primary' : 'text-text-secondary'} ${textRoles.metricBody}`}>
               {repValue || '—'}
             </Text>
-            <Text className={`text-text-disabled ${textRoles.caption}`}>reps</Text>
+            <Text className={`text-text-secondary ${textRoles.caption}`}>reps</Text>
           </View>
           <View className="bg-accent rounded-lg flex-row items-center gap-1.5 px-4" style={{ height: 40 }}>
             <Icon name="plus-circle-outline" size={17} color="surface-0" />
@@ -199,7 +199,7 @@ export function LogPad({
           accessibilityLabel={`Weight ${weightText} ${weightUnit}, tap to edit`}
           activeOpacity={0.7}
         >
-          <Text className={`text-text-disabled ${textRoles.caption}`} style={{ fontSize: 10 }}>
+          <Text className={`text-text-secondary ${textRoles.caption}`} style={{ fontSize: 11 }}>
             {mode === 'plates' ? 'WEIGHT · PER SIDE' : 'WEIGHT'}
           </Text>
           <View className="flex-row items-baseline gap-1">
@@ -208,10 +208,10 @@ export function LogPad({
             >
               {weightText}
             </Text>
-            <Text className={`text-text-disabled ${textRoles.inputSuffix}`}>{weightUnit}</Text>
+            <Text className={`text-text-secondary ${textRoles.inputSuffix}`}>{weightUnit}</Text>
           </View>
           {mode === 'plates' && (
-            <Text className={`text-text-disabled ${textRoles.caption}`} style={{ fontSize: 10 }}>
+            <Text className={`text-text-secondary ${textRoles.caption}`} style={{ fontSize: 11 }}>
               {hasPlates ? `${plateCount} ${plateCount === 1 ? 'plate' : 'plates'} · no bar` : 'tap plates below'}
             </Text>
           )}
@@ -224,7 +224,7 @@ export function LogPad({
           accessibilityLabel={`Reps ${repValue || 'empty'}, tap to edit`}
           activeOpacity={0.7}
         >
-          <Text className={`text-text-disabled ${textRoles.caption}`} style={{ fontSize: 10 }}>
+          <Text className={`text-text-secondary ${textRoles.caption}`} style={{ fontSize: 11 }}>
             REPS
           </Text>
           <Text
@@ -232,7 +232,7 @@ export function LogPad({
           >
             {repValue || '0'}
           </Text>
-          {mode === 'plates' && <Text className={textRoles.caption} style={{ fontSize: 10 }}> </Text>}
+          {mode === 'plates' && <Text className={textRoles.caption} style={{ fontSize: 11 }}> </Text>}
         </TouchableOpacity>
       </View>
 
@@ -271,7 +271,7 @@ export function LogPad({
       {panel === 'rir' ? (
         <View className="bg-surface-0 rounded-xl p-2.5 mb-2">
           <View className="flex-row items-center justify-between mb-2">
-            <Text className={`text-text-disabled ${textRoles.sectionLabel}`} style={{ fontSize: 10 }}>
+            <Text className={`text-text-secondary ${textRoles.sectionLabel}`} style={{ fontSize: 11 }}>
               Reps in reserve
             </Text>
             <TouchableOpacity
@@ -307,14 +307,14 @@ export function LogPad({
               );
             })}
           </View>
-          <Text className={`text-text-disabled ${textRoles.caption} text-center mt-2`} style={{ fontSize: 11 }}>
+          <Text className={`text-text-secondary ${textRoles.caption} text-center mt-2`} style={{ fontSize: 11 }}>
             {rir !== undefined ? describeRir(rir) : 'how many reps were left?'}
           </Text>
         </View>
       ) : panel === 'note' ? (
         <View className="bg-surface-0 rounded-xl p-2.5 mb-2">
           <View className="flex-row items-center justify-between mb-2">
-            <Text className={`text-text-disabled ${textRoles.sectionLabel}`} style={{ fontSize: 10 }}>
+            <Text className={`text-text-secondary ${textRoles.sectionLabel}`} style={{ fontSize: 11 }}>
               Note for this set
             </Text>
             <TouchableOpacity
@@ -547,7 +547,7 @@ function PlatePad({
                 </Text>
               )}
               <Text className={`text-text-primary ${textRoles.metricBody}`}>{weight}</Text>
-              <Text className={`text-text-disabled ${textRoles.caption}`} style={{ fontSize: 9 }}>
+              <Text className={`text-text-secondary ${textRoles.caption}`} style={{ fontSize: 11 }}>
                 + per side
               </Text>
             </TouchableOpacity>
@@ -565,7 +565,7 @@ function PlatePad({
       >
         <Text className={textRoles.toggleLabel} style={{ fontSize: 12.5 }}>
           <Text className="text-accent">{weightUnit}</Text>
-          <Text className="text-text-disabled"> · {weightUnit === 'lbs' ? 'kg' : 'lbs'}</Text>
+          <Text className="text-text-secondary"> · {weightUnit === 'lbs' ? 'kg' : 'lbs'}</Text>
         </Text>
       </TouchableOpacity>
     </>

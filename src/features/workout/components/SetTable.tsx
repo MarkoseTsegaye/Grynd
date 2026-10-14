@@ -45,15 +45,15 @@ export function SetTable({
     <View className="flex-1">
       {/* Column headers */}
       <View className="flex-row items-center gap-2 px-1 pb-1.5">
-        <Text className={`text-text-disabled ${textRoles.caption}`} style={{ width: COL_NUM, fontSize: 10 }}>
+        <Text className={`text-text-secondary ${textRoles.caption}`} style={{ width: COL_NUM }}>
           #
         </Text>
-        <Text className={`flex-1 text-text-disabled ${textRoles.sectionLabel}`} style={{ fontSize: 10 }}>
+        <Text className={`flex-1 text-text-secondary ${textRoles.sectionLabel}`} style={{ fontSize: 12 }}>
           Weight
         </Text>
         <Text
-          className={`text-text-disabled ${textRoles.sectionLabel} text-right`}
-          style={{ width: COL_REPS, fontSize: 10 }}
+          className={`text-text-secondary ${textRoles.sectionLabel} text-right`}
+          style={{ width: COL_REPS, fontSize: 12 }}
         >
           Reps
         </Text>
@@ -62,7 +62,7 @@ export function SetTable({
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {isEmpty && (
-          <Text className={`text-text-disabled ${textRoles.bodySmall} text-center px-6 py-8`}>
+          <Text className={`text-text-secondary ${textRoles.bodySmall} text-center px-6 py-8`}>
             No sets yet — enter a weight and reps below to log your first.
           </Text>
         )}
@@ -130,7 +130,7 @@ function LoggedRow({
           activeOpacity={0.6}
         >
           <Text
-            className={`text-text-disabled ${textRoles.metricBold}`}
+            className={`text-text-secondary ${textRoles.metricBold}`}
             style={{ width: COL_NUM, fontSize: 12 }}
           >
             {setNumber}
@@ -140,13 +140,13 @@ function LoggedRow({
               <Text className={`text-accent ${textRoles.metricBold}`}>{sideLabel}</Text>
             )}
             <Text className={`text-text-primary ${textRoles.metricBody}`}>{weightText}</Text>
-            <Text className={`text-text-disabled ${textRoles.caption}`} style={{ fontSize: 11 }}>
+            <Text className={`text-text-secondary ${textRoles.caption}`} style={{ fontSize: 11 }}>
               {unitLabel}
             </Text>
           </View>
           <View className="flex-row items-baseline justify-end gap-1" style={{ width: COL_REPS }}>
             <Text className={`text-text-primary ${textRoles.metricBody}`}>{set.reps}</Text>
-            <Text className={`text-text-disabled ${textRoles.caption}`} style={{ fontSize: 11 }}>
+            <Text className={`text-text-secondary ${textRoles.caption}`} style={{ fontSize: 11 }}>
               ×
             </Text>
           </View>
@@ -206,10 +206,10 @@ function SetMetaChips({
   muted: boolean;
 }) {
   const chipBg = muted ? 'bg-surface-2/50' : 'bg-surface-2';
-  const chipText = muted ? 'text-text-disabled' : 'text-text-secondary';
+  const chipText = muted ? 'text-text-secondary/80' : 'text-text-secondary';
   const failureText = muted ? 'text-danger/60' : 'text-danger';
   const failureBorder = muted ? 'border-danger/30' : 'border-danger/50';
-  const notesText = muted ? 'text-text-disabled/70' : 'text-text-secondary';
+  const notesText = muted ? 'text-text-secondary/80' : 'text-text-secondary';
 
   return (
     <View
@@ -225,14 +225,14 @@ function SetMetaChips({
       )}
       {toFailure && (
         <View className={`rounded border ${failureBorder} px-1.5 py-0.5`}>
-          <Text className={`${failureText} ${textRoles.caption}`} style={{ fontSize: 10 }}>
+          <Text className={`${failureText} ${textRoles.caption}`} style={{ fontSize: 11 }}>
             FAILURE
           </Text>
         </View>
       )}
       {rirLabel && (
         <View className={`rounded ${chipBg} px-1.5 py-0.5`}>
-          <Text className={`${chipText} ${textRoles.caption}`} style={{ fontSize: 10 }}>
+          <Text className={`${chipText} ${textRoles.caption}`} style={{ fontSize: 11 }}>
             {rirLabel}
           </Text>
         </View>
@@ -271,7 +271,7 @@ function GhostRow({
         accessibilityLabel={`Set ${setNumber} target from last session, ${weightText} ${unitLabel} by ${set.reps} reps`}
       >
         <Text
-          className={`text-text-disabled/50 ${textRoles.metricBold}`}
+          className={`text-text-secondary/70 ${textRoles.metricBold}`}
           style={{ width: COL_NUM, fontSize: 12 }}
         >
           {setNumber}
@@ -280,19 +280,19 @@ function GhostRow({
           {sideLabel && (
             <Text className={`text-accent/60 ${textRoles.metricBold}`}>{sideLabel}</Text>
           )}
-          <Text className={`text-text-disabled ${textRoles.metricBody}`}>{weightText}</Text>
-          <Text className={`text-text-disabled/60 ${textRoles.caption}`} style={{ fontSize: 11 }}>
+          <Text className={`text-text-secondary ${textRoles.metricBody}`}>{weightText}</Text>
+          <Text className={`text-text-secondary/70 ${textRoles.caption}`} style={{ fontSize: 11 }}>
             {unitLabel}
           </Text>
         </View>
         <View className="flex-row items-baseline justify-end gap-1" style={{ width: COL_REPS }}>
-          <Text className={`text-text-disabled ${textRoles.metricBody}`}>{set.reps}</Text>
-          <Text className={`text-text-disabled/60 ${textRoles.caption}`} style={{ fontSize: 11 }}>
+          <Text className={`text-text-secondary ${textRoles.metricBody}`}>{set.reps}</Text>
+          <Text className={`text-text-secondary/70 ${textRoles.caption}`} style={{ fontSize: 11 }}>
             ×
           </Text>
         </View>
         <View className="items-end" style={{ width: COL_DELTA }}>
-          <Text className={`text-text-disabled/70 ${textRoles.caption}`} style={{ fontSize: 9 }}>
+          <Text className={`text-text-secondary ${textRoles.caption}`} style={{ fontSize: 11 }}>
             LAST
           </Text>
         </View>
