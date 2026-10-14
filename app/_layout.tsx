@@ -24,6 +24,7 @@ import { startSyncEngine, pull as syncPull } from '../src/storage/sync';
 import { DevBadge } from '../src/shared/components/DevBadge';
 import { SyncErrorBanner } from '../src/shared/components/SyncErrorBanner';
 import { ActiveWorkoutBanner } from '../src/features/workout/components/ActiveWorkoutBanner';
+import { InsetDebugOverlay } from '../src/shared/components/InsetDebugOverlay';
 
 const stackHeader = {
   headerShown: true,
@@ -118,6 +119,7 @@ export default function RootLayout() {
         </Stack>
         <SyncErrorBanner />
         <ActiveWorkoutBanner />
+        <InsetDebugOverlay />
         <DevBadge />
       </BottomSheetModalProvider>
       </GestureHandlerRootView>
