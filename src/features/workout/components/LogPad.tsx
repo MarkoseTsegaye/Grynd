@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import { colors } from '../../../shared/theme/colors';
 import { View, Text, TouchableOpacity, TextInput } from 'react-native';
 import { Icon } from '../../../shared/components/Icon';
 import { textRoles } from '../../../shared/theme/typography';
@@ -333,7 +334,7 @@ export function LogPad({
             value={notes}
             onChangeText={onChangeNotes}
             placeholder="e.g. used straps, paused mid-set"
-            placeholderTextColor="#3D3B38"
+            placeholderTextColor={colors['text-disabled']}
             multiline
             textAlignVertical="top"
             maxLength={MAX_NOTE_LENGTH}

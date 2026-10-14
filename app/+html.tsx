@@ -1,4 +1,5 @@
 import React, { type PropsWithChildren } from 'react';
+import { colors } from '../src/shared/theme/colors';
 import { ScrollViewStyleReset } from 'expo-router/html';
 
 /**
@@ -11,8 +12,8 @@ import { ScrollViewStyleReset } from 'expo-router/html';
  * Also enables the PWA "add to home screen" install path with a matching
  * status-bar style so the standalone shell blends into the dark theme.
  */
-const backgroundColor = '#0A0A0A';
-const tabBarColor = '#141414';
+const backgroundColor = colors['surface-0'];
+const tabBarColor = colors['surface-1'];
 
 /*
  * Paint the html/body dark so the env(safe-area-inset-*) regions around the

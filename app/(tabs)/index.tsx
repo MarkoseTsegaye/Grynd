@@ -191,7 +191,7 @@ export default function HomeScreen() {
                 activeOpacity={0.7}
               >
                 <Icon name="sync-circle" size={20} color="text-secondary" />
-                <Text className={`text-text-secondary ${textRoles.buttonLabel}`}>Set Up Cycle</Text>
+                <Text className={`text-text-secondary ${textRoles.buttonLabel}`}>Set up cycle</Text>
               </TouchableOpacity>
             </View>
           ) : todayDay.type === 'split' ? (
@@ -234,7 +234,7 @@ export default function HomeScreen() {
                       activeOpacity={0.7}
                     >
                       <Icon name="play-circle-outline" size={20} color="surface-0" />
-                      <Text className={`text-surface-0 ${textRoles.buttonLabel}`}>Start Workout</Text>
+                      <Text className={`text-surface-0 ${textRoles.buttonLabel}`}>Start workout</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -253,7 +253,7 @@ export default function HomeScreen() {
               {cycleStrip}
               <View className="flex-row items-center gap-2 mb-1">
                 <Icon name="sleep" size={20} color="text-secondary" />
-                <Text className={`text-text-primary ${textRoles.listTitle}`}>Rest Day</Text>
+                <Text className={`text-text-primary ${textRoles.listTitle}`}>Rest day</Text>
               </View>
               {staleDayHint && (
                 <Text className={`text-text-secondary ${textRoles.bodySmall} mb-3`}>
@@ -267,7 +267,7 @@ export default function HomeScreen() {
                 activeOpacity={0.7}
               >
                 <Icon name="arrow-right-circle-outline" size={20} color="text-secondary" />
-                <Text className={`text-text-secondary ${textRoles.buttonLabel}`}>Mark Rest Done</Text>
+                <Text className={`text-text-secondary ${textRoles.buttonLabel}`}>Mark rest done</Text>
               </TouchableOpacity>
             </>
           )}

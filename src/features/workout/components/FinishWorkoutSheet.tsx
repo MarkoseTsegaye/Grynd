@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, useState, type RefObject } from 'react';
+import { colors } from '../../../shared/theme/colors';
 import { View, Text, TouchableOpacity } from 'react-native';
 import {
   BottomSheetModal,
@@ -113,8 +114,8 @@ export function FinishWorkoutSheet({
       backdropComponent={renderBackdrop}
       onChange={handleSheetChange}
       onDismiss={handleDismiss}
-      backgroundStyle={{ backgroundColor: '#141414' }}
-      handleIndicatorStyle={{ backgroundColor: '#3D3B38' }}
+      backgroundStyle={{ backgroundColor: colors['surface-1'] }}
+      handleIndicatorStyle={{ backgroundColor: colors['text-disabled'] }}
     >
       {/* Inline padding rather than className: the BottomSheetView →
           gesture-handler → react-native-web chain drops NativeWind classes,

@@ -1,4 +1,5 @@
 import React from 'react';
+import { colors } from '../../../shared/theme/colors';
 import { View, Text } from 'react-native';
 import { DatePicker } from 'react-native-any-picker';
 import { formatDisplayDate } from '../../../shared/lib/date';
@@ -6,10 +7,10 @@ import { textRoles } from '../../../shared/theme/typography';
 
 const darkTheme = {
   colors: {
-    text: '#F0EDE8',
+    text: colors['text-primary'],
     border: 'transparent',
     indicator: 'rgba(255,255,255,0.08)',
-    background: '#141414',
+    background: colors['surface-1'],
   },
   fonts: {
     size: { xl: 28, lg: 18, base: 15, sm: 12 },

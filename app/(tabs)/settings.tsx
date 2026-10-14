@@ -470,7 +470,7 @@ export default function SettingsScreen() {
             activeOpacity={0.7}
           >
             <View className="flex-1 mr-3">
-              <Text className={`text-text-primary ${textRoles.cardTitle}`}>Edit Training Cycle</Text>
+              <Text className={`text-text-primary ${textRoles.cardTitle}`}>Edit training cycle</Text>
               <Text className={`text-text-secondary ${textRoles.bodySmall} mt-0.5`}>{cycleSummary}</Text>
             </View>
             <Icon name="chevron-right" size={20} color="text-secondary" />

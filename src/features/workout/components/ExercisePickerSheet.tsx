@@ -131,8 +131,8 @@ export function ExercisePickerSheet({
       backdropComponent={renderBackdrop}
       onChange={handleSheetChange}
       onDismiss={handleDismiss}
-      backgroundStyle={{ backgroundColor: '#141414' }}
-      handleIndicatorStyle={{ backgroundColor: '#3D3B38' }}
+      backgroundStyle={{ backgroundColor: colors['surface-1'] }}
+      handleIndicatorStyle={{ backgroundColor: colors['text-disabled'] }}
     >
       {/* Inline padding: the sheet → gesture-handler → react-native-web
           chain drops NativeWind classes, which ran this content off both
@@ -151,7 +151,7 @@ export function ExercisePickerSheet({
           value={query}
           onChangeText={setQuery}
           placeholder={searchPlaceholder}
-          placeholderTextColor="#8A8580"
+          placeholderTextColor={colors['text-secondary']}
           // Native only. Focusing an input inside a sheet on web sends
           // @gorhom/bottom-sheet through a keyboard path that calls
           // TextInputState.currentlyFocusedInput(), which react-native-web
