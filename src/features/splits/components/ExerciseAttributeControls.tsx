@@ -37,8 +37,8 @@ function Option({ title, hint, selected, onPress, accessibilityLabel }: OptionPr
         {title}
       </Text>
       <Text
-        className={`${selected ? 'text-text-secondary' : 'text-text-disabled'} ${textRoles.caption}`}
-        style={{ fontSize: 10 }}
+        className={`text-text-secondary ${textRoles.caption}`}
+        style={{ fontSize: 11 }}
         numberOfLines={1}
       >
         {hint}
@@ -51,8 +51,8 @@ function Group({ label, children }: { label: string; children: React.ReactNode }
   return (
     <View className="mb-2">
       <Text
-        className={`text-text-disabled ${textRoles.sectionLabel} mb-1.5`}
-        style={{ fontSize: 10 }}
+        className={`text-text-secondary ${textRoles.sectionLabel} mb-1.5`}
+        style={{ fontSize: 11 }}
       >
         {label}
       </Text>

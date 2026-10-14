@@ -1,4 +1,5 @@
 import '../src/global.css';
+import { colors } from '../src/shared/theme/colors';
 import React, { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -26,8 +27,8 @@ import { ActiveWorkoutBanner } from '../src/features/workout/components/ActiveWo
 
 const stackHeader = {
   headerShown: true,
-  headerStyle: { backgroundColor: '#141414' },
-  headerTintColor: '#F0EDE8',
+  headerStyle: { backgroundColor: colors['surface-1'] },
+  headerTintColor: colors['text-primary'],
 } as const;
 
 export default function RootLayout() {
@@ -77,10 +78,10 @@ export default function RootLayout() {
     // report real insets. Without it they silently resolve to 0, which put
     // content under the notch and clipped the tab bar above the home indicator.
     <SafeAreaProvider>
-      <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#0A0A0A' }}>
+      <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors['surface-0'] }}>
       <BottomSheetModalProvider>
         <StatusBar style="light" />
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#0A0A0A' } }}>
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors['surface-0'] } }}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen
             name="workout/[splitId]"
@@ -104,7 +105,7 @@ export default function RootLayout() {
           />
           <Stack.Screen
             name="trends/weight"
-            options={{ animation: 'slide_from_right', ...stackHeader, headerTitle: 'Body weight' }}
+            options={{ animation: 'slide_from_right', ...stackHeader, headerTitle: 'Body Weight' }}
           />
           <Stack.Screen
             name="progress/volume"

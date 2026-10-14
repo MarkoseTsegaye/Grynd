@@ -1,4 +1,5 @@
 import React from 'react';
+import { colors } from '../../../shared/theme/colors';
 import { View, Text, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { RestTimerBar } from './RestTimerBar';
 import { SetTable } from './SetTable';
@@ -87,7 +88,7 @@ function DotProgress({ current, total }: { current: number; total: number }) {
         const isCompleted = idx < current;
         // Inline style: the active dot is a wider pill, so size is dynamic.
         const width = isActive ? 16 : 5;
-        const bg = isActive ? '#E8FF47' : isCompleted ? '#8A8580' : '#3D3B38';
+        const bg = isActive ? colors.accent : isCompleted ? colors['text-secondary'] : colors['text-disabled'];
         return (
           <View
             key={idx}

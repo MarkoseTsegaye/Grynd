@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { colors } from '../../src/shared/theme/colors';
 import { View, Text, TextInput, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import DraggableFlatList, { ScaleDecorator } from 'react-native-draggable-flatlist';
@@ -205,14 +206,14 @@ export default function ManageSplitScreen() {
             <View className="flex-row items-center flex-wrap gap-1.5 mt-1">
               {exercise.unilateral && (
                 <View className="rounded bg-surface-2 px-1.5 py-0.5">
-                  <Text className={`text-text-secondary ${textRoles.caption}`} style={{ fontSize: 10 }}>
+                  <Text className={`text-text-secondary ${textRoles.caption}`} style={{ fontSize: 11 }}>
                     L / R
                   </Text>
                 </View>
               )}
               {exercise.plateLoaded && (
                 <View className="rounded bg-accent/10 px-1.5 py-0.5">
-                  <Text className={`text-accent ${textRoles.caption}`} style={{ fontSize: 10 }}>
+                  <Text className={`text-accent ${textRoles.caption}`} style={{ fontSize: 11 }}>
                     Plates
                   </Text>
                 </View>
@@ -325,15 +326,15 @@ export default function ManageSplitScreen() {
           style={{ borderWidth: 1, borderColor: 'rgba(232, 255, 71, 0.25)' }}
         >
           <Text
-            className={`text-text-disabled ${textRoles.sectionLabel} mb-1.5`}
-            style={{ fontSize: 10 }}
+            className={`text-text-secondary ${textRoles.sectionLabel} mb-1.5`}
+            style={{ fontSize: 11 }}
           >
             New exercise
           </Text>
           <TextInput
             className={`bg-surface-0 text-text-primary ${textRoles.body} rounded-lg px-3 py-2.5 mb-3`}
             placeholder="Exercise name"
-            placeholderTextColor="#3D3B38"
+            placeholderTextColor={colors['text-disabled']}
             value={newExerciseName}
             onChangeText={setNewExerciseName}
             returnKeyType="done"
@@ -381,7 +382,7 @@ export default function ManageSplitScreen() {
       ) : (
         <TouchableOpacity
           className="flex-row items-center justify-center gap-2 rounded-xl py-3.5 mb-3"
-          style={{ borderWidth: 1, borderStyle: 'dashed', borderColor: '#3D3B38' }}
+          style={{ borderWidth: 1, borderStyle: 'dashed', borderColor: colors['text-disabled'] }}
           onPress={() => setIsAddingOpen(true)}
           accessibilityLabel="Add exercise"
           accessibilityRole="button"

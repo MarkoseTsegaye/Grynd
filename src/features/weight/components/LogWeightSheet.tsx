@@ -155,8 +155,8 @@ export function LogWeightSheet({ sheetRef, entry, onDismiss, onSubmit, onDelete 
       backdropComponent={renderBackdrop}
       onChange={handleSheetChange}
       onDismiss={onDismiss}
-      backgroundStyle={{ backgroundColor: '#141414' }}
-      handleIndicatorStyle={{ backgroundColor: '#3D3B38' }}
+      backgroundStyle={{ backgroundColor: colors['surface-1'] }}
+      handleIndicatorStyle={{ backgroundColor: colors['text-disabled'] }}
     >
       <BottomSheetScrollView
         showsVerticalScrollIndicator={false}
@@ -181,7 +181,7 @@ export function LogWeightSheet({ sheetRef, entry, onDismiss, onSubmit, onDelete 
             }
             accessibilityRole="header"
           >
-            {isEditing ? 'Edit Weight' : 'Log Weight'}
+            {isEditing ? 'Edit weight' : 'Log weight'}
           </Text>
           <TouchableOpacity
             onPress={() => sheetRef.current?.dismiss()}

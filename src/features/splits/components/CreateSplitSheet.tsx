@@ -55,8 +55,8 @@ export function CreateSplitSheet({ sheetRef, onCreated }: Props) {
       android_keyboardInputMode="adjustResize"
       bottomInset={insets.bottom}
       backdropComponent={renderBackdrop}
-      backgroundStyle={{ backgroundColor: '#141414' }}
-      handleIndicatorStyle={{ backgroundColor: '#3D3B38' }}
+      backgroundStyle={{ backgroundColor: colors['surface-1'] }}
+      handleIndicatorStyle={{ backgroundColor: colors['text-disabled'] }}
     >
       {/* Inline styles rather than className from here down: the
           BottomSheetView / BottomSheetTextInput → gesture-handler →
@@ -99,7 +99,7 @@ export function CreateSplitSheet({ sheetRef, onCreated }: Props) {
           value={name}
           onChangeText={setName}
           placeholder="Split name (e.g. Push, Legs)"
-          placeholderTextColor="#8A8580"
+          placeholderTextColor={colors['text-secondary']}
           autoFocus
           maxLength={40}
           returnKeyType="done"

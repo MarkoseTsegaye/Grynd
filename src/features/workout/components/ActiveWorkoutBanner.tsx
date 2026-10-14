@@ -8,8 +8,20 @@ import { textRoles } from '../../../shared/theme/typography';
 import { useWorkoutStore } from '../store/workoutStore';
 import { isIncompleteActiveSession, isWorkoutRoute } from '../lib/workoutRoute';
 
-/** Clearance for the tab bar the banner floats above. */
-const TAB_BAR_HEIGHT = 60;
+/**
+ * React Navigation's own UIKit tab bar height (`TABBAR_HEIGHT_UIKIT` in
+ * `@react-navigation/bottom-tabs`). It reserves `insets.bottom` on top of
+ * this, so the clearance is the sum.
+ */
+const TAB_BAR_CONTENT_HEIGHT = 49;
+const GAP = 8;
+
+/**
+ * The five tab roots. Anything else is a pushed stack screen, which has no
+ * tab bar under it — sitting the banner a tab-bar's height off the bottom
+ * there left it floating in open space.
+ */
+const TAB_ROUTES = new Set(['/', '/splits', '/trends', '/history', '/settings']);
 
 /**
  * Persistent reminder that a workout is still open, mounted at the root
@@ -34,6 +46,10 @@ export function ActiveWorkoutBanner() {
   if (!isIncompleteActiveSession(session)) return null;
   if (isWorkoutRoute(pathname)) return null;
 
+  const bottomOffset = TAB_ROUTES.has(pathname)
+    ? TAB_BAR_CONTENT_HEIGHT + insets.bottom + GAP
+    : insets.bottom + GAP;
+
   return (
     <View
       pointerEvents="box-none"
@@ -41,7 +57,7 @@ export function ActiveWorkoutBanner() {
         position: 'absolute',
         left: 12,
         right: 12,
-        bottom: TAB_BAR_HEIGHT + insets.bottom + 8,
+        bottom: bottomOffset,
         zIndex: 90,
       }}
     >

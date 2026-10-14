@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, type RefObject } from 'react';
+import { colors } from '../../../shared/theme/colors';
 import { View, Text, TouchableOpacity } from 'react-native';
 import {
   BottomSheetModal,
@@ -123,8 +124,8 @@ export function ExerciseOverviewSheet({
       bottomInset={insets.bottom}
       onChange={onChange}
       backdropComponent={renderBackdrop}
-      backgroundStyle={{ backgroundColor: '#141414' }}
-      handleIndicatorStyle={{ backgroundColor: '#3D3B38' }}
+      backgroundStyle={{ backgroundColor: colors['surface-1'] }}
+      handleIndicatorStyle={{ backgroundColor: colors['text-disabled'] }}
     >
       <View accessibilityViewIsModal className="flex-1">
         <View className="px-5 pt-2 pb-3">

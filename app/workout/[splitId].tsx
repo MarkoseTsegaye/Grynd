@@ -423,7 +423,7 @@ export default function WorkoutScreen() {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       finishSheetRef.current?.dismiss();
       beginIntentionalLeave(() => {
-        router.replace(`/history/${sessionId}`);
+        router.replace(`/history/${sessionId}?finished=1`);
       });
     },
     [beginIntentionalLeave, handleFinish, router, session?.id],
@@ -542,7 +542,7 @@ export default function WorkoutScreen() {
           accessibilityLabel="Go back"
           activeOpacity={0.7}
         >
-          <Text className={`text-text-primary ${textRoles.buttonLabel}`}>Go Back</Text>
+          <Text className={`text-text-primary ${textRoles.buttonLabel}`}>Go back</Text>
         </TouchableOpacity>
       </View>
     );

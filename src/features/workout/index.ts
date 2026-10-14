@@ -20,7 +20,5 @@ export {
   hasPausedSession,
   isIncompleteActiveSession,
   isWorkoutRoute,
-  shouldPromptResumeSession,
-  shouldSuppressForegroundPrompt,
 } from './lib/workoutRoute';
 export type { WorkoutSession, LoggedExercise, LoggedSet } from './types';

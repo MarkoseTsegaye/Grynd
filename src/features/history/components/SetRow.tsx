@@ -40,17 +40,17 @@ export function SetRow({ setNumber, set, priorSet, weightUnit }: Props) {
   return (
     <View className="py-1">
       <View className="flex-row items-center gap-1.5">
-        <Text className={`text-text-disabled ${textRoles.caption}`} style={{ width: 14 }}>
+        <Text className={`text-text-secondary ${textRoles.caption}`} style={{ width: 14 }}>
           {setNumber}
         </Text>
 
         {sideLabel && <Text className={`text-accent ${textRoles.metricBold}`}>{sideLabel}</Text>}
 
         <Text className={`text-text-primary ${textRoles.metricBold}`}>{weightText}</Text>
-        <Text className={`text-text-disabled ${textRoles.metric}`}>{unitLabel}</Text>
-        <Text className={`text-text-disabled ${textRoles.metric}`}>×</Text>
+        <Text className={`text-text-secondary ${textRoles.metric}`}>{unitLabel}</Text>
+        <Text className={`text-text-secondary ${textRoles.metric}`}>×</Text>
         <Text className={`text-text-primary ${textRoles.metricBold}`}>{set.reps}</Text>
-        <Text className={`text-text-disabled ${textRoles.metric}`}>reps</Text>
+        <Text className={`text-text-secondary ${textRoles.metric}`}>reps</Text>
 
         <View className="flex-1" />
 
@@ -80,7 +80,7 @@ export function SetRow({ setNumber, set, priorSet, weightUnit }: Props) {
             </Text>
           )}
           {plateBreakdown && rirLabel && (
-            <Text className={`text-text-disabled ${textRoles.caption}`}>·</Text>
+            <Text className={`text-text-secondary ${textRoles.caption}`}>·</Text>
           )}
           {rirLabel && (
             <Text className={`text-text-secondary ${textRoles.caption}`} style={{ fontSize: 12 }}>

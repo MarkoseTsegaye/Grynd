@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useMemo, useCallback } from 'react';
+import { colors } from '../src/shared/theme/colors';
 import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -70,7 +71,7 @@ export default function CycleScreen() {
   if (!isLoaded || !splitsLoaded) {
     return (
       <View className="flex-1 bg-surface-0 items-center justify-center">
-        <ActivityIndicator color="#E8FF47" />
+        <ActivityIndicator color={colors.accent} />
       </View>
     );
   }
@@ -206,7 +207,7 @@ export default function CycleScreen() {
             activeOpacity={0.7}
           >
             <Icon name="plus-circle-outline" size={20} color="accent" />
-            <Text className={`text-accent ${textRoles.buttonLabel}`}>Add Split Day</Text>
+            <Text className={`text-accent ${textRoles.buttonLabel}`}>Add split day</Text>
           </TouchableOpacity>
           <TouchableOpacity
             className="flex-1 bg-surface-1 border border-surface-2 rounded-lg py-4 flex-row items-center justify-center gap-2"
@@ -215,7 +216,7 @@ export default function CycleScreen() {
             activeOpacity={0.7}
           >
             <Icon name="sleep" size={20} color="text-secondary" />
-            <Text className={`text-text-secondary ${textRoles.buttonLabel}`}>Add Rest Day</Text>
+            <Text className={`text-text-secondary ${textRoles.buttonLabel}`}>Add rest day</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -227,8 +228,8 @@ export default function CycleScreen() {
         enablePanDownToClose
         bottomInset={insets.bottom}
         backdropComponent={renderBackdrop}
-        backgroundStyle={{ backgroundColor: '#141414' }}
-        handleIndicatorStyle={{ backgroundColor: '#3D3B38' }}
+        backgroundStyle={{ backgroundColor: colors['surface-1'] }}
+        handleIndicatorStyle={{ backgroundColor: colors['text-disabled'] }}
       >
         <View accessibilityViewIsModal>
           <View className="px-5 pt-2 pb-3">

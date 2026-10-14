@@ -150,8 +150,8 @@ export function SignInSheet({ sheetRef, onChange }: Props) {
       bottomInset={insets.bottom}
       backdropComponent={renderBackdrop}
       onChange={handleSheetChange}
-      backgroundStyle={{ backgroundColor: '#141414' }}
-      handleIndicatorStyle={{ backgroundColor: '#3D3B38' }}
+      backgroundStyle={{ backgroundColor: colors['surface-1'] }}
+      handleIndicatorStyle={{ backgroundColor: colors['text-disabled'] }}
     >
       <BottomSheetView style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 32 }}>
         {/* Web has no pan-down-to-close gesture, so it needs a real target. */}
@@ -193,7 +193,7 @@ export function SignInSheet({ sheetRef, onChange }: Props) {
               value={email}
               onChangeText={setEmail}
               placeholder="you@example.com"
-              placeholderTextColor="#8A8580"
+              placeholderTextColor={colors['text-secondary']}
               keyboardType="email-address"
               autoCapitalize="none"
               autoComplete="email"
@@ -220,7 +220,7 @@ export function SignInSheet({ sheetRef, onChange }: Props) {
               value={token}
               onChangeText={setToken}
               placeholder="000000"
-              placeholderTextColor="#3D3B38"
+              placeholderTextColor={colors['text-disabled']}
               keyboardType="number-pad"
               autoComplete="one-time-code"
               maxLength={OTP_LENGTH}

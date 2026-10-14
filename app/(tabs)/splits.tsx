@@ -231,7 +231,7 @@ export default function SplitsScreen() {
             }}
           >
             <Button
-              label="New Split"
+              label="New split"
               icon="plus"
               onPress={() => void handleOpenCreate()}
               accessibilityLabel="Create new split"
