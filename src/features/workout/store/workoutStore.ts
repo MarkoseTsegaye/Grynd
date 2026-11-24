@@ -5,6 +5,7 @@ import { useCycleStore } from '../../splits/store/cycleStore';
 import { useHistoryStore } from '../../history/store/historyStore';
 import { usePrefsStore } from '../../../shared/store/prefsStore';
 import { generateId } from '../../../shared/lib/id';
+import { applyPreviousOrder } from '../lib/previousExerciseOrder';
 import { sortExercisesByPerformedOrder } from '../lib/sortExercisesByPerformedOrder';
 import type { WorkoutSession, LoggedExercise, LoggedSet } from '../types';
 import type { Split, Exercise } from '../../splits/types';
@@ -46,6 +47,12 @@ interface WorkoutState {
   ) => Promise<void>;
   deleteSet: (exerciseId: string, setIndex: number) => Promise<void>;
   goToExercise: (index: number) => void;
+  /**
+   * Rearrange this session's exercises into `orderedExerciseIds` (planned
+   * ids; substitutes resolve to the exercise they replaced). Anything not
+   * named keeps its current relative order behind them.
+   */
+  reorderExercises: (orderedExerciseIds: string[]) => Promise<void>;
   /**
    * Replace the planned exercise at `index` with a real library exercise.
    * Takes a resolved `masterExerciseId` for the same reason
@@ -213,6 +220,26 @@ export const useWorkoutStore = create<WorkoutState>()(
         });
         const updated = { ...session, exercises, currentExerciseIndex: get().currentExerciseIndex };
         set({ session: updated });
+        await setActiveSession(updated);
+      },
+
+      reorderExercises: async (orderedExerciseIds) => {
+        const { session, currentExerciseIndex } = get();
+        if (!session || orderedExerciseIds.length === 0) return;
+
+        const exercises = applyPreviousOrder(session.exercises, orderedExerciseIds);
+        const unchanged = exercises.every((e, i) => e === session.exercises[i]);
+        if (unchanged) return;
+
+        // Follow the exercise the user is on rather than the slot number.
+        // Reordering mid-set and landing on a different lift would be worse
+        // than not offering this at all.
+        const current = session.exercises[currentExerciseIndex];
+        const nextIndex = current ? exercises.indexOf(current) : 0;
+        const safeIndex = nextIndex >= 0 ? nextIndex : 0;
+
+        const updated = { ...session, exercises, currentExerciseIndex: safeIndex };
+        set({ session: updated, currentExerciseIndex: safeIndex });
         await setActiveSession(updated);
       },
 

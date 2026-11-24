@@ -10,6 +10,7 @@ import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../../../shared/components/Icon';
 import { textRoles } from '../../../shared/theme/typography';
+import { plannedIdOf } from '../lib/previousExerciseOrder';
 import type { LoggedExercise } from '../types';
 
 interface Props {
@@ -20,6 +21,11 @@ interface Props {
   onChange: (index: number) => void;
   /** Optional — omit to hide the "Add exercise" footer. */
   onAddExercise?: () => void;
+  /** Planned exercise id → position it held last time this split was run. */
+  previousPositionById?: Map<string, number>;
+  /** Omit, or pass false, to hide the reorder action. */
+  canUsePreviousOrder?: boolean;
+  onUsePreviousOrder?: () => void;
 }
 
 type RowState = 'current' | 'completed' | 'upcoming';
@@ -42,6 +48,9 @@ export function ExerciseOverviewSheet({
   onSelectExercise,
   onChange,
   onAddExercise,
+  previousPositionById,
+  canUsePreviousOrder,
+  onUsePreviousOrder,
 }: Props) {
   const insets = useSafeAreaInsets();
   const snapPoints = useMemo(() => ['50%', '85%'], []);
@@ -67,6 +76,7 @@ export function ExerciseOverviewSheet({
       const state = getRowState(index, currentExerciseIndex, item.sets.length);
       const setCountLabel = formatSetCount(item.sets.length);
       const positionLabel = `${index + 1} / ${total}`;
+      const previousPosition = previousPositionById?.get(plannedIdOf(item));
       const stateLabel =
         state === 'current' ? 'current' : state === 'completed' ? 'completed' : 'upcoming';
 
@@ -85,9 +95,19 @@ export function ExerciseOverviewSheet({
           accessibilityRole="button"
           activeOpacity={0.7}
         >
-          <Text className={`text-text-secondary ${textRoles.captionMono}`}>
-            {index + 1}
-          </Text>
+          <View className="items-center" style={{ width: 26 }}>
+            <Text className={`text-text-secondary ${textRoles.captionMono}`}>{index + 1}</Text>
+            {/* Where it sat last time — the ghost that makes the reorder
+                below legible before you tap it. */}
+            {previousPosition !== undefined && (
+              <Text
+                className={`text-text-secondary ${textRoles.captionMono}`}
+                style={{ fontSize: 11 }}
+              >
+                #{previousPosition}
+              </Text>
+            )}
+          </View>
           <View className="flex-1">
             <Text
               className={`${textRoles.bodySmall} ${state === 'current' ? 'text-accent' : state === 'upcoming' ? 'text-text-disabled' : 'text-text-primary'}`}
@@ -113,7 +133,7 @@ export function ExerciseOverviewSheet({
         </TouchableOpacity>
       );
     },
-    [currentExerciseIndex, handleSelect, total],
+    [currentExerciseIndex, handleSelect, previousPositionById, total],
   );
 
   return (
@@ -137,6 +157,23 @@ export function ExerciseOverviewSheet({
             All exercises
           </Text>
         </View>
+        {canUsePreviousOrder && onUsePreviousOrder ? (
+          <View className="px-5 pb-3">
+            <TouchableOpacity
+              className="flex-row items-center gap-2 bg-surface-2 rounded-lg px-3 py-2.5"
+              onPress={onUsePreviousOrder}
+              accessibilityRole="button"
+              accessibilityLabel="Use last week's order"
+              activeOpacity={0.7}
+            >
+              <Icon name="sort-variant" size={18} color="accent" />
+              <Text className={`flex-1 text-text-primary ${textRoles.bodySmall}`}>
+                Use last week&apos;s order
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
         <BottomSheetFlatList
           data={exercises}
           keyExtractor={(item) => item.exerciseId}
