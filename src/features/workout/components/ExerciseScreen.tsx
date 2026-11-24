@@ -57,6 +57,8 @@ interface Props {
   overviewDisabled?: boolean;
   onSubstitute?: () => void;
   substitutionLabel?: string;
+  /** 1-based position this exercise held last time this split was run. */
+  previousPosition?: number | null;
   renderSwipeable?: (body: React.ReactNode) => React.ReactNode;
 
   restTimerStatus?: RestTimerStatus;
@@ -111,6 +113,7 @@ export function ExerciseScreen({
   editingSetIndex, onEditSet, onCancelEdit, onDeleteSet,
   onFinish, onCancel, onOpenOverview, overviewDisabled,
   onSubstitute, substitutionLabel,
+  previousPosition,
   renderSwipeable,
   restTimerStatus, restTimerRemainingMs, restTimerProgress, restTimerVisible,
   onRestTimerToggle, onRestTimerAdjustPlus, onRestTimerDismiss,
@@ -215,6 +218,25 @@ export function ExerciseScreen({
             <Icon name="flag-checkered" size={16} color="surface-0" />
             <Text className={`text-surface-0 ${textRoles.buttonLabelSmall}`}>Finish</Text>
           </TouchableOpacity>
+        ) : previousPosition ? (
+          /* Where this exercise sat last time you ran this split — the same
+             idea as SetTable's LAST ghost rows, one level up. The slot is
+             otherwise empty; on the last exercise Finish outranks it. */
+          <View
+            className="items-center justify-center"
+            style={{ width: 34, height: 34 }}
+            accessibilityLabel={`Last time this was exercise ${previousPosition}`}
+          >
+            <Text
+              className={`text-text-secondary ${textRoles.metricBold}`}
+              style={{ fontSize: 13 }}
+            >
+              #{previousPosition}
+            </Text>
+            <Text className={`text-text-secondary ${textRoles.caption}`} style={{ fontSize: 11 }}>
+              LAST
+            </Text>
+          </View>
         ) : (
           <View style={{ width: 34 }} />
         )}

@@ -5,7 +5,10 @@ import { useWorkoutStore } from '../store/workoutStore';
 import { usePrefsStore } from '../../../shared/store/prefsStore';
 import { useHaptics } from '../../../shared/hooks/useHaptics';
 import { useRestTimer } from './useRestTimer';
-import { getPreviousPerformance } from '../../../storage/adapters/sessions';
+import {
+  getPreviousPerformance,
+  getPreviousSessionForSplit,
+} from '../../../storage/adapters/sessions';
 import {
   computePlateWeightKg,
   formatWeight,
@@ -15,6 +18,11 @@ import {
   KG_PLATES,
 } from '../../../shared/lib/weight';
 import { buildEffort, getSetRir } from '../lib/effort';
+import {
+  buildPreviousExerciseOrder,
+  matchesPreviousOrder,
+  plannedIdOf,
+} from '../lib/previousExerciseOrder';
 import type { LoggedExercise, LoggedSet } from '../types';
 
 /** What the exercise picker resolves with — a real library row. */
@@ -49,6 +57,7 @@ export function useWorkout(substituteSheetRef: RefObject<BottomSheetModal | null
     deleteSet,
     goToExercise,
     substituteExercise,
+    reorderExercises,
     finishWorkout,
   } = useWorkoutStore();
   const { weightUnit, defaultRestSeconds, loadPrefs, isLoaded: prefsLoaded, setWeightUnit } =
@@ -85,6 +94,10 @@ export function useWorkout(substituteSheetRef: RefObject<BottomSheetModal | null
     Record<string, LoggedExercise | null>
   >({});
   const fetchedIds = useRef(new Set<string>());
+  const [previousOrder, setPreviousOrder] = useState<ReturnType<typeof buildPreviousExerciseOrder>>(
+    () => buildPreviousExerciseOrder(null),
+  );
+  const fetchedOrderForSession = useRef<string | null>(null);
   const presentRafRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -120,11 +133,38 @@ export function useWorkout(substituteSheetRef: RefObject<BottomSheetModal | null
     session?.id,
   ]);
 
+  // The order ghost needs the whole previous run of this split, not a single
+  // exercise — fetched once per session rather than per exercise.
+  useEffect(() => {
+    if (!session) return;
+    if (fetchedOrderForSession.current === session.id) return;
+    fetchedOrderForSession.current = session.id;
+    void getPreviousSessionForSplit(session.splitId, session.id).then((previous) => {
+      setPreviousOrder(buildPreviousExerciseOrder(previous));
+    });
+  }, [session?.id, session?.splitId]);
+
   const currentPreviousPerformance = currentExercise
     ? (previousPerformances[
         currentExercise.substitutedForExerciseId ?? currentExercise.exerciseId
       ] ?? null)
     : null;
+
+  const currentPreviousPosition = currentExercise
+    ? (previousOrder.positionById.get(plannedIdOf(currentExercise)) ?? null)
+    : null;
+
+  /** Offered only when it would actually move something. */
+  const canUsePreviousOrder =
+    previousOrder.orderedIds.length > 0 &&
+    !!session &&
+    !matchesPreviousOrder(session.exercises, previousOrder.orderedIds);
+
+  const handleUsePreviousOrder = useCallback(() => {
+    if (!canUsePreviousOrder) return;
+    impact();
+    void reorderExercises(previousOrder.orderedIds);
+  }, [canUsePreviousOrder, impact, previousOrder.orderedIds, reorderExercises]);
 
   const plateList = weightUnit === 'lbs' ? LBS_PLATES : KG_PLATES;
 
@@ -488,6 +528,10 @@ export function useWorkout(substituteSheetRef: RefObject<BottomSheetModal | null
     handleSwipePrev,
     handleFinish,
     currentPreviousPerformance,
+    previousOrder,
+    currentPreviousPosition,
+    canUsePreviousOrder,
+    handleUsePreviousOrder,
     restTimerStatus,
     restTimerRemainingMs,
     restTimerProgress,

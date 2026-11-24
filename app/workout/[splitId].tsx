@@ -77,6 +77,10 @@ export default function WorkoutScreen() {
     handleGoToExercise,
     handleSwipeNext, handleSwipePrev, handleFinish,
     currentPreviousPerformance,
+    previousOrder,
+    currentPreviousPosition,
+    canUsePreviousOrder,
+    handleUsePreviousOrder,
     restTimerStatus,
     restTimerRemainingMs,
     restTimerProgress,
@@ -598,6 +602,7 @@ export default function WorkoutScreen() {
         onOpenOverview={openOverview}
         onSubstitute={handleSubstitutePress}
         substitutionLabel={substitutionLabel}
+        previousPosition={currentPreviousPosition}
         overviewDisabled={substituteSheetVisible}
         renderSwipeable={renderSwipeable}
         restTimerVisible={restTimerVisible}
@@ -628,6 +633,9 @@ export default function WorkoutScreen() {
           onSelectExercise={handleSelectExercise}
           onChange={handleOverviewSheetChange}
           onAddExercise={handleOpenAddExercise}
+          previousPositionById={previousOrder.positionById}
+          canUsePreviousOrder={canUsePreviousOrder}
+          onUsePreviousOrder={handleUsePreviousOrder}
         />
       )}
 

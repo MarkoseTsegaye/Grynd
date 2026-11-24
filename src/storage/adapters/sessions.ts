@@ -118,6 +118,29 @@ export async function deleteSession(sessionId: string): Promise<void> {
   }
 }
 
+/**
+ * The most recent completed run of this split, excluding the session in
+ * progress. Backs the exercise-order ghost: `getPreviousPerformance` answers
+ * "what did I lift on this exercise", this answers "what did this whole
+ * workout look like".
+ */
+export async function getPreviousSessionForSplit(
+  splitId: string,
+  beforeSessionId: string,
+): Promise<WorkoutSession | null> {
+  try {
+    const sessions = await getSessions();
+    const completed = sessions
+      .filter(
+        (s) => s.completedAt !== null && s.id !== beforeSessionId && s.splitId === splitId,
+      )
+      .sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0));
+    return completed[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function getPreviousPerformance(
   exerciseId: string,
   beforeSessionId: string,

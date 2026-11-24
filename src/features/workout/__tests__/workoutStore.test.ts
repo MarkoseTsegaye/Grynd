@@ -431,3 +431,57 @@ describe('useWorkoutStore substituteExercise', () => {
     expect(mockSetActiveSession).not.toHaveBeenCalled();
   });
 });
+
+describe('useWorkoutStore reorderExercises', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSetActiveSession.mockResolvedValue(undefined);
+    useWorkoutStore.setState({ session: makeSession(), currentExerciseIndex: 0 });
+  });
+
+  it('rearranges the session into the given order', async () => {
+    await useWorkoutStore.getState().reorderExercises(['ex-2', 'ex-1']);
+
+    expect(useWorkoutStore.getState().session!.exercises.map((e) => e.exerciseId)).toEqual([
+      'ex-2',
+      'ex-1',
+    ]);
+    expect(mockSetActiveSession).toHaveBeenCalledTimes(1);
+  });
+
+  // Reordering mid-set and landing on a different lift would be worse than
+  // not offering the feature at all.
+  it('keeps the user on the exercise they were doing', async () => {
+    useWorkoutStore.setState({ session: makeSession(), currentExerciseIndex: 0 });
+
+    await useWorkoutStore.getState().reorderExercises(['ex-2', 'ex-1']);
+
+    const { session, currentExerciseIndex } = useWorkoutStore.getState();
+    expect(currentExerciseIndex).toBe(1);
+    expect(session!.exercises[currentExerciseIndex].exerciseId).toBe('ex-1');
+    expect(session!.currentExerciseIndex).toBe(1);
+  });
+
+  it('no-ops when the order already matches', async () => {
+    await useWorkoutStore.getState().reorderExercises(['ex-1', 'ex-2']);
+
+    expect(mockSetActiveSession).not.toHaveBeenCalled();
+  });
+
+  it('no-ops on an empty list or with no session', async () => {
+    await useWorkoutStore.getState().reorderExercises([]);
+    useWorkoutStore.setState({ session: null, currentExerciseIndex: 0 });
+    await useWorkoutStore.getState().reorderExercises(['ex-2', 'ex-1']);
+
+    expect(mockSetActiveSession).not.toHaveBeenCalled();
+  });
+
+  it('leaves unknown ids alone and keeps unnamed exercises behind', async () => {
+    await useWorkoutStore.getState().reorderExercises(['missing', 'ex-2']);
+
+    expect(useWorkoutStore.getState().session!.exercises.map((e) => e.exerciseId)).toEqual([
+      'ex-2',
+      'ex-1',
+    ]);
+  });
+});
