@@ -206,40 +206,44 @@ export function ExerciseScreen({
           </TouchableOpacity>
         </View>
 
-        {isLastExercise ? (
-          <TouchableOpacity
-            className="bg-success rounded-lg px-3 flex-row items-center gap-1"
-            style={{ height: 34 }}
-            onPress={onFinish}
-            accessibilityLabel="Finish workout"
-            accessibilityRole="button"
-            activeOpacity={0.7}
-          >
-            <Icon name="flag-checkered" size={16} color="surface-0" />
-            <Text className={`text-surface-0 ${textRoles.buttonLabelSmall}`}>Finish</Text>
-          </TouchableOpacity>
-        ) : previousPosition ? (
-          /* Where this exercise sat last time you ran this split — the same
-             idea as SetTable's LAST ghost rows, one level up. The slot is
-             otherwise empty; on the last exercise Finish outranks it. */
-          <View
-            className="items-center justify-center"
-            style={{ width: 34, height: 34 }}
-            accessibilityLabel={`Last time this was exercise ${previousPosition}`}
-          >
-            <Text
-              className={`text-text-secondary ${textRoles.metricBold}`}
-              style={{ fontSize: 13 }}
+        {/* Where this exercise sat last time you ran this split — the same
+            idea as SetTable's LAST ghost rows, one level up. It sits beside
+            Finish rather than losing the slot to it: in a short split the
+            exercise you habitually do first is often the last in the list,
+            which is exactly when the ghost is worth seeing. */}
+        <View className="flex-row items-center gap-2">
+          {previousPosition ? (
+            <View
+              className="items-center justify-center"
+              accessibilityLabel={`Last time this was exercise ${previousPosition}`}
             >
-              #{previousPosition}
-            </Text>
-            <Text className={`text-text-secondary ${textRoles.caption}`} style={{ fontSize: 11 }}>
-              LAST
-            </Text>
-          </View>
-        ) : (
-          <View style={{ width: 34 }} />
-        )}
+              <Text
+                className={`text-text-secondary ${textRoles.metricBold}`}
+                style={{ fontSize: 13 }}
+              >
+                #{previousPosition}
+              </Text>
+              <Text className={`text-text-secondary ${textRoles.caption}`} style={{ fontSize: 11 }}>
+                LAST
+              </Text>
+            </View>
+          ) : null}
+          {isLastExercise ? (
+            <TouchableOpacity
+              className="bg-success rounded-lg px-3 flex-row items-center gap-1"
+              style={{ height: 34 }}
+              onPress={onFinish}
+              accessibilityLabel="Finish workout"
+              accessibilityRole="button"
+              activeOpacity={0.7}
+            >
+              <Icon name="flag-checkered" size={16} color="surface-0" />
+              <Text className={`text-surface-0 ${textRoles.buttonLabelSmall}`}>Finish</Text>
+            </TouchableOpacity>
+          ) : !previousPosition ? (
+            <View style={{ width: 34 }} />
+          ) : null}
+        </View>
       </View>
 
       <View className="flex-1">
